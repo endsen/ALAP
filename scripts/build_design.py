@@ -14,7 +14,7 @@ def build() -> str:
     sections = [
         "# ALAP Engineering Design v3.1 — 完整合订本\n\n"
         "> 开发基线：专用 Agent + 多供应商 LLM API + 实验执行平台。\n"
-        "> 由 docs/01–20 自动生成；不是已运行产品或真机安全认证。\n"
+        "> 由 docs/01–22 自动生成；不是已运行产品或真机安全认证。\n"
         "> 原始 v3.0 保留；实施进度见 IMPLEMENTATION_STATUS.md。\n\n"
         "## 目录\n\n"
         + "\n".join(f"- {path.read_text(encoding='utf-8').splitlines()[0][2:]}" for path in paths)

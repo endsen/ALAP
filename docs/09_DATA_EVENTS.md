@@ -28,67 +28,9 @@ erDiagram
   DATASET ||--o{ PROVENANCE_EDGE : references
 ```
 
-### 2.1 核心 DDL 片段（设计示意，可进一步用迁移管理）
+### 2.1 持久化设计基线
 
-```sql
-CREATE TABLE experiments (
-  id TEXT PRIMARY KEY,
-  owner_id TEXT NOT NULL,
-  title TEXT NOT NULL,
-  state TEXT NOT NULL,
-  revision BIGINT NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE TABLE experiment_runs (
-  id TEXT PRIMARY KEY,
-  experiment_id TEXT NOT NULL REFERENCES experiments(id),
-  plan_revision_id TEXT NOT NULL,
-  state TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE TABLE tasks (
-  id TEXT PRIMARY KEY,
-  run_id TEXT NOT NULL REFERENCES experiment_runs(id),
-  state TEXT NOT NULL,
-  state_version BIGINT NOT NULL DEFAULT 0,
-  required_resource_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE TABLE command_ledger (
-  command_id TEXT PRIMARY KEY,
-  task_id TEXT NOT NULL REFERENCES tasks(id),
-  instrument_id TEXT NOT NULL,
-  lease_id TEXT NOT NULL,
-  fencing_token BIGINT NOT NULL,
-  payload_hash TEXT NOT NULL,
-  state TEXT NOT NULL,
-  observed_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE TABLE datasets (
-  dataset_id TEXT PRIMARY KEY,
-  task_id TEXT NOT NULL REFERENCES tasks(id),
-  manifest_uri TEXT NOT NULL,
-  checksum_sha256 TEXT,
-  state TEXT NOT NULL CHECK (state IN ('STAGING','VALIDATING','COMMITTED','CORRUPT')),
-  acquired_from TIMESTAMPTZ,
-  acquired_to TIMESTAMPTZ
-);
-CREATE TABLE outbox_events (
-  event_id UUID PRIMARY KEY,
-  aggregate_id TEXT NOT NULL,
-  aggregate_seq BIGINT NOT NULL,
-  experiment_id TEXT NOT NULL REFERENCES experiments(id),
-  experiment_seq BIGINT NOT NULL,
-  event_type TEXT NOT NULL,
-  payload JSONB NOT NULL,
-  published_at TIMESTAMPTZ,
-  UNIQUE (aggregate_id, aggregate_seq),
-  UNIQUE (experiment_id, experiment_seq)
-);
-```
-
-**迁移前补齐的表**：`users`, `roles`, `instrument`, `gateways`, `plan_revisions`, `approvals`, `resource_leases`, `proposals`, `agent_runs`, `audit_events`, `provenance_edges`。对资源租约唯一性应使用事务锁/约束和版本检查，不只依赖应用内 mutex。
+原概览 DDL 已由[第 22 章](22_PERSISTENCE_TRANSACTIONS.md)的表约束、事务、锁顺序和迁移批次替代。该章为 D02 设计，不是已经执行的迁移；D03 起在真实 PostgreSQL 上实现并验证。资源占用和隔离独立于租约终态，outbox 唯一键包括 aggregate_type，审批和执行必须在同一事务核实版本与有效期。
 
 ## 3. 实验数据 Manifest
 

@@ -71,3 +71,25 @@ def test_all_schema_files_have_positive_examples(catalog):
     for name in catalog.schemas:
         example = json.loads((ROOT / f"contracts/examples/{name}.json").read_text(encoding="utf-8"))
         catalog.validate(name, example)
+
+
+def test_lifecycle_states_match_shared_schema_and_generated_api(api_validator, catalog):
+    from alap.domain.lifecycle import STATE_TYPES
+
+    schema = json.loads((ROOT / "contracts/lifecycle.schema.json").read_text())
+    for kind, enum in STATE_TYPES.items():
+        assert set(schema["$defs"][enum.__name__]["enum"]) == {s.value for s in enum}
+        for state in enum:
+            item = dict(
+                kind=kind.value,
+                subject_id="id-1",
+                state=state.value,
+                version=0,
+                binding_hash="a" * 64,
+            )
+            catalog.validate("lifecycle", item)
+            api_validator("LifecycleRecord").validate(item)
+    item["kind"] = "run"
+    item["state"] = "COMMITTED"
+    with pytest.raises(ValidationError):
+        api_validator("LifecycleRecord").validate(item)

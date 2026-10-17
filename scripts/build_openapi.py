@@ -18,12 +18,13 @@ COMPONENTS = {
     "capability": "CapabilityManifest",
     "command": "CommandEnvelope",
     "event": "DomainEvent",
+    "lifecycle": "LifecycleRecord",
 }
 
 
-def convert(value):
+def convert(value, component):
     if isinstance(value, list):
-        return [convert(item) for item in value]
+        return [convert(item, component) for item in value]
     if not isinstance(value, dict):
         return value
     result = {}
@@ -31,10 +32,11 @@ def convert(value):
         if key in {"$id", "$schema"}:
             continue
         if key == "$ref":
-            name = item.removesuffix(".schema.json")
-            result[key] = f"#/components/schemas/{COMPONENTS[name]}"
+            filename, _, fragment = item.partition("#")
+            target = COMPONENTS[filename.removesuffix(".schema.json")] if filename else component
+            result[key] = f"#/components/schemas/{target}{fragment}"
         else:
-            result[key] = convert(item)
+            result[key] = convert(item, component)
     return result
 
 
@@ -43,7 +45,8 @@ def build() -> str:
     schemas = api["components"]["schemas"]
     for name, component in COMPONENTS.items():
         schemas[component] = convert(
-            json.loads((ROOT / f"contracts/{name}.schema.json").read_text(encoding="utf-8"))
+            json.loads((ROOT / f"contracts/{name}.schema.json").read_text(encoding="utf-8")),
+            component,
         )
     # Server-owned IDs and agent identity come from the authenticated context.
     request = copy.deepcopy(schemas["PlanProposalRecord"])

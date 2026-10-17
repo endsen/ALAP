@@ -2,7 +2,7 @@
 
 ## 当前基线
 
-- 开发以 `docs/01–20` 和生成的 `ALAP_Engineering_Design_v3.1_完整合订本.md` 为准；原始 v3.0 合订本和 ZIP 保留不改。
+- 开发以 `docs/01–22` 和生成的 `ALAP_Engineering_Design_v3.1_完整合订本.md` 为准；原始 v3.0 合订本和 ZIP 保留不改。
 - 用户明确要求：专用实验 Agent 平台；经 API 接入 LLM，支持主流供应商，首批 OpenAI/DeepSeek；Web 包含独立 Skills、MCP、模型、仪表板、用量、轨迹与知识管理。
 - 按专业工程顺序分层实现，不追求快速演示。实施顺序以 `docs/20_DELIVERY_PLAN.md` 为准，实际完成项见 `IMPLEMENTATION_STATUS.md`。
 - 额度限制下按 D01–D13 分期交付，区别于技术层 P0–P7。每期可跨会话；每期结束保存完成项、验证、遗留问题和下一动作。先读状态再续做，默认不在当期交接后自行跨期。不要假定能读取用户账户剩余额度。
@@ -36,6 +36,7 @@ python3 -m venv .venv
 编辑源文档或契约后生成：
 
 ```bash
+.venv/bin/python scripts/build_lifecycle_reference.py
 .venv/bin/python scripts/build_design.py
 .venv/bin/python scripts/build_openapi.py
 ```

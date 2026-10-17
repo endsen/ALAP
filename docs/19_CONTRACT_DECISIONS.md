@@ -32,7 +32,7 @@ Dataset Manifest 的独立 Schema 和 REST 公共字段保持一致，公开响�
 
 近端命令处理：校验授权 → 同一 command_id 比对 payload hash → 持久写入 ACCEPTED → 写前持久 RUNNING → 单设备串行执行 → 读回与结果落盘 → 返回结果。重启见 ACCEPTED/RUNNING 的非终态命令一律先对账，不重发。对于已有终态，查询只返回原结果；同 ID 不同 payload 拒绝。
 
-UNKNOWN 阻塞相关后继和资源复用，直到取得设备/journal 证据并完成对账。Run、Task、Command 各自完整状态表与恢复证据类型是 P2 的进入门槛；旧第 07 章图仅作概览，不能直接生成调度实现。
+UNKNOWN 阻塞相关后继和资源复用，直到取得设备/journal 证据并完成对账。Run、Task、Command 各自完整状态表与恢复证据类型已在第 21 章及纯领域规则中定义；第 22 章定义持久化边界。数据库和调度执行仍待后续实现。
 
 ## 契约维护
 

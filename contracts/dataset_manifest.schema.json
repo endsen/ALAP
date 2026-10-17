@@ -87,13 +87,7 @@
       }
     },
     "status": {
-      "type": "string",
-      "enum": [
-        "STAGING",
-        "VALIDATING",
-        "COMMITTED",
-        "CORRUPT"
-      ]
+      "$ref": "lifecycle.schema.json#/$defs/DatasetState"
     },
     "device_snapshot_version": {
       "type": "integer",

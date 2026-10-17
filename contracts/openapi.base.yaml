@@ -503,6 +503,7 @@ components:
       - plan_hash
       - state
       - decided_at
+      - state_version
       properties:
         approval_id:
           type: string
@@ -511,12 +512,7 @@ components:
         plan_hash:
           type: string
         state:
-          type: string
-          enum:
-          - APPROVED
-          - REJECTED
-          - EXPIRED
-          - REVOKED
+          $ref: '#/components/schemas/LifecycleRecord/$defs/ApprovalState'
         decided_at:
           type: string
           format: date-time
@@ -525,6 +521,9 @@ components:
           - string
           - 'null'
           format: date-time
+        state_version:
+          type: integer
+          minimum: 0
     Run:
       type: object
       additionalProperties: false
@@ -533,6 +532,7 @@ components:
       - experiment_id
       - plan_revision_id
       - state
+      - state_version
       properties:
         run_id:
           type: string
@@ -541,21 +541,10 @@ components:
         plan_revision_id:
           type: string
         state:
-          type: string
-          enum:
-          - READY
-          - WAITING_RESOURCE
-          - DISPATCHED
-          - RUNNING
-          - VERIFYING
-          - PAUSE_REQUESTED
-          - PAUSED
-          - CANCEL_REQUESTED
-          - CANCELLED
-          - SUCCEEDED
-          - FAILED
-          - UNKNOWN
-          - NEEDS_RECONCILIATION
+          $ref: '#/components/schemas/LifecycleRecord/$defs/RunState'
+        state_version:
+          type: integer
+          minimum: 0
     Instrument:
       type: object
       additionalProperties: false

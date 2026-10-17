@@ -14,29 +14,14 @@
 
 当前可校验实例以 `contracts/examples/plan_proposal.json` 为准。Task 字段及条件语义见第 19 章；资源用 `resource_id/required_resources`，技能必须锁定 `skill_ref`，前置条件与成功判据为结构化对象。模拟参数不构成真机授权。
 
-## 4. 执行生命周期概览（非完整实现状态表）
+## 4. 独立执行生命周期
 
-```mermaid
-stateDiagram-v2
-  [*] --> DRAFT
-  DRAFT --> VALIDATED
-  VALIDATED --> WAITING_APPROVAL
-  WAITING_APPROVAL --> READY: approval valid
-  READY --> WAITING_RESOURCE: lease unavailable
-  WAITING_RESOURCE --> READY: lease acquired
-  READY --> DISPATCHED
-  DISPATCHED --> RUNNING: gateway accepted
-  RUNNING --> VERIFYING
-  VERIFYING --> SUCCEEDED: readback + data commit
-  RUNNING --> FAILED: confirmed fail
-  DISPATCHED --> UNKNOWN: ack timeout
-  RUNNING --> UNKNOWN: uncertain state
-  READY --> CANCELLED: cancel before dispatch
-  RUNNING --> CANCEL_REQUESTED
-  CANCEL_REQUESTED --> CANCELLED: safe stop confirmed
-  CANCEL_REQUESTED --> UNKNOWN: stop unconfirmed
-  UNKNOWN --> NEEDS_RECONCILIATION
-```
+完整状态、事件、守卫、主体、证据与失败语义以[第 21 章](21_STATE_MACHINES.md)及可执行领域规则为准。计划审批不混入 Run 状态；Run、Task、Command 分别维护版本。
+
+- Run 从 READY 开始，汇总子任务；只有子对象静止后才能确认暂停或进入终态。
+- Task 从 PENDING 开始；暂停位于有限任务边界，不支持任意物理步骤中途续跑。
+- Command 从 NOT_DISPATCHED 开始，先持久化 DISPATCHED 再外发；ACK 只表示接收，成功还需执行、读回和持久结果。
+- UNKNOWN 冻结后继并隔离资源；完成对账前不能重发原命令。
 
 绝对不能将 HTTP 200、消息送达或设备“目标值已设定”等同于仪器完成动作。`SUCCEEDED` 需有明确技能级成功判定（读回、稳定窗口、采集与提交）。
 
@@ -57,10 +42,10 @@ stateDiagram-v2
 |---|---|---|
 | NOT_DISPATCHED | 可按策略 | 使用原 `command_id` 幂等出队 |
 | REJECTED_BEFORE_EXECUTE | 修正后可新建命令 | 原命令不可重放 |
-| ACCEPTED/RUNNING | 不能新发同动作 | 查询/等待设备与执行器状态 |
+| DISPATCHED/ACCEPTED/RUNNING/VERIFYING/CANCEL_REQUESTED | 不能新发同动作 | 查询/等待设备与执行器状态 |
 | SUCCEEDED | 禁止重做 | 直接读已有结果 |
 | FAILED_CONFIRMED | 依据技能安全规程决定 | 新 Command ID + 新尝试 |
-| UNKNOWN | **禁止盲重试** | 冻结后继任务→只读核对→必要时现场操作员介入 |
+| UNKNOWN/NEEDS_RECONCILIATION | **禁止盲重试** | 冻结后继任务→只读核对→必要时现场操作员介入 |
 
 ## 7. Approval 约束
 
@@ -72,7 +57,7 @@ stateDiagram-v2
 
 ## 9. Pause / Cancel / Resume / Takeover
 
-- `PAUSE_REQUESTED`：停止发布新任务，现有任务到达可控安全点才 `PAUSED`。
+- `PAUSE_REQUESTED`：停止发布新任务，现有有限任务完成且子对象静止才 `PAUSED`。
 - `CANCEL_REQUESTED`：请求边缘执行器安全终止，明确等待确认；无法确认转 `UNKNOWN`。
 - `RESUME`：重新核实租约、审批有效期、设备真实状态、依赖前置条件，必要时创建新的 Run/TaskAttempt。
 - `TAKEOVER`：现场操作员经双因素/审批（依据风险）接管；回收或废止旧租约，发行新 token，不能信任旧执行状态。

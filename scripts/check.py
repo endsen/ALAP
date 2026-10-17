@@ -11,6 +11,7 @@ def main():
     commands = [
         ["-m", "ruff", "check", "."],
         ["-m", "ruff", "format", "--check", "."],
+        ["scripts/build_lifecycle_reference.py", "--check"],
         ["scripts/build_design.py", "--check"],
         ["scripts/build_openapi.py", "--check"],
         ["contracts/validate_contracts.py"],

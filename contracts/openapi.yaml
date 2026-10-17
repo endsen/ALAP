@@ -504,6 +504,7 @@ components:
       - plan_hash
       - state
       - decided_at
+      - state_version
       properties:
         approval_id:
           type: string
@@ -512,12 +513,7 @@ components:
         plan_hash:
           type: string
         state:
-          type: string
-          enum:
-          - APPROVED
-          - REJECTED
-          - EXPIRED
-          - REVOKED
+          $ref: '#/components/schemas/LifecycleRecord/$defs/ApprovalState'
         decided_at:
           type: string
           format: date-time
@@ -526,6 +522,9 @@ components:
           - string
           - 'null'
           format: date-time
+        state_version:
+          type: integer
+          minimum: 0
     Run:
       type: object
       additionalProperties: false
@@ -534,6 +533,7 @@ components:
       - experiment_id
       - plan_revision_id
       - state
+      - state_version
       properties:
         run_id:
           type: string
@@ -542,21 +542,10 @@ components:
         plan_revision_id:
           type: string
         state:
-          type: string
-          enum:
-          - READY
-          - WAITING_RESOURCE
-          - DISPATCHED
-          - RUNNING
-          - VERIFYING
-          - PAUSE_REQUESTED
-          - PAUSED
-          - CANCEL_REQUESTED
-          - CANCELLED
-          - SUCCEEDED
-          - FAILED
-          - UNKNOWN
-          - NEEDS_RECONCILIATION
+          $ref: '#/components/schemas/LifecycleRecord/$defs/RunState'
+        state_version:
+          type: integer
+          minimum: 0
     Instrument:
       type: object
       additionalProperties: false
@@ -864,12 +853,7 @@ components:
           additionalProperties:
             type: string
         status:
-          type: string
-          enum:
-          - STAGING
-          - VALIDATING
-          - COMMITTED
-          - CORRUPT
+          $ref: '#/components/schemas/LifecycleRecord/$defs/DatasetState'
         device_snapshot_version:
           type: integer
           minimum: 0
@@ -1185,6 +1169,156 @@ components:
         experiment_seq:
           type: integer
           minimum: 1
+    LifecycleRecord:
+      title: ALAP lifecycle record v2
+      type: object
+      additionalProperties: false
+      required:
+      - kind
+      - subject_id
+      - state
+      - version
+      - binding_hash
+      properties:
+        kind:
+          enum:
+          - run
+          - task
+          - command
+          - approval
+          - lease
+          - dataset
+        subject_id:
+          type: string
+          minLength: 1
+        state:
+          type: string
+        version:
+          type: integer
+          minimum: 0
+        binding_hash:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+      $defs:
+        RunState:
+          type: string
+          enum:
+          - READY
+          - WAITING_RESOURCE
+          - RUNNING
+          - VERIFYING
+          - PAUSE_REQUESTED
+          - PAUSED
+          - CANCEL_REQUESTED
+          - SUCCEEDED
+          - FAILED
+          - CANCELLED
+          - UNKNOWN
+          - NEEDS_RECONCILIATION
+        TaskState:
+          type: string
+          enum:
+          - PENDING
+          - READY
+          - WAITING_RESOURCE
+          - DISPATCHED
+          - RUNNING
+          - VERIFYING
+          - CANCEL_REQUESTED
+          - SUCCEEDED
+          - FAILED
+          - CANCELLED
+          - SKIPPED
+          - UNKNOWN
+          - NEEDS_RECONCILIATION
+        CommandState:
+          type: string
+          enum:
+          - NOT_DISPATCHED
+          - DISPATCHED
+          - ACCEPTED
+          - RUNNING
+          - VERIFYING
+          - CANCEL_REQUESTED
+          - SUCCEEDED
+          - FAILED_CONFIRMED
+          - REJECTED_BEFORE_EXECUTE
+          - CANCELLED
+          - UNKNOWN
+          - NEEDS_RECONCILIATION
+        ApprovalState:
+          type: string
+          enum:
+          - PENDING
+          - APPROVED
+          - REJECTED
+          - EXPIRED
+          - REVOKED
+          - SUPERSEDED
+        LeaseState:
+          type: string
+          enum:
+          - ACTIVE
+          - RELEASE_PENDING
+          - RELEASED
+          - EXPIRED
+          - REVOKED
+        DatasetState:
+          type: string
+          enum:
+          - STAGING
+          - VALIDATING
+          - COMMITTED
+          - CORRUPT
+      allOf:
+      - if:
+          properties:
+            kind:
+              const: run
+        then:
+          properties:
+            state:
+              $ref: '#/components/schemas/LifecycleRecord/$defs/RunState'
+      - if:
+          properties:
+            kind:
+              const: task
+        then:
+          properties:
+            state:
+              $ref: '#/components/schemas/LifecycleRecord/$defs/TaskState'
+      - if:
+          properties:
+            kind:
+              const: command
+        then:
+          properties:
+            state:
+              $ref: '#/components/schemas/LifecycleRecord/$defs/CommandState'
+      - if:
+          properties:
+            kind:
+              const: approval
+        then:
+          properties:
+            state:
+              $ref: '#/components/schemas/LifecycleRecord/$defs/ApprovalState'
+      - if:
+          properties:
+            kind:
+              const: lease
+        then:
+          properties:
+            state:
+              $ref: '#/components/schemas/LifecycleRecord/$defs/LeaseState'
+      - if:
+          properties:
+            kind:
+              const: dataset
+        then:
+          properties:
+            state:
+              $ref: '#/components/schemas/LifecycleRecord/$defs/DatasetState'
     PlanProposalCreate:
       title: PlanProposalCreate
       type: object

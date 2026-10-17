@@ -1,7 +1,7 @@
 # ALAP Engineering Design v3.1 — 完整合订本
 
 > 开发基线：专用 Agent + 多供应商 LLM API + 实验执行平台。
-> 由 docs/01–20 自动生成；不是已运行产品或真机安全认证。
+> 由 docs/01–22 自动生成；不是已运行产品或真机安全认证。
 > 原始 v3.0 保留；实施进度见 IMPLEMENTATION_STATUS.md。
 
 ## 目录
@@ -26,6 +26,8 @@
 - 18 · 多供应商 LLM API 接入（v3.1）
 - 19 · v3.1 契约与领域规则
 - 20 · 分层实施与阶段门禁（v3.1）
+- 21 · D02 完整领域状态与转换规则
+- 22 · D02 PostgreSQL 数据与事务设计
 
 ---
 
@@ -607,29 +609,14 @@ LangGraph checkpointer 可持久化智能体线程并支持交互中断；**恢�
 
 当前可校验实例以 `contracts/examples/plan_proposal.json` 为准。Task 字段及条件语义见第 19 章；资源用 `resource_id/required_resources`，技能必须锁定 `skill_ref`，前置条件与成功判据为结构化对象。模拟参数不构成真机授权。
 
-## 4. 执行生命周期概览（非完整实现状态表）
+## 4. 独立执行生命周期
 
-```mermaid
-stateDiagram-v2
-  [*] --> DRAFT
-  DRAFT --> VALIDATED
-  VALIDATED --> WAITING_APPROVAL
-  WAITING_APPROVAL --> READY: approval valid
-  READY --> WAITING_RESOURCE: lease unavailable
-  WAITING_RESOURCE --> READY: lease acquired
-  READY --> DISPATCHED
-  DISPATCHED --> RUNNING: gateway accepted
-  RUNNING --> VERIFYING
-  VERIFYING --> SUCCEEDED: readback + data commit
-  RUNNING --> FAILED: confirmed fail
-  DISPATCHED --> UNKNOWN: ack timeout
-  RUNNING --> UNKNOWN: uncertain state
-  READY --> CANCELLED: cancel before dispatch
-  RUNNING --> CANCEL_REQUESTED
-  CANCEL_REQUESTED --> CANCELLED: safe stop confirmed
-  CANCEL_REQUESTED --> UNKNOWN: stop unconfirmed
-  UNKNOWN --> NEEDS_RECONCILIATION
-```
+完整状态、事件、守卫、主体、证据与失败语义以[第 21 章](docs/21_STATE_MACHINES.md)及可执行领域规则为准。计划审批不混入 Run 状态；Run、Task、Command 分别维护版本。
+
+- Run 从 READY 开始，汇总子任务；只有子对象静止后才能确认暂停或进入终态。
+- Task 从 PENDING 开始；暂停位于有限任务边界，不支持任意物理步骤中途续跑。
+- Command 从 NOT_DISPATCHED 开始，先持久化 DISPATCHED 再外发；ACK 只表示接收，成功还需执行、读回和持久结果。
+- UNKNOWN 冻结后继并隔离资源；完成对账前不能重发原命令。
 
 绝对不能将 HTTP 200、消息送达或设备“目标值已设定”等同于仪器完成动作。`SUCCEEDED` 需有明确技能级成功判定（读回、稳定窗口、采集与提交）。
 
@@ -650,10 +637,10 @@ stateDiagram-v2
 |---|---|---|
 | NOT_DISPATCHED | 可按策略 | 使用原 `command_id` 幂等出队 |
 | REJECTED_BEFORE_EXECUTE | 修正后可新建命令 | 原命令不可重放 |
-| ACCEPTED/RUNNING | 不能新发同动作 | 查询/等待设备与执行器状态 |
+| DISPATCHED/ACCEPTED/RUNNING/VERIFYING/CANCEL_REQUESTED | 不能新发同动作 | 查询/等待设备与执行器状态 |
 | SUCCEEDED | 禁止重做 | 直接读已有结果 |
 | FAILED_CONFIRMED | 依据技能安全规程决定 | 新 Command ID + 新尝试 |
-| UNKNOWN | **禁止盲重试** | 冻结后继任务→只读核对→必要时现场操作员介入 |
+| UNKNOWN/NEEDS_RECONCILIATION | **禁止盲重试** | 冻结后继任务→只读核对→必要时现场操作员介入 |
 
 ## 7. Approval 约束
 
@@ -665,7 +652,7 @@ stateDiagram-v2
 
 ## 9. Pause / Cancel / Resume / Takeover
 
-- `PAUSE_REQUESTED`：停止发布新任务，现有任务到达可控安全点才 `PAUSED`。
+- `PAUSE_REQUESTED`：停止发布新任务，现有有限任务完成且子对象静止才 `PAUSED`。
 - `CANCEL_REQUESTED`：请求边缘执行器安全终止，明确等待确认；无法确认转 `UNKNOWN`。
 - `RESUME`：重新核实租约、审批有效期、设备真实状态、依赖前置条件，必要时创建新的 Run/TaskAttempt。
 - `TAKEOVER`：现场操作员经双因素/审批（依据风险）接管；回收或废止旧租约，发行新 token，不能信任旧执行状态。
@@ -815,67 +802,9 @@ erDiagram
   DATASET ||--o{ PROVENANCE_EDGE : references
 ```
 
-### 2.1 核心 DDL 片段（设计示意，可进一步用迁移管理）
+### 2.1 持久化设计基线
 
-```sql
-CREATE TABLE experiments (
-  id TEXT PRIMARY KEY,
-  owner_id TEXT NOT NULL,
-  title TEXT NOT NULL,
-  state TEXT NOT NULL,
-  revision BIGINT NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE TABLE experiment_runs (
-  id TEXT PRIMARY KEY,
-  experiment_id TEXT NOT NULL REFERENCES experiments(id),
-  plan_revision_id TEXT NOT NULL,
-  state TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE TABLE tasks (
-  id TEXT PRIMARY KEY,
-  run_id TEXT NOT NULL REFERENCES experiment_runs(id),
-  state TEXT NOT NULL,
-  state_version BIGINT NOT NULL DEFAULT 0,
-  required_resource_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE TABLE command_ledger (
-  command_id TEXT PRIMARY KEY,
-  task_id TEXT NOT NULL REFERENCES tasks(id),
-  instrument_id TEXT NOT NULL,
-  lease_id TEXT NOT NULL,
-  fencing_token BIGINT NOT NULL,
-  payload_hash TEXT NOT NULL,
-  state TEXT NOT NULL,
-  observed_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE TABLE datasets (
-  dataset_id TEXT PRIMARY KEY,
-  task_id TEXT NOT NULL REFERENCES tasks(id),
-  manifest_uri TEXT NOT NULL,
-  checksum_sha256 TEXT,
-  state TEXT NOT NULL CHECK (state IN ('STAGING','VALIDATING','COMMITTED','CORRUPT')),
-  acquired_from TIMESTAMPTZ,
-  acquired_to TIMESTAMPTZ
-);
-CREATE TABLE outbox_events (
-  event_id UUID PRIMARY KEY,
-  aggregate_id TEXT NOT NULL,
-  aggregate_seq BIGINT NOT NULL,
-  experiment_id TEXT NOT NULL REFERENCES experiments(id),
-  experiment_seq BIGINT NOT NULL,
-  event_type TEXT NOT NULL,
-  payload JSONB NOT NULL,
-  published_at TIMESTAMPTZ,
-  UNIQUE (aggregate_id, aggregate_seq),
-  UNIQUE (experiment_id, experiment_seq)
-);
-```
-
-**迁移前补齐的表**：`users`, `roles`, `instrument`, `gateways`, `plan_revisions`, `approvals`, `resource_leases`, `proposals`, `agent_runs`, `audit_events`, `provenance_edges`。对资源租约唯一性应使用事务锁/约束和版本检查，不只依赖应用内 mutex。
+原概览 DDL 已由[第 22 章](docs/22_PERSISTENCE_TRANSACTIONS.md)的表约束、事务、锁顺序和迁移批次替代。该章为 D02 设计，不是已经执行的迁移；D03 起在真实 PostgreSQL 上实现并验证。资源占用和隔离独立于租约终态，outbox 唯一键包括 aggregate_type，审批和执行必须在同一事务核实版本与有效期。
 
 ## 3. 实验数据 Manifest
 
@@ -1363,6 +1292,14 @@ PostgreSQL 连续归档/WAL（按组织策略）+ 定期快照；Dataset Store �
 
 OD-05 中接入方式已确认为 API；模型供应商、真实凭据和具体科研数据出域许可仍按部署环境确定。旧 ADR 的现场相关 Proposed 状态保持，不能由开发基线代替现场签署。
 
+## D02 开发基线决策（2026-10-17）
+
+- ADR-017：Run/Task/Command 独立状态；首期在有限 Task 边界暂停，终态不重开。UNKNOWN 必须先对账，原命令不回到 NOT_DISPATCHED。
+- ADR-018：状态转换为无 I/O 的纯决策，证据绑定对象/版本/hash/期限；实际认证与证据核验由受信任应用适配器完成，状态与 effects/audit/outbox 原子落库。
+- ADR-019：租约终态不等于资源可用；claim、fencing 与隔离独立持久化。PostgreSQL 采用显式锁顺序与约束，网络调用在事务外。
+
+状态为 Accepted for development；完整说明见第 21、22 章。真实数据库与设备故障验收尚待 D03–D05。
+
 ---
 
 <!-- 来源: docs/16_TRACEABILITY.md -->
@@ -1417,6 +1354,18 @@ OD-05 中接入方式已确认为 API；模型供应商、真实凭据和具体�
 | FR-029 | 17 页面与权限 | P4/P5 | EVAL-18/24 |
 
 上述是规划追踪，不代表用例已执行。当前基础层代码与测试见根目录 IMPLEMENTATION_STATUS.md。
+
+## D02 已执行与后续验证
+
+| 需求范围 | 已落地证据 | 尚未验证 |
+|---|---|---|
+| FR-004 审批版本绑定 | lifecycle 的审批状态、证据 hash/版本/期限测试 | 数据库权限、计划不可变性、撤销并发（D03） |
+| FR-009 命令执行 | tests/test_lifecycle.py：ACK 不代表成功、UNKNOWN 隔离、原命令不重放、取消竞争 | Gateway journal、实际 fencing 与故障恢复（D04） |
+| FR-011 数据发布 | 提交证据守卫、损坏后撤回状态；共享状态 Schema | 文件持久化与数据库提交中断（D05） |
+| FR-012 事件恢复 | 第 22 章锁顺序、outbox/游标/快照事务方案 | 真实事务、消息重复与 SSE 恢复（D03/D05/D09） |
+| 跨接口一致性 | tests/test_contract_consistency.py：六种枚举与共享 Schema、OpenAPI 引用一致 | 实际 API 行为（D09） |
+
+D02 完整本地检查输出保存在 reports/d02-validation.txt；不等价于集成/现场 EVAL 通过。
 
 ---
 
@@ -1560,7 +1509,7 @@ Dataset Manifest 的独立 Schema 和 REST 公共字段保持一致，公开响�
 
 近端命令处理：校验授权 → 同一 command_id 比对 payload hash → 持久写入 ACCEPTED → 写前持久 RUNNING → 单设备串行执行 → 读回与结果落盘 → 返回结果。重启见 ACCEPTED/RUNNING 的非终态命令一律先对账，不重发。对于已有终态，查询只返回原结果；同 ID 不同 payload 拒绝。
 
-UNKNOWN 阻塞相关后继和资源复用，直到取得设备/journal 证据并完成对账。Run、Task、Command 各自完整状态表与恢复证据类型是 P2 的进入门槛；旧第 07 章图仅作概览，不能直接生成调度实现。
+UNKNOWN 阻塞相关后继和资源复用，直到取得设备/journal 证据并完成对账。Run、Task、Command 各自完整状态表与恢复证据类型已在第 21 章及纯领域规则中定义；第 22 章定义持久化边界。数据库和调度执行仍待后续实现。
 
 ## 契约维护
 
@@ -1612,7 +1561,7 @@ P3 的 Agent 测试可调用 P2 应用端口，无需提前做 Web。P4 不另�
 | 开发期 | 范围与交付物 | 对应层 | 本期验收与保存点 |
 |---|---|---|---|
 | D01 · 企划与基础工程 | v3.1 企划、目录、依赖锁、核心 Schema、第一批领域规则、检查命令 | P0/P1 | 基础检查通过，保存结果与未完成项；本期已完成本地交付，远程 CI 结果见 IMPLEMENTATION_STATUS.md |
-| D02 · 完整状态与事务设计 | Run/Task/Command 独立状态表、审批/租约/数据状态、转换规则、数据库与事务方案 | P1/P2 设计 | 每条转换有触发、守卫、证据和失败语义；纯状态测试通过；输出迁移设计 |
+| D02 · 完整状态与事务设计 | Run/Task/Command 独立状态表、审批/租约/数据状态、转换规则、数据库与事务方案 | P1/P2 设计 | 每条转换有触发、守卫、证据和失败语义；纯状态测试通过；输出迁移设计；本期已完成本地交付，证据见 IMPLEMENTATION_STATUS.md |
 | D03 · 数据库与审批 | PostgreSQL 迁移、Repository、实验/计划版本、审批、幂等与并发校验 | P2 | 真实数据库迁移、回滚、重复请求及审批失效测试通过 |
 | D04 · 执行引擎与模拟网关 | DAG 调度、三模拟设备、租约/fencing/epoch、CommandLedger、近端 journal | P2 | 并发互斥、旧租约拒绝、ACK 丢失不重放、重启对账通过 |
 | D05 · 数据与事件恢复 | Dataset 持久化/提交、血缘、outbox、NATS、实验事件游标、暂停取消恢复 | P2 | 半成品不发布、重复/乱序幂等、取消待确认、持久事件恢复通过 |
@@ -1640,3 +1589,363 @@ P3 的 Agent 测试可调用 P2 应用端口，无需提前做 Web。P4 不另�
 先读 `AGENTS.md` → `IMPLEMENTATION_STATUS.md` → 本章的当前期及对应详细设计，随后检查实际源码/变更。优先沿用已经确认的决策与验证证据，只重读受影响章节，减少重复分析消耗。用户说“继续下一期”时，从状态文件记录的下一期开始；用户说“继续”且当前期未完成时，先完成当前期。
 
 无法直接获知用户账户的剩余额度，不声称能够自动精确分配账户额度。用户若给出单期预算或结束指令，则据此缩小工作项并完成可追溯交接；不凭空估算每期固定 Token 消耗。
+
+---
+
+<!-- 来源: docs/21_STATE_MACHINES.md -->
+
+# 21 · D02 完整领域状态与转换规则
+
+状态：D02 设计与纯领域规则已落地；数据库事务、设备/身份验证与恢复执行尚未实现。本章替代第 07 章的混合概览图作为实现依据。代码位于 `src/alap/domain/lifecycle.py`；结构源为 `contracts/lifecycle.schema.json`，测试防止枚举漂移。
+
+## 1. 六种对象与初始条件
+
+| 对象 | 初始状态 | 创建时必须满足（由 D03/D04 应用层执行） |
+|---|---|---|
+| Run | READY | 已验证不可变 PlanRevision，审批未过期/撤销且版本与范围完全匹配；保存启动者和幂等键 |
+| Task | PENDING | 所属 Run/Plan 内的固定节点及 attempt_no；依赖图已验证；不因重试改变计划定义 |
+| Command | NOT_DISPATCHED | 唯一 command_id，固定 payload hash、TaskAttempt、资源/epoch/租约/策略/技能版本；未交付网络 |
+| Approval | PENDING | 固定计划 hash、作用域、申请者、expires_at；批准者不能由模型产生 |
+| Lease | ACTIVE | 在事务中取得所有资源 claim，当前 epoch、单调 token、有效期合法、资源无隔离；不设虚假的“待领取有效租约” |
+| Dataset | STAGING | 确定 dataset_id、Run/Task/Command 来源；文件尚未发布 |
+
+`Record` 可重建任意合法持久状态，但不是创建这些业务对象的授权 API。状态类型严格区分：Run.READY 不接受 Task.READY 的枚举实例。Run 不含 DISPATCHED；该状态仅属于 Task/Command。计划草稿/校验/审批不属于 Run 执行状态。
+
+## 2. 转换接口与信任边界
+
+输入为不可变 Record（kind、subject_id、state、version、binding_hash）、事件、expected_version、经过认证的 Actor、证据引用及显式时钟 now。输出 Decision 含新版本、事件、操作者、证据 ID 和必须执行的 effects；函数无网络/数据库/设备调用，输入不被修改。
+
+只有状态表列出的事件可以转换；禁止任意 set_state。相同状态的续租/重复授权失效观察也递增版本。终态重复事件由应用层幂等记录返回原结果，不能再次改变版本。终态结果矛盾时创建异常/对账事件，不静默覆写已经确认的历史结果。
+
+证据必须绑定同一个 kind/id/version/hash，且 valid_from ≤ now < valid_until；每种事实只允许一个证据引用。时间戳必须带时区，截止时刻即失效。expected_version 冲突先拒绝，不能以重试直接覆盖。
+
+**证据是受信任应用适配器生成的判定输入，不是数字签名或事实验证器。** 不能将 HTTP 请求里的布尔值或字符串直接映射成 Evidence/Actor。Gateway 原始回执必须先核对身份、command_id、payload hash、epoch、序号与签名/认证通道，再由应用层结合数据库状态形成当前版本的短期判定；原始回执及其核验记录必须持久保存。权限/读回/哈希的真实验证在 D03–D05/D09 实现。
+
+绑定 hash 的范围：Run/Task 为固定计划版本及其资源范围；Command 为完整固定命令载荷；Approval 为固定计划及授权包络/期限；Lease 为资源、holder、epoch、token、策略及允许续租范围（当前租约截止时间属于受版本控制的可变字段）；Dataset 为固定采集来源。不得通过一次转换换成另一个 hash。
+
+## 3. 权限主体
+
+- engine：已认证的确定性执行服务；聚合任务/命令结果，不能凭自身权限编造仪器完成。
+- gateway：经认证的该设备执行器回执入口；它不能审批计划。
+- reconciler：受限恢复服务，结合命令 journal、实际读回和现场证据进行对账。
+- operator：具有该实验/资源控制权限的用户入口；可请求暂停/取消，不可宣称设备成功。
+- approver：具有对应计划/风险审批权的用户入口。
+- data_service：负责实际数据持久化与校验的服务。
+- timer：受控到期检测服务；不能单凭消息时间戳认定到期，使用数据库/受控时钟验证。
+
+这里的 authority 是用例执行身份类别，不替代 RBAC/ABAC；`control_authorized/approval_authorized` 等事实要求先核验用户、实验、设备、风险范围。
+
+## 4. 证据事实词典
+
+| 事实 | 可信来源与含义 |
+|---|---|
+| authorization_valid / authorization_invalid | 审批用例：固定计划/包络/策略版本相符且许可当前有效，或明确失效；有效性每次调度重核 |
+| control_authorized / approval_authorized / cancellation_authorized | 权限用例：该主体对当前对象具备对应控制/审批/停止请求权限 |
+| approval_window_valid / expiry_reached | 审批或租约用例：批准期限有效，或受控 now 已达到 expires_at；事务取得锁后检查 |
+| plan_current / plan_changed | 计划仓储：引用版本仍是当前可执行版本，或已被更改/替代 |
+| lease_valid / epoch_current | 租约用例：资源集合完整、所有权/token/epoch 匹配、未过期且无隔离；epoch 当前已握手生效 |
+| renewal_before_expiry / renewal_window_valid | 续租用例：现租约未过期；新期限严格延长且不超审批/策略上限，所有者与 token 不变 |
+| preconditions_fresh | 设备监测/规则引擎：实际读回质量、采样窗口、斜率、单位与鲜度满足计划；不是单次心跳 |
+| resources_busy | 租约用例：至少一个资源不可领取；不能在等待事务中长期占有部分资源 |
+| run_dispatch_allowed / dispatch_disabled | Run 用例：调度门开启或已关闭；恢复或停止期间禁止新的命令发放 |
+| command_prepared / journal_prepared | 中央命令台账：固定命令与待发送项已纳入当前事务，不代表 Gateway 已持久接收 |
+| gateway_authenticated | 入口适配器：回执身份与目标设备/epoch/命令/载荷匹配 |
+| journal_accepted / journal_running | Gateway 日志：接收或写前 RUNNING 已持久记录；网络 ACK 单独不能证明动作成功 |
+| execution_finished / execution_active | Gateway 或对账服务：原命令动作已结束或仍在运行；不得借此重新调用执行方法 |
+| success_verified / result_durable | 技能执行/数据服务：读回/稳定/结果判据通过；最终执行结果已落盘可查询 |
+| safe_stop_confirmed / device_quiescent | 现场受控停止已确认；设备无未核对的在途动作且符合该技能交接条件，不等于通用断电/零输出 |
+| never_executed / no_dispatch | 对账可证明命令未发生物理执行；中央在持锁检查后确认未进入 DISPATCHED；发送失败不是这类证据 |
+| outcome_uncertain / failure_confirmed | 结果未知（例如 ACK 丢失）或可确认失败；两者不能互相代替 |
+| reconciliation_complete | 恢复用例：原命令/设备/资源已核对，报告有出处与责任主体；无法证明的保持对账中 |
+| recovery_stop_authorized | 恢复用例：有权经专门停止通道请求原动作受控终止，不要求授予新实验执行权限 |
+| command_running / command_succeeded / command_failed / command_cancelled / command_terminal | 锁定的原 Command 状态：运行、成功、已知失败/执行前拒绝、取消或已确认终态；不接受未经校验的广播文本 |
+| dependencies_succeeded / dependency_failed | Task DAG：全部前置成功；或存在已确认失败/跳过/取消的依赖，且无 UNKNOWN 依赖冒充失败 |
+| all_tasks_succeeded / children_quiescent | Run 聚合：所有计划任务成功；或所有子任务/命令均无在途/未知动作，且设备符合交接条件 |
+| run_cancel_requested / cancellation_complete | Run 控制：取消意图已持久化；未启动任务已取消且在途任务已确认安全结束，无未知子项 |
+| datasets_committed | 数据用例：该技能要求的全部数据已真实 COMMITTED；不产出数据的技能必须由锁定 Skill 契约证明不适用 |
+| no_inflight_commands | 租约用例：资源所有关联命令都不在 DISPATCHED/ACCEPTED/RUNNING/VERIFYING/CANCEL_REQUESTED/UNKNOWN/NEEDS_RECONCILIATION |
+| upload_complete / artifact_durable | 数据服务：上传完整且持久存储确认；仅收到上传请求不算完成 |
+| checksum_verified / manifest_valid / metadata_prepared | 数据服务：重新校验内容 hash，完整 Manifest/血缘验证通过，元数据准备好与状态/event 同事务提交 |
+| corruption_verified | 数据完整性检查：有可查证的损坏证据；保留原始文件和来源，不以覆盖方式修复 |
+
+时间窗证明的是判定仍可用，不能让旧设备读数因重新包装 Evidence 获得新鲜度；原始 observed_at 必须参加 preconditions_fresh 的计算。
+
+## 5. 暂停、取消、重试与 UNKNOWN
+
+首期只在有限任务边界暂停：Run 请求暂停后关闭新调度，正在执行的 Task 可正常完成；全部子项安静后 Run 才 PAUSED。Task/Command 不提供暂停后重发的快捷路径。需要中断当前动作则走 cancel 和受控停止；以后扩展中间 checkpoint 必须另作 ADR。
+
+取消是请求。动作已经完成的回执可以使取消中的 Command 经 VERIFYING 走成功；Run 只有全部任务都成功才允许 completion_won_race，混合成功/取消则必须确认 cancellation_complete 后 CANCELLED。无确认则 UNKNOWN。任何 Run 终态均要求 children_quiescent，不能让一个任务失败掩盖另一个仍在输出。
+
+UNKNOWN 立刻冻结调度并隔离相关资源。只能先进入 NEEDS_RECONCILIATION，再依据原动作证据恢复 RUNNING/VERIFYING 或落入已确认终态。Run 完成对账后默认 PAUSED；显式 resume 要重新核对权限/租约/前置条件。即使证明原命令从未执行，也关闭为 REJECTED_BEFORE_EXECUTE，使用新 ID 和明确的新执行尝试，不能把原命令改回 NOT_DISPATCHED。
+
+首期失败后的新尝试放入显式新 Run/TaskAttempt；原 Task 与 Command 终态不重开。D03 保留 attempt_no，但不实现自动物理重试。
+
+## 6. 转换 effects 必须落地
+
+- freeze_dispatch：关闭相关 Run 的新发放入口；Task/Command/Approval/Lease 的影响按关联 Run 扩展。
+- enable_dispatch：只用于 Run 的显式 resume，且所有门禁已通过；不解除任何资源隔离。
+- quarantine_resources：持久阻止相关资源被任何新持有者领取。租约 EXPIRED/REVOKED 不自动清除隔离；清除需另一个有读回与对账证据的恢复事务。
+- request_safe_stop：写入高优先级停止请求，事务提交后由近端厂商策略执行；不是立即停止证明。
+- invalidate_authorization：使授权不再能用于新命令；已有授予与物理动作的处置见第 22 章撤销时序。
+- revoke_data_access：停止该数据及受影响派生结果的正式发布，记录完整性事故；已经完成的物理动作不回退。
+
+纯函数只返回 effects。持久化状态但丢弃 effects 是实现错误，必须在 D03–D05 集成测试中验证原子提交。一次领域转换生成一个事实事件；多对象联动在同一短事务中完成。
+
+## 7. 完整转换表
+
+以下由 `scripts/build_lifecycle_reference.py` 从代码生成；未列出的转换一律拒绝。权限与事实必须同时满足。
+
+<!-- BEGIN GENERATED TRANSITIONS -->
+
+### RunState
+
+状态：`READY`、`WAITING_RESOURCE`、`RUNNING`、`VERIFYING`、`PAUSE_REQUESTED`、`PAUSED`、`CANCEL_REQUESTED`、`SUCCEEDED`、`FAILED`、`CANCELLED`、`UNKNOWN`、`NEEDS_RECONCILIATION`
+
+| 起始状态 | 事件 → 目标 | 主体 | 必需证据事实 | effects |
+|---|---|---|---|---|
+| READY | `resources_unavailable` → WAITING_RESOURCE | engine | resources_busy | — |
+| WAITING_RESOURCE | `resources_acquired` → READY | engine | authorization_valid, lease_valid | — |
+| READY | `start` → RUNNING | engine | authorization_valid, lease_valid, preconditions_fresh, run_dispatch_allowed | — |
+| RUNNING | `tasks_succeeded` → VERIFYING | engine | all_tasks_succeeded, children_quiescent | — |
+| VERIFYING | `complete` → SUCCEEDED | engine | all_tasks_succeeded, children_quiescent, datasets_committed | — |
+| READY, WAITING_RESOURCE, PAUSED, RUNNING, VERIFYING, PAUSE_REQUESTED, CANCEL_REQUESTED | `fail` → FAILED | engine | children_quiescent, failure_confirmed | freeze_dispatch |
+| READY, WAITING_RESOURCE | `pause` → PAUSED | operator | children_quiescent, control_authorized | freeze_dispatch |
+| RUNNING, VERIFYING | `pause` → PAUSE_REQUESTED | operator | control_authorized | freeze_dispatch |
+| PAUSE_REQUESTED | `pause_confirmed` → PAUSED | engine | children_quiescent, dispatch_disabled | freeze_dispatch |
+| PAUSED | `resume` → READY | operator | authorization_valid, children_quiescent, control_authorized, lease_valid, preconditions_fresh | enable_dispatch |
+| READY, WAITING_RESOURCE, PAUSED, RUNNING, VERIFYING, PAUSE_REQUESTED | `cancel` → CANCEL_REQUESTED | operator | control_authorized | freeze_dispatch, request_safe_stop |
+| CANCEL_REQUESTED | `cancel_confirmed` → CANCELLED | engine | cancellation_complete, children_quiescent | freeze_dispatch |
+| CANCEL_REQUESTED, PAUSE_REQUESTED | `completion_won_race` → SUCCEEDED | engine | all_tasks_succeeded, children_quiescent, datasets_committed | freeze_dispatch |
+| READY, WAITING_RESOURCE, PAUSED | `authorization_lost` → PAUSED | engine | authorization_invalid, children_quiescent | freeze_dispatch |
+| RUNNING, VERIFYING, PAUSE_REQUESTED | `authorization_lost` → PAUSE_REQUESTED | engine | authorization_invalid | freeze_dispatch |
+| READY, WAITING_RESOURCE, RUNNING, VERIFYING, PAUSE_REQUESTED, PAUSED, CANCEL_REQUESTED | `uncertain` → UNKNOWN | engine | outcome_uncertain | freeze_dispatch, quarantine_resources |
+| UNKNOWN | `begin_reconciliation` → NEEDS_RECONCILIATION | reconciler | dispatch_disabled | freeze_dispatch, quarantine_resources |
+| NEEDS_RECONCILIATION | `reconciled_pause` → PAUSED | reconciler | children_quiescent, reconciliation_complete | freeze_dispatch |
+| NEEDS_RECONCILIATION | `reconciled_success` → VERIFYING | reconciler | all_tasks_succeeded, children_quiescent, reconciliation_complete | freeze_dispatch |
+| NEEDS_RECONCILIATION | `reconciled_failure` → FAILED | reconciler | children_quiescent, failure_confirmed, reconciliation_complete | freeze_dispatch |
+| NEEDS_RECONCILIATION | `reconciled_cancel` → CANCELLED | reconciler | cancellation_complete, children_quiescent, reconciliation_complete | freeze_dispatch |
+
+### TaskState
+
+状态：`PENDING`、`READY`、`WAITING_RESOURCE`、`DISPATCHED`、`RUNNING`、`VERIFYING`、`CANCEL_REQUESTED`、`SUCCEEDED`、`FAILED`、`CANCELLED`、`SKIPPED`、`UNKNOWN`、`NEEDS_RECONCILIATION`
+
+| 起始状态 | 事件 → 目标 | 主体 | 必需证据事实 | effects |
+|---|---|---|---|---|
+| PENDING | `dependencies_succeeded` → READY | engine | dependencies_succeeded | — |
+| READY | `resources_unavailable` → WAITING_RESOURCE | engine | resources_busy | — |
+| WAITING_RESOURCE | `resources_acquired` → READY | engine | lease_valid | — |
+| READY | `dispatch` → DISPATCHED | engine | authorization_valid, command_prepared, lease_valid, preconditions_fresh, run_dispatch_allowed | — |
+| DISPATCHED | `execution_started` → RUNNING | engine | command_running | — |
+| DISPATCHED, RUNNING, CANCEL_REQUESTED | `execution_finished` → VERIFYING | engine | command_succeeded | — |
+| VERIFYING | `complete` → SUCCEEDED | engine | command_succeeded, datasets_committed, success_verified | — |
+| PENDING, READY, WAITING_RESOURCE | `cancel` → CANCELLED | engine | no_dispatch, run_cancel_requested | freeze_dispatch |
+| DISPATCHED, RUNNING, VERIFYING | `cancel` → CANCEL_REQUESTED | engine | run_cancel_requested | freeze_dispatch, request_safe_stop |
+| CANCEL_REQUESTED | `cancel_confirmed` → CANCELLED | engine | command_cancelled, device_quiescent | freeze_dispatch |
+| PENDING, READY, WAITING_RESOURCE | `skip` → SKIPPED | engine | dependency_failed, no_dispatch | freeze_dispatch |
+| PENDING, READY, WAITING_RESOURCE | `validation_failed` → FAILED | engine | failure_confirmed, no_dispatch | freeze_dispatch |
+| DISPATCHED, RUNNING, VERIFYING, CANCEL_REQUESTED | `fail` → FAILED | engine | command_failed, device_quiescent | freeze_dispatch |
+| DISPATCHED, RUNNING, VERIFYING, CANCEL_REQUESTED | `uncertain` → UNKNOWN | engine | outcome_uncertain | freeze_dispatch, quarantine_resources |
+| UNKNOWN | `begin_reconciliation` → NEEDS_RECONCILIATION | reconciler | dispatch_disabled | freeze_dispatch, quarantine_resources |
+| NEEDS_RECONCILIATION | `reconciled_success` → VERIFYING | reconciler | command_succeeded, reconciliation_complete | freeze_dispatch |
+| NEEDS_RECONCILIATION | `reconciled_running` → RUNNING | reconciler | authorization_valid, command_running, lease_valid, preconditions_fresh, reconciliation_complete | freeze_dispatch |
+| NEEDS_RECONCILIATION | `reconciled_failure` → FAILED | reconciler | command_failed, device_quiescent, reconciliation_complete | freeze_dispatch |
+| NEEDS_RECONCILIATION | `reconciled_cancel` → CANCELLED | reconciler | command_cancelled, device_quiescent, reconciliation_complete | freeze_dispatch |
+| VERIFYING | `verification_failed` → FAILED | engine | command_terminal, device_quiescent, failure_confirmed | freeze_dispatch |
+
+### CommandState
+
+状态：`NOT_DISPATCHED`、`DISPATCHED`、`ACCEPTED`、`RUNNING`、`VERIFYING`、`CANCEL_REQUESTED`、`SUCCEEDED`、`FAILED_CONFIRMED`、`REJECTED_BEFORE_EXECUTE`、`CANCELLED`、`UNKNOWN`、`NEEDS_RECONCILIATION`
+
+| 起始状态 | 事件 → 目标 | 主体 | 必需证据事实 | effects |
+|---|---|---|---|---|
+| NOT_DISPATCHED | `dispatch` → DISPATCHED | engine | authorization_valid, journal_prepared, lease_valid, preconditions_fresh, run_dispatch_allowed | — |
+| NOT_DISPATCHED | `cancel` → CANCELLED | engine | cancellation_authorized, no_dispatch | freeze_dispatch |
+| DISPATCHED | `accepted` → ACCEPTED | gateway | gateway_authenticated, journal_accepted | — |
+| DISPATCHED, ACCEPTED | `execution_started` → RUNNING | gateway | gateway_authenticated, journal_running | — |
+| DISPATCHED, ACCEPTED, RUNNING, CANCEL_REQUESTED | `execution_finished` → VERIFYING | gateway | execution_finished, gateway_authenticated | — |
+| VERIFYING | `complete` → SUCCEEDED | gateway | datasets_committed, gateway_authenticated, result_durable, success_verified | — |
+| NOT_DISPATCHED, DISPATCHED, ACCEPTED | `reject` → REJECTED_BEFORE_EXECUTE | gateway | gateway_authenticated, never_executed | freeze_dispatch |
+| DISPATCHED, ACCEPTED, RUNNING, VERIFYING, CANCEL_REQUESTED | `fail` → FAILED_CONFIRMED | gateway | device_quiescent, failure_confirmed, gateway_authenticated, result_durable | freeze_dispatch |
+| DISPATCHED, ACCEPTED, RUNNING, VERIFYING | `cancel` → CANCEL_REQUESTED | engine | cancellation_authorized | freeze_dispatch, request_safe_stop |
+| CANCEL_REQUESTED | `cancel_confirmed` → CANCELLED | gateway | device_quiescent, gateway_authenticated, result_durable, safe_stop_confirmed | freeze_dispatch |
+| DISPATCHED, ACCEPTED, RUNNING, VERIFYING, CANCEL_REQUESTED | `uncertain` → UNKNOWN | engine, gateway | outcome_uncertain | freeze_dispatch, quarantine_resources |
+| UNKNOWN | `begin_reconciliation` → NEEDS_RECONCILIATION | reconciler | dispatch_disabled | freeze_dispatch, quarantine_resources |
+| NEEDS_RECONCILIATION | `reconciled_success` → VERIFYING | reconciler | execution_finished, reconciliation_complete | freeze_dispatch |
+| NEEDS_RECONCILIATION | `reconciled_running` → RUNNING | reconciler | authorization_valid, execution_active, lease_valid, preconditions_fresh, reconciliation_complete | freeze_dispatch |
+| NEEDS_RECONCILIATION | `reconciled_failure` → FAILED_CONFIRMED | reconciler | device_quiescent, failure_confirmed, reconciliation_complete, result_durable | freeze_dispatch |
+| NEEDS_RECONCILIATION | `reconciled_cancel` → CANCELLED | reconciler | device_quiescent, reconciliation_complete, result_durable, safe_stop_confirmed | freeze_dispatch |
+| NEEDS_RECONCILIATION | `reconciled_not_executed` → REJECTED_BEFORE_EXECUTE | reconciler | never_executed, reconciliation_complete | freeze_dispatch |
+| NEEDS_RECONCILIATION | `request_recovery_stop` → CANCEL_REQUESTED | reconciler | execution_active, reconciliation_complete, recovery_stop_authorized | freeze_dispatch, request_safe_stop |
+
+### ApprovalState
+
+状态：`PENDING`、`APPROVED`、`REJECTED`、`EXPIRED`、`REVOKED`、`SUPERSEDED`
+
+| 起始状态 | 事件 → 目标 | 主体 | 必需证据事实 | effects |
+|---|---|---|---|---|
+| PENDING | `approve` → APPROVED | approver | approval_authorized, approval_window_valid, plan_current | — |
+| PENDING | `reject` → REJECTED | approver | approval_authorized | — |
+| PENDING, APPROVED | `expire` → EXPIRED | timer | expiry_reached | freeze_dispatch, invalidate_authorization |
+| APPROVED | `revoke` → REVOKED | approver | approval_authorized | freeze_dispatch, invalidate_authorization |
+| PENDING, APPROVED | `supersede` → SUPERSEDED | engine | plan_changed | freeze_dispatch, invalidate_authorization |
+
+### LeaseState
+
+状态：`ACTIVE`、`RELEASE_PENDING`、`RELEASED`、`EXPIRED`、`REVOKED`
+
+| 起始状态 | 事件 → 目标 | 主体 | 必需证据事实 | effects |
+|---|---|---|---|---|
+| ACTIVE | `request_release` → RELEASE_PENDING | engine | dispatch_disabled | freeze_dispatch |
+| RELEASE_PENDING | `release` → RELEASED | engine | device_quiescent, no_inflight_commands | — |
+| ACTIVE, RELEASE_PENDING | `expire` → EXPIRED | timer | expiry_reached | freeze_dispatch, quarantine_resources |
+| ACTIVE, RELEASE_PENDING | `revoke` → REVOKED | operator | control_authorized | freeze_dispatch, quarantine_resources |
+| ACTIVE | `renew` → ACTIVE | engine | authorization_valid, epoch_current, renewal_before_expiry, renewal_window_valid | — |
+
+### DatasetState
+
+状态：`STAGING`、`VALIDATING`、`COMMITTED`、`CORRUPT`
+
+| 起始状态 | 事件 → 目标 | 主体 | 必需证据事实 | effects |
+|---|---|---|---|---|
+| STAGING | `upload_complete` → VALIDATING | data_service | upload_complete | — |
+| VALIDATING | `commit` → COMMITTED | data_service | artifact_durable, checksum_verified, manifest_valid, metadata_prepared | — |
+| STAGING, VALIDATING, COMMITTED | `corruption_found` → CORRUPT | data_service | corruption_verified | revoke_data_access |
+
+<!-- END GENERATED TRANSITIONS -->
+
+## 8. D02 验收范围
+
+`tests/test_lifecycle.py` 验证成功路径、取消/完成竞态、UNKNOWN 不重放、证据串用/过期、版本冲突、资源隔离、审批撤销、数据损坏、终态不可重开和状态可达性。契约测试核对状态枚举与 API 一致。数据库并发、身份认证、真实时序和设备执行尚待后续期验证，本期不宣称通过这些集成场景。
+
+---
+
+<!-- 来源: docs/22_PERSISTENCE_TRANSACTIONS.md -->
+
+# 22 · D02 PostgreSQL 数据与事务设计
+
+状态：D02 迁移实施基线；本期不创建数据库、不执行迁移，不以 SQLite/内存模拟代替 PostgreSQL。D03 首先实现本章所列基础表和应用用例，D04/D05 继续添加执行与数据表。
+
+## 1. 约束与事务选择
+
+以 PostgreSQL 为唯一业务状态权威。默认短写事务采用 READ COMMITTED + 明确行锁和唯一约束；多查询一致性快照使用只读 REPEATABLE READ。需要更强隔离的复杂操作按实测采用 SERIALIZABLE，并在无外部副作用的边界重试整个事务；不能重试已经发往设备的动作。[PostgreSQL 事务隔离](https://www.postgresql.org/docs/18/transaction-iso.html)
+
+锁顺序统一：控制代际行（正常操作 FOR SHARE，恢复操作 FOR UPDATE）→ experiment ID 排序 → approval ID 排序 → resource_control ID 排序 → lease ID 排序 → run ID 排序 → task ID 排序 → command ID 排序 → dataset ID 排序。只取需要的锁，但不得反向补锁。任何操作先确定父对象再锁；资源所有者变化时回滚重读，不在持锁后临时修改另一实验。[PostgreSQL 显式锁](https://www.postgresql.org/docs/18/explicit-locking.html)
+
+所有实验状态写都锁 experiment 行，序列号与状态一起提交；首期接受每实验串行写的开销。网络调用、LLM、采样、文件上传、NATS 发布均在事务之外。事务冲突/死锁允许有界重试数据库工作；命令发送严格另走持久发放协议。
+
+主键、唯一约束、NOT NULL 与复合外键保护身份和所属关系；CHECK 只验证本行可确定不变量，不能用跨表查询或 now() 的动态结果保证有效租约。[PostgreSQL 约束](https://www.postgresql.org/docs/18/ddl-constraints.html)
+
+## 2. 表与约束蓝图
+
+共同约定：ID 用不透明文本/UUID；时间 TIMESTAMPTZ，UTC 输出；hash 为 64 位小写十六进制文本；state_version BIGINT ≥ 0；状态值来自生命周期契约。JSONB 保存结构快照，不用它替代关键外键。表和字段最终 SQL 在 D03–D05 的迁移中落地。
+
+| 表 | 主要字段/键 | 必须成立的不变量 | 实施期 |
+|---|---|---|---|
+| principals | id PK、issuer、external_subject、kind、disabled_at | UNIQUE(issuer,external_subject)，无明文 API Key；用户与服务均有身份 | D03 |
+| samples | id PK、owner_id FK、metadata、version | 实验只能引用有权限的样品，历史引用不级联删除 | D03 |
+| experiments | id PK、owner_id FK、sample_id FK、revision、event_cursor、state | revision/event_cursor ≥ 0，所有关联写共用此锁 | D03 |
+| experiment_memberships | experiment_id/actor_id 复合 PK、role、scope、version | 成员撤销不删除历史审计；资源级授权由应用验证 | D03 |
+| plan_revisions | id PK、experiment_id FK、revision、snapshot_version、canonical_bytes、plan_json、plan_hash、created_by | UNIQUE(experiment_id,revision)，UNIQUE(experiment_id,id)；内容不可 UPDATE，canonical_bytes 为 hash 原文 | D03 |
+| approvals | id PK、experiment_id、plan_revision_id、plan_hash、scope_json、binding_hash、state、state_version、requested_by、decided_by、expires_at | 复合 FK 到同实验计划；授权内容/期限不变，状态按表转换，批准人 FK；审批日志追加写 | D03 |
+| idempotency_records | actor_id、operation、scope_id、key 复合唯一，request_hash、response_json、status、expires_at | 同 key 不同请求 409；副作用结果与业务同事务，重试不创建第二个 Run | D03 |
+| runs | id PK、experiment_id、plan_revision_id、approval_id、state、state_version、dispatch_blocked、binding_hash、created_by | 复合 FK 保证计划与审批属于同实验；启动时校验同计划 hash；固定执行定义 | D03 |
+| tasks | id PK、experiment_id、run_id、plan_task_id、attempt_no、state、state_version、binding_hash | UNIQUE(run_id,plan_task_id,attempt_no)；父 Run 的复合外键；失败不复写旧 attempt | D04 |
+| task_dependencies | run_id、task_id、depends_on_id 复合 PK | 两端都属于同 Run；禁止 self-edge；无环由领域验证+不可变计划保证 | D04 |
+| gateways / instruments | gateway id、身份引用；instrument id、gateway_id、physical_resource_key、版本、读回元数据 | physical_resource_key 唯一，不能以别名绕过单写者；迁移归属需受控处理 | D04 |
+| control_generation | singleton key、epoch UUID、mode、version | 单一当前代际，mode=ACTIVE/RECOVERING；恢复锁防并发发放 | D04 |
+| resource_controls | instrument_id PK/FK、epoch、last_fencing_token、quarantined、reason、reconciliation_ref | token 单调，隔离与租约失效分离；重置须换 epoch 且所有 Gateway 对账 | D04 |
+| leases | id PK、resource_id、holder_run_id、epoch、token、expires_at、scope_hash、state、state_version | UNIQUE(resource_id,epoch,token)，同 owner/token 范围固定；续租只延长期限与版本 | D04 |
+| resource_claims | resource_id PK、lease_id UNIQUE、holder_run_id | 每设备最多一个当前 claim；和 lease/resource_control 同事务创建/移除 | D04 |
+| command_ledger | command_id PK、experiment_id、run_id、task_id、attempt_no、payload_bytes、payload_hash、instrument_id、lease_id、epoch、token、state、state_version | 复合 FK 固定所属；载荷永久不变；同 command_id 不同 hash 拒绝 | D04 |
+| command_deliveries | command_id UNIQUE FK、status、claimed_by、claimed_until、delivery_attempt_id | 待发送与台账同事务建立；DISPATCHED 后不能自动回到待发送队列 | D04 |
+| stop_requests | request_id PK、command_id、actor_id、reason、state、dedup_key | 独立高优先级受控停止通道；重复请求不重发普通实验动作 | D04 |
+| evidence_records | evidence_id PK、kind/id/version/hash、fact、原始来源引用、valid_from/until、verified_by、verified_at | 证据追加写；包含设备 observed_at 等原始时序；校验主体不能由请求自填 | D03 基础/D04 执行 |
+| transition_audit | id PK、对象 kind/id、from/to、old/new_version、event、actor、evidence_ids、effects、trace_id | UNIQUE(kind,id,new_version)，不可任意改写或覆盖 | D03 |
+| outbox_events | event_id PK、experiment_id、experiment_seq、aggregate_type/id/seq、event_type、payload、published_at | UNIQUE(experiment_id,experiment_seq)，UNIQUE(aggregate_type,aggregate_id,aggregate_seq) | D03 |
+| consumer_inbox | consumer_id/event_id 复合 PK、payload_hash、applied_at | 消费效果与去重记录同事务；同 ID 不同载荷标记冲突 | D05 |
+| gateway_receipts | gateway_id/epoch/receipt_seq 唯一、command_id、payload_hash、raw_ref、received_at | 重复幂等；旧/乱序回执不回退状态；字段与身份映射核验 | D04 |
+| datasets | id PK、experiment_id/run_id/task_id/command_id、state、state_version、storage_key、manifest_json、checksum、binding_hash、acquired_from/to | 血缘复合 FK；STAGING 可无完整 Manifest；COMMITTED 必须完整且验证，损坏不覆盖原文件 | D05 |
+| provenance_edges | source/target 类型与 ID、relation、algorithm_version、parameters_hash | 关系可追踪，访问由关联实验权限过滤；文件发布与正式血缘记录同事务 | D05 |
+
+基础角色与权限细化在 D09 接身份系统；D03 使用显式测试身份并保留同一授权端口，不提供匿名管理员默认权限。Agent/Model/Skill/MCP 表在 D06–D09 增量设计，不为未实现模块预建自由 JSON 垃圾桶。
+
+## 3. 创建与不可变性
+
+plan_revisions 的 canonical_bytes 保留完整原始规范编码，不能从 JSONB 重序列化后宣称得到同一 hash；JSON 数字表示变化可能影响摘要。schema_version、模型来源、策略/能力版本进入固定快照。D03 用仓储限制与数据库更新防护约束不可变列；每次变更新建 revision。
+
+Approval 的资源/动作/参数/期限一旦创建不修改；审批动作只改变状态、决定者和 state_version。Lease 的持有者、epoch、token 不变；续租允许在批准上限内更新 expires_at。Dataset 初期 staging metadata 与正式 Manifest 分开；完整性损坏改变发布状态并追加事故记录，保留原始 manifest/file 证据。
+
+## 4. 核心事务时序
+
+### TX-01 创建实验与幂等响应
+
+验证身份/样品范围 → 插入按 actor+operation+scope 隔离的幂等记录（并发由唯一约束协调）→ 写 Experiment → 分配首个 experiment_seq → 写 outbox/审计及响应 → 提交。冲突请求读取已提交响应；请求 hash 不同返回 409。唯一约束冲突回滚后在新事务读取结果，不在已失败事务里继续查询。
+
+### TX-02 审批与启动
+
+锁 Experiment 与 Approval → 核验 If-Match 对应实验 revision、精确计划/hash、scope、期限、审批主体 → 领域状态转换 → 写 state_version、证据/审计与 outbox → revision/cursor 递增 → 提交。
+
+启动另一个事务锁定相同父对象，重新验证当前 Approval/Plan；创建 Run READY 与任务身份，保存启动幂等响应。审批成功不自动启动。过期判断每次读取权限时主动执行，不能等待定时任务先把 APPROVED 改成 EXPIRED 才停止授权。
+
+### TX-03 领取资源与准备命令
+
+读取完整资源集合 → 按统一顺序取得锁 → 检查 epoch=ACTIVE、全部资源无隔离/有效他人 claim、审批有效、真实状态新鲜 → 原子创建全部 leases/claims、递增资源 token → 写 Command NOT_DISPATCHED、固定载荷及 delivery 意图 → 提交。不具备全套资源则回滚，本事务不保留部分 claim；等待/退避用新的短事务记录。
+
+不在某实验的领取事务中抢先清理另一个实验的过期租约。后者的过期/隔离由其所属实验事务处理。新领取依然检查 expires_at 和 quarantine，即便定时清理尚未执行也不能凭“时间到了”直接接管。
+
+### TX-04 发放与 Gateway 接收
+
+中央发送 worker 按第 1 节统一顺序锁定代际、Experiment、Approval、资源、Lease、Run、Task、Command，重新检查发放门、有效租约与期限 → Command 标 DISPATCHED，delivery 标已尝试、Task 进入 DISPATCHED，写 outbox → 提交 → 发出网络请求。提交后进程崩溃即便可能尚未发包也进入 UNKNOWN 对账，不能盲目重新出队；这用可用性换取避免重复动作。
+
+Gateway 独立持久 journal：认证/限幅/epoch/fencing/幂等 → ACCEPTED 落盘 → RUNNING 写前落盘 → 执行 → VERIFYING/结果落盘。相同 ID/hash 返回已有状态；不同 hash 拒绝。网关重启见非终态记录先对账，不能把重复网络请求转成再次执行。中央 receipt 导入核验原始来源，再基于当前 state_version 构建证据；晚到 ACCEPTED 不可回退已 RUNNING/UNKNOWN 状态。
+
+### TX-05 状态转换、停止与授权撤销
+
+在同一事务更新对象 version、所有 effects、父级聚合、evidence/audit/outbox；例如 UNKNOWN 必须同时关闭 Run 调度并隔离资源。停止请求通过独立队列提交后发送，不在 DB 锁内等待设备响应。已发送请求只显示 CANCEL_REQUESTED，停止确认前不得释放资源。
+
+撤销或到期阻止新的发放许可，并根据设备策略处理已经提交的有限命令。DB 与硬件之间不存在原子撤销：发放事务先于撤销提交的命令可能已被接收或在途，需要 token/许可期限及明确停止协议，不承诺点击撤销瞬间消除物理副作用。Gateway 在每个新命令边界重核有效性；原有有限步骤按批准的失联/停止策略完成或终止。
+
+### TX-06 事件发布与消费
+
+业务事务锁 Experiment，更新状态、revision、event_cursor，同事务 outbox 存 experiment_seq。使用事务性计数器而非 PostgreSQL sequence 保证“已提交实验流”的游标语义。不同实验之间不要求顺序。
+
+发布器用短事务领取 outbox 工作（SKIP LOCKED 只用于队列，不用于分配同一仪器的独占 claim），释放锁后发 NATS；ack 后标记 published。ack 后崩溃会重投，但不能再次执行 Command。消费者依据 event_id 去重，inbox 与本地消费效果同事务提交；跨库消费者各自维护 inbox。NATS 到达顺序不作物理执行依据。
+
+### TX-07 快照与数据提交
+
+UI 快照在同一只读 REPEATABLE READ 事务中取实验相关状态及 event_cursor；事务结束后从该 cursor 读取持久事件。超过保留期明确要求完整重同步；新订阅需检查当前权限。
+
+文件持久写与校验在 DB 事务外完成；选用不可覆盖的 storage_key → 将真实存储确认/校验和作为证据 → 锁定 Dataset/Experiment，在短事务写完整 Manifest/血缘、状态 COMMITTED 和 outbox。DB 失败保留 staging 对象并重核，不重复采集；孤儿文件仅在保留窗口后依据引用和审计清理。状态变 COMMITTED 前任何正式分析/下载入口都拒绝发布。
+
+### TX-08 对账、隔离清除与代际恢复
+
+单资源隔离清除要求：原命令全有确认结果、无在途停止请求、设备符合交接条件、旧 holder 已失效、当前 epoch/身份一致，证据和责任主体齐备；同事务移除旧 claim、记录对账及清除 quarantine。原 EXPIRED/REVOKED Lease 终态保持不变。
+
+数据库恢复先将控制代际置 RECOVERING，暂停一切新发放；联系每个注册 Gateway 收集持久最大 token、命令与实际状态。新 epoch 只通过独立受认证握手绑定，不由普通命令切换。不在线/未完成对账的 Gateway 与设备保持隔离。确认后启用新 epoch、新租约，恢复出站；旧 epoch 命令永久拒绝。此协议在 D04 故障测试实现。
+
+## 5. 迁移顺序与 D03 计划
+
+| 批次 | 建议迁移 | 验证与回退要求 |
+|---|---|---|
+| D03-001 | principals、samples、experiments、memberships | 空库升级；FK/权限测试身份；隔离测试数据库，不连接生产 |
+| D03-002 | plan_revisions、approvals、runs、idempotency | 不可变列、跨实验外键、审批期限、重复请求和版本冲突 |
+| D03-003 | evidence_records、transition_audit、outbox | 状态/证据/effects/游标同事务回滚；重复事件不重复写 |
+| D04-001 | instruments/gateways、代际、资源/租约、tasks/commands/journal 关联 | 两连接并发领取、epoch 恢复、发放后宕机不重放 |
+| D05-001 | datasets、provenance、consumer_inbox | 半上传、hash 不符、commit 中断、重投/乱序 |
+
+D03 将选定并锁版本的迁移工具与驱动接入真实 PostgreSQL，CI 使用隔离数据库。空库 up/down/up 可作为开发迁移检查；含真实实验审计的生产库不得用破坏性 down 脚本回滚，采用前向修复、备份与经审阅的数据迁移。不得添加“清空数据库重建”作为默认启动行为。
+
+## 6. 后续集成故障用例（本期未执行）
+
+DB-01：两个连接使用同一幂等键/不同载荷；相同请求只产生一个对象，冲突返回 409。
+DB-02：审批修改/过期与启动并发；持锁后核验，失效许可不能产生新的发放授权。
+DB-03：两个 Run 竞争重叠资源，至多一个 holder，不部分占有、不死锁后重复动作。
+DB-04：状态已写而 outbox 前崩溃；整个事务回滚，无半提交状态。
+DB-05：DISPATCHED 提交后发包前宕机；重启进入 UNKNOWN，不自动发送。
+DB-06：设备执行后 ACK 丢失，重连回执乱序；不重复物理动作、不回退终态。
+DB-07：租约过期但设备仍工作；资源保持隔离，不能交给新 Run。
+DB-08：pause/cancel 与完成并发；显示真实结果，所有子项可核对后才 Run 终态。
+DB-09：数据文件已存而 DB 提交失败；无正式 Dataset，恢复不重新测量。
+DB-10：outbox 已发布未标记，消费者重投；inbox 与效果原子且不重复计费/动作。
+DB-11：DB 备份恢复 token 回退；旧 epoch 拒绝，未握手设备不启用。
+DB-12：UI 快照读取间发生事务提交；状态与游标来自同一快照，续订不静默丢事件。

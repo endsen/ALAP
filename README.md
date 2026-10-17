@@ -2,15 +2,17 @@
 
 面向实验室的专用 Agent 平台：通过多供应商 API 接入 LLM，由 Planner、Instrument、Analysis Agent 规划和分析实验，由确定性引擎及 Gateway 执行已授权任务。
 
-**当前完成的是 v3.1 企划修订及第一批契约/领域基础代码。尚无运行中的 Web、API、Agent Runtime、数据库或设备服务。** 各层实际进度见 [实施状态](IMPLEMENTATION_STATUS.md)。
+**当前完成的是 v3.1 企划修订及D02 状态领域内核及持久化事务设计。尚无运行中的 Web、API、Agent Runtime、数据库或设备服务。** 各层实际进度见 [实施状态](IMPLEMENTATION_STATUS.md)。
 
 ## 文档入口
 
-- [v3.1 完整企划](ALAP_Engineering_Design_v3.1_完整合订本.md)：由 `docs/01–20` 生成。
+- [v3.1 完整企划](ALAP_Engineering_Design_v3.1_完整合订本.md)：由 `docs/01–22` 生成。
 - [平台控制台与页面](docs/17_AGENT_CONSOLE.md)：Skills、MCP、仪表板、模型、用量、轨迹与知识。
 - [LLM API 接入](docs/18_LLM_INTEGRATION.md)：首批 OpenAI/DeepSeek，多协议适配、凭据与能力。
 - [领域与契约决策](docs/19_CONTRACT_DECISIONS.md)：计划、条件、来源、事件游标及恢复边界。
 - [分层交付计划](docs/20_DELIVERY_PLAN.md)：P0–P7 依赖与质量门禁。
+- [完整状态机](docs/21_STATE_MACHINES.md)：六类对象、证据守卫、失败语义及可执行规则。
+- [持久化事务设计](docs/22_PERSISTENCE_TRANSACTIONS.md)：表约束、锁顺序、事务、迁移批次与故障验收。
 - [企划评审](PROJECT_REVIEW.md)：保留原始发现，附本轮问题处理状态。
 
 原始 v3.0 合订本与 ZIP 保持不变，作为历史输入。v3.1 代表开发基线，不代表现场安全批准。
@@ -26,11 +28,12 @@ python3 -m venv .venv
 .venv/bin/python scripts/check.py
 ```
 
-检查包括 Ruff、文档生成漂移、OpenAPI 生成漂移、9 份 JSON Schema 及实例、完整 OpenAPI 规范、领域/契约测试、依赖一致性。全套检查不调用外部模型、不连接仪器或数据库。`requirements-contracts.txt` 保留最早 v3.0 校验依赖；当前开发环境以 `requirements-dev.lock` 为准。
+检查包括 Ruff、状态转换参考表漂移、文档生成漂移、OpenAPI 生成漂移、10 份 JSON Schema 及实例、完整 OpenAPI 规范、领域/契约测试、依赖一致性。全套检查不调用外部模型、不连接仪器或数据库。`requirements-contracts.txt` 保留最早 v3.0 校验依赖；当前开发环境以 `requirements-dev.lock` 为准。
 
 编辑 `docs/` 或契约源后更新生成文件：
 
 ```bash
+.venv/bin/python scripts/build_lifecycle_reference.py
 .venv/bin/python scripts/build_design.py
 .venv/bin/python scripts/build_openapi.py
 ```
@@ -49,7 +52,7 @@ src/alap/domain/            无网络/数据库/框架依赖的领域规则
 src/alap/contracts.py      离线 Schema 校验与领域规则入口
 scripts/                    生成与统一质量检查
 tests/                      契约、领域及跨接口一致性测试
-.github/workflows/          待接入远程仓库执行的 CI 配置
+.github/workflows/          GitHub CI 配置（初始提交已通过）
 ```
 
 后续按依赖增加 application、持久化/消息/模型/MCP 适配器、FastAPI/worker/Gateway 入口，以及 `apps/web`、`infra`。计划路径不提前伪装为可运行组件。

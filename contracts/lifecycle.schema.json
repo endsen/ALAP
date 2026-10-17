@@ -1,0 +1,223 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alap.invalid/contracts/lifecycle.schema.json",
+  "title": "ALAP lifecycle record v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "subject_id",
+    "state",
+    "version",
+    "binding_hash"
+  ],
+  "properties": {
+    "kind": {
+      "enum": [
+        "run",
+        "task",
+        "command",
+        "approval",
+        "lease",
+        "dataset"
+      ]
+    },
+    "subject_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "state": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "binding_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "$defs": {
+    "RunState": {
+      "type": "string",
+      "enum": [
+        "READY",
+        "WAITING_RESOURCE",
+        "RUNNING",
+        "VERIFYING",
+        "PAUSE_REQUESTED",
+        "PAUSED",
+        "CANCEL_REQUESTED",
+        "SUCCEEDED",
+        "FAILED",
+        "CANCELLED",
+        "UNKNOWN",
+        "NEEDS_RECONCILIATION"
+      ]
+    },
+    "TaskState": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "READY",
+        "WAITING_RESOURCE",
+        "DISPATCHED",
+        "RUNNING",
+        "VERIFYING",
+        "CANCEL_REQUESTED",
+        "SUCCEEDED",
+        "FAILED",
+        "CANCELLED",
+        "SKIPPED",
+        "UNKNOWN",
+        "NEEDS_RECONCILIATION"
+      ]
+    },
+    "CommandState": {
+      "type": "string",
+      "enum": [
+        "NOT_DISPATCHED",
+        "DISPATCHED",
+        "ACCEPTED",
+        "RUNNING",
+        "VERIFYING",
+        "CANCEL_REQUESTED",
+        "SUCCEEDED",
+        "FAILED_CONFIRMED",
+        "REJECTED_BEFORE_EXECUTE",
+        "CANCELLED",
+        "UNKNOWN",
+        "NEEDS_RECONCILIATION"
+      ]
+    },
+    "ApprovalState": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "APPROVED",
+        "REJECTED",
+        "EXPIRED",
+        "REVOKED",
+        "SUPERSEDED"
+      ]
+    },
+    "LeaseState": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "RELEASE_PENDING",
+        "RELEASED",
+        "EXPIRED",
+        "REVOKED"
+      ]
+    },
+    "DatasetState": {
+      "type": "string",
+      "enum": [
+        "STAGING",
+        "VALIDATING",
+        "COMMITTED",
+        "CORRUPT"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "run"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "state": {
+            "$ref": "#/$defs/RunState"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "task"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "state": {
+            "$ref": "#/$defs/TaskState"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "command"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "state": {
+            "$ref": "#/$defs/CommandState"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "approval"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "state": {
+            "$ref": "#/$defs/ApprovalState"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "lease"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "state": {
+            "$ref": "#/$defs/LeaseState"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "dataset"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "state": {
+            "$ref": "#/$defs/DatasetState"
+          }
+        }
+      }
+    }
+  ]
+}

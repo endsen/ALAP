@@ -48,3 +48,15 @@
 | FR-029 | 17 页面与权限 | P4/P5 | EVAL-18/24 |
 
 上述是规划追踪，不代表用例已执行。当前基础层代码与测试见根目录 IMPLEMENTATION_STATUS.md。
+
+## D02 已执行与后续验证
+
+| 需求范围 | 已落地证据 | 尚未验证 |
+|---|---|---|
+| FR-004 审批版本绑定 | lifecycle 的审批状态、证据 hash/版本/期限测试 | 数据库权限、计划不可变性、撤销并发（D03） |
+| FR-009 命令执行 | tests/test_lifecycle.py：ACK 不代表成功、UNKNOWN 隔离、原命令不重放、取消竞争 | Gateway journal、实际 fencing 与故障恢复（D04） |
+| FR-011 数据发布 | 提交证据守卫、损坏后撤回状态；共享状态 Schema | 文件持久化与数据库提交中断（D05） |
+| FR-012 事件恢复 | 第 22 章锁顺序、outbox/游标/快照事务方案 | 真实事务、消息重复与 SSE 恢复（D03/D05/D09） |
+| 跨接口一致性 | tests/test_contract_consistency.py：六种枚举与共享 Schema、OpenAPI 引用一致 | 实际 API 行为（D09） |
+
+D02 完整本地检查输出保存在 reports/d02-validation.txt；不等价于集成/现场 EVAL 通过。
