@@ -5,10 +5,10 @@
 ## 分期交接入口
 
 - 分期计划：`docs/20_DELIVERY_PLAN.md` 的 D01–D13；P0–P7 为技术层次，D 编号为分批交付单位。
-- 当前：**D04 已完成本地交付与真实 PostgreSQL / 离线模拟网关验收**。D03/D04 代码尚未提交/推送；本期远程 CI 未运行。
+- 当前：**D04 已完成本地交付与真实 PostgreSQL / 离线模拟网关验收**。D03/D04 已以 `d3f064b` 推送至 origin/main；远程 CI 结果见下方最新上传交接。
 - 下一期：**D05 · 数据与事件恢复，尚未开始**。按第 20–22 章补齐 Dataset/血缘、outbox 发布/NATS、暂停取消及停止确认；重点在资源释放和代际恢复时核验停止请求，不将本地 IV 文件视为正式 Dataset。
 - 环境：当前 macOS 工作树 `/Users/endsen/codex/ALAP`，origin 为 endsen/ALAP，main；旧 Linux 上传临时目录仅保留历史记录。
-- D01/D02 的历史提交与远程 CI 已通过，详见下方历史交接；当前 HEAD 为 bfe1178，D03/D04 改动在工作区。
+- D01/D02 的历史提交与远程 CI 已通过，详见下方历史交接；D03/D04 实现提交为 d3f064b，已推送。
 
 ## D04 本地交付（2026-10-18）
 
@@ -19,7 +19,7 @@
 | 故障与对账 | 本地通过 | ACK 丢失、发送前宕机、实际子进程退出、重启显式对账、乱序/矛盾回执、隔离及恢复代际 |
 | 项目统一检查 | 本地通过 | **202 项测试**、10 份 Schema/实例、OpenAPI、Ruff、生成漂移、pip check |
 
-证据：`reports/d04-validation.txt`；详细实现、命令与限制见 `docs/D04_EXECUTION_DEVELOPMENT.md`。新增 28 项执行集成测试和 16 项稳定窗口测试，连同原 158 项全部通过。环境为 macOS / Python 3.14.8 / PostgreSQL 18.6；远程 CI 和 Windows 未验证。
+证据：`reports/d04-validation.txt`；详细实现、命令与限制见 `docs/D04_EXECUTION_DEVELOPMENT.md`。新增 28 项执行集成测试和 16 项稳定窗口测试，连同原 158 项全部通过。环境为 macOS / Python 3.14.8 / PostgreSQL 18.6；本地验收时远程 CI 尚未运行；后续结果见最新上传交接。Windows 未验证。
 
 中央 PostgreSQL 与近端 journal 分离；离线 HMAC 不代表生产 mTLS。没有常驻 worker/API/Gateway 服务，没有真机或 LLM 操作。IV 本地结果保持 VERIFYING，Dataset 提交、消息发布、完整暂停取消协议待 D05。停止请求目前仅预留表结构。验收后停止本机临时 PostgreSQL，不注册常驻服务。
 
@@ -111,3 +111,11 @@ P0/P1 基础和 P2 的 D03 数据库/审批、D04 模拟执行部分已建立。
 - GitHub workflow 授权已完成；不在项目保存凭据或授权码。
 - 历史上传工作树：`/tmp/alap-github-dliggqw9`，仅记录 D01 旧环境。当前使用已克隆的 macOS 工作树；提交前检查本地与远程状态，不覆盖他人提交。
 - 本次后续提交只更新上传/CI 交接文档，未改变业务代码。此为 D02 开发前的上传记录；当前开发进度以上方交接为准。
+
+## D03/D04 GitHub 上传交接（2026-10-18）
+
+- 实现提交 `d3f064b19f7e9b51e573e5014477de05b46beccf` 已推送至 endsen/ALAP 的 main，包含 38 个文件变更及 D03/D04 验收报告。
+- 该实现提交的远程 Foundation checks 已通过：https://github.com/endsen/ALAP/actions/runs/39052377810 。Linux CI 使用真实 PostgreSQL 18 执行统一检查。
+- 本次交接文档另作后续提交；上面的 CI 结果明确对应实现提交，不冒充后续提交结果。
+- 推送前检查远程无分叉、暂存差异格式及常见凭据模式；未纳入虚拟环境、缓存、临时数据库或 journal 文件。
+- 下一期仍为 D05，尚未开始；Windows 与真机验收未完成。
