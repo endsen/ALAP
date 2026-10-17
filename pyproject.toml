@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools==84.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "alap"
+version = "0.1.0"
+description = "Autonomous Laboratory Agent Platform — domain and contract foundation"
+requires-python = ">=3.14,<3.15"
+dependencies = ["jsonschema==4.26.0", "referencing==0.37.0", "rfc3339-validator==0.1.4"]
+
+[project.optional-dependencies]
+dev = ["PyYAML==6.0.3", "pytest==9.1.1", "ruff==0.17.1", "openapi-spec-validator==0.9.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

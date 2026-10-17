@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alap.invalid/contracts/plan_proposal.schema.json",
+  "title": "ALAP plan_proposal v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "proposal_id",
+    "experiment_id",
+    "source_agent_run_id",
+    "based_on_snapshot_version",
+    "requested_resources",
+    "tasks",
+    "reason",
+    "risk_level",
+    "evidence_dataset_ids"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0"
+    },
+    "proposal_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "experiment_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_agent_run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "based_on_snapshot_version": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "requested_resources": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "$ref": "plan_task.schema.json"
+      },
+      "minItems": 1
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "risk_level": {
+      "enum": [
+        "read_only",
+        "low_risk_write",
+        "operator_review",
+        "high_risk"
+      ]
+    },
+    "evidence_dataset_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    }
+  }
+}

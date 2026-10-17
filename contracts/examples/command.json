@@ -1,0 +1,21 @@
+{
+  "schema_version": "2.0",
+  "command_id": "CMD-001",
+  "experiment_id": "EXP-001",
+  "run_id": "RUN-001",
+  "task_id": "TASK-001",
+  "instrument_id": "keithley-01",
+  "lease_id": "LEASE-001",
+  "fencing_token": 1,
+  "policy_version": "policy-2450-v1",
+  "skill_id": "iv_measurement",
+  "parameters": {
+    "points": 201
+  },
+  "deadline_at": "2026-10-16T08:05:00Z",
+  "issued_at": "2026-10-16T08:00:00Z",
+  "authorized_plan_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "capability_version": "capability-v1",
+  "control_epoch": "87c056bf-a272-4aa1-8e65-e07e901e32c1",
+  "skill_version": "1"
+}

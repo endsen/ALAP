@@ -1,0 +1,29 @@
+{
+  "dataset_id": "DATA-001",
+  "experiment_id": "EXP-001",
+  "run_id": "RUN-001",
+  "task_id": "TASK-001",
+  "instrument_ids": [
+    "keithley-01"
+  ],
+  "acquisition_interval": {
+    "start_utc": "2026-10-16T08:00:00Z",
+    "end_utc": "2026-10-16T08:00:20Z"
+  },
+  "data_format": "hdf5",
+  "storage_uri": "datasets/EXP-001/DATA-001.h5",
+  "checksum_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "unit_map": {
+    "current": "A",
+    "voltage": "V"
+  },
+  "status": "COMMITTED",
+  "schema_version": "2.0",
+  "policy_versions": {
+    "keithley-01": "sim-policy-1"
+  },
+  "capability_versions": {
+    "keithley-01": "sim-capability-1"
+  },
+  "device_snapshot_version": 1
+}

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alap.invalid/contracts/event.schema.json",
+  "title": "ALAP event v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "aggregate_id",
+    "aggregate_seq",
+    "event_type",
+    "schema_version",
+    "occurred_at",
+    "producer",
+    "trace_id",
+    "experiment_id",
+    "payload",
+    "experiment_seq"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "aggregate_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "aggregate_seq": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "event_type": {
+      "type": "string",
+      "pattern": "^[a-z_]+\\.[a-z_]+\\.v[0-9]+$"
+    },
+    "schema_version": {
+      "const": "2.0"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "trace_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "experiment_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "experiment_seq": {
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}

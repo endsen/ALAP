@@ -1,0 +1,15 @@
+{
+  "event_id": "87c056bf-a272-4aa1-8e65-e07e901e32c1",
+  "aggregate_id": "EXP-001",
+  "aggregate_seq": 43,
+  "event_type": "task.started.v1",
+  "schema_version": "2.0",
+  "occurred_at": "2026-10-16T08:00:00Z",
+  "producer": "experiment-engine",
+  "trace_id": "trace-001",
+  "experiment_id": "EXP-001",
+  "payload": {
+    "task_id": "TASK-001"
+  },
+  "experiment_seq": 43
+}

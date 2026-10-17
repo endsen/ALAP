@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alap.invalid/contracts/plan_revision.schema.json",
+  "title": "ALAP plan_revision v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "plan_revision_id",
+    "revision",
+    "proposal",
+    "policy_versions",
+    "capability_versions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0"
+    },
+    "plan_revision_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "proposal": {
+      "$ref": "plan_proposal.schema.json"
+    },
+    "policy_versions": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "capability_versions": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

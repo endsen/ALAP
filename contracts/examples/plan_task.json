@@ -1,0 +1,26 @@
+{
+  "id": "temperature",
+  "kind": "set_temperature",
+  "resource_id": "sim-temp",
+  "required_resources": [
+    "sim-temp"
+  ],
+  "skill_ref": "set_temperature@1",
+  "parameters": {
+    "target_kelvin": 295.0
+  },
+  "depends_on": [],
+  "preconditions": [],
+  "success_condition": {
+    "kind": "stable_window",
+    "resource_id": "sim-temp",
+    "quantity": "temperature",
+    "target": 295.0,
+    "unit": "K",
+    "tolerance": 0.1,
+    "max_slope_per_s": 0.01,
+    "min_duration_s": 5,
+    "max_age_s": 2
+  },
+  "timeout_s": 60
+}

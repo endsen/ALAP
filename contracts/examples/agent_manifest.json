@@ -1,0 +1,21 @@
+{
+  "agent_id": "inst-keithley-01",
+  "version": 1,
+  "kind": "instrument",
+  "model_ref": "model-default",
+  "max_iterations": 12,
+  "max_runtime_seconds": 180,
+  "allowed_tools": [
+    "read_instrument_state",
+    "propose_iv_measurement"
+  ],
+  "scoped_instruments": [
+    "keithley-01"
+  ],
+  "autonomy_level": "L1",
+  "skill_refs": [
+    "iv_measurement@1"
+  ],
+  "context_policy": "experiment_snapshot_only",
+  "schema_version": "2.0"
+}

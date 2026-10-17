@@ -1,0 +1,20 @@
+{
+  "schema_version": "2.0",
+  "instrument_id": "keithley-01",
+  "gateway_id": "labpc-1",
+  "manufacturer": "Keithley",
+  "model": "2450",
+  "driver_version": "1.0",
+  "transport": "gpib",
+  "status_ttl_s": 5,
+  "skills": [
+    {
+      "skill_id": "iv_measurement",
+      "version": "1",
+      "input_schema_ref": "skills/iv-v1",
+      "safety_class": "operator_review"
+    }
+  ],
+  "safety_policy_ref": "policy-2450-v1",
+  "capability_version": "sim-capability-1"
+}

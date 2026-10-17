@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alap.invalid/contracts/capability.schema.json",
+  "title": "ALAP capability v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "instrument_id",
+    "gateway_id",
+    "manufacturer",
+    "model",
+    "driver_version",
+    "transport",
+    "status_ttl_s",
+    "skills",
+    "safety_policy_ref",
+    "capability_version"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0"
+    },
+    "instrument_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "gateway_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "manufacturer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "serial_number": {
+      "type": "string"
+    },
+    "driver_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "firmware_version": {
+      "type": "string"
+    },
+    "transport": {
+      "type": "string",
+      "enum": [
+        "tcp",
+        "gpib",
+        "usb",
+        "serial",
+        "rpc_bridge",
+        "tcp_bridge",
+        "simulator"
+      ]
+    },
+    "status_ttl_s": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 86400
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "skill_id",
+          "version",
+          "input_schema_ref",
+          "safety_class"
+        ],
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "input_schema_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "safety_class": {
+            "type": "string",
+            "enum": [
+              "read_only",
+              "low_risk_write",
+              "operator_review",
+              "high_risk"
+            ]
+          }
+        }
+      }
+    },
+    "safety_policy_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "capability_version": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

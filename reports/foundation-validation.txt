@@ -1,0 +1,24 @@
+
+> python -m ruff check .
+All checks passed!
+
+> python -m ruff format --check .
+40 files already formatted
+
+> python scripts/build_design.py --check
+PASS: combined v3.1 design is current
+
+> python scripts/build_openapi.py --check
+PASS: generated OpenAPI is current
+
+> python contracts/validate_contracts.py
+PASS: 9 schemas/examples and full OpenAPI specification
+
+> python -m pytest -q
+........................................................................ [ 94%]
+....                                                                     [100%]
+76 passed in 0.47s
+
+> python -m pip check
+WARNING: The directory '/home/endsen/.cache/pip' or its parent directory is not owned or is not writable by the current user. The cache has been disabled. Check the permissions and owner of that directory. If executing pip with sudo, you should use sudo's -H flag.
+No broken requirements found.

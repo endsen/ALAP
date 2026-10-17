@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alap.invalid/contracts/stable_condition.schema.json",
+  "title": "ALAP stable_condition v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "resource_id",
+    "quantity",
+    "target",
+    "unit",
+    "tolerance",
+    "max_slope_per_s",
+    "min_duration_s",
+    "max_age_s"
+  ],
+  "properties": {
+    "kind": {
+      "const": "stable_window"
+    },
+    "resource_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "quantity": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target": {
+      "type": "number"
+    },
+    "unit": {
+      "enum": [
+        "K",
+        "T",
+        "A",
+        "V"
+      ]
+    },
+    "tolerance": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "max_slope_per_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "min_duration_s": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "max_age_s": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    }
+  }
+}

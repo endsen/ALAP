@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alap.invalid/contracts/dataset_manifest.schema.json",
+  "title": "ALAP dataset_manifest v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "dataset_id",
+    "experiment_id",
+    "run_id",
+    "task_id",
+    "instrument_ids",
+    "acquisition_interval",
+    "data_format",
+    "storage_uri",
+    "checksum_sha256",
+    "unit_map",
+    "status",
+    "schema_version",
+    "policy_versions",
+    "capability_versions",
+    "device_snapshot_version"
+  ],
+  "properties": {
+    "dataset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "experiment_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "instrument_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "acquisition_interval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start_utc",
+        "end_utc"
+      ],
+      "properties": {
+        "start_utc": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_utc": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "data_format": {
+      "type": "string",
+      "enum": [
+        "hdf5",
+        "zarr"
+      ]
+    },
+    "storage_uri": {
+      "type": "string",
+      "minLength": 1
+    },
+    "checksum_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "unit_map": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "STAGING",
+        "VALIDATING",
+        "COMMITTED",
+        "CORRUPT"
+      ]
+    },
+    "device_snapshot_version": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "schema_version": {
+      "const": "2.0"
+    },
+    "policy_versions": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "capability_versions": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

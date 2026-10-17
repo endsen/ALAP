@@ -1,0 +1,588 @@
+openapi: 3.1.0
+info:
+  title: ALAP Web & Experiment API
+  version: 3.1.0-development
+  description: Engineering design contract. Not a deployed API. All mutations require
+    server-side authorization; no raw instrument command route is publicly exposed.
+servers:
+- url: /api/v1
+security:
+- bearerAuth: []
+tags:
+- name: Experiments
+- name: Approvals
+- name: Runs
+- name: Instruments
+- name: Datasets
+paths:
+  /experiments:
+    post:
+      tags:
+      - Experiments
+      operationId: createExperiment
+      summary: Create an experiment without controlling hardware
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExperimentCreate'
+      responses:
+        '201':
+          description: Experiment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Experiment'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+    get:
+      tags:
+      - Experiments
+      operationId: listExperiments
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: cursor
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Authorized experiments
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Experiment'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+        '401':
+          $ref: '#/components/responses/Error'
+  /experiments/{experiment_id}:
+    get:
+      tags:
+      - Experiments
+      operationId: getExperiment
+      parameters:
+      - $ref: '#/components/parameters/ExperimentId'
+      responses:
+        '200':
+          description: Authoritative experiment snapshot; revision is for concurrency
+            control
+          headers:
+            ETag:
+              description: Revision ETag
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Experiment'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+  /experiments/{experiment_id}/proposals:
+    post:
+      tags:
+      - Experiments
+      operationId: createProposal
+      description: Store a candidate plan. This does not authorize any physical command.
+      parameters:
+      - $ref: '#/components/parameters/ExperimentId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanProposalCreate'
+      responses:
+        '201':
+          description: Plan proposal stored for validation and review
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanProposal'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /experiments/{experiment_id}/approvals:
+    post:
+      tags:
+      - Approvals
+      operationId: approvePlan
+      description: Requires appropriate approval permission and safety policy.
+      parameters:
+      - $ref: '#/components/parameters/ExperimentId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequest'
+      responses:
+        '201':
+          description: Bound approval stored; no hardware command yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Approval'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /experiments/{experiment_id}/runs:
+    post:
+      tags:
+      - Runs
+      operationId: startRun
+      description: Start an approved plan; scheduler and gateway still independently
+        validate.
+      parameters:
+      - $ref: '#/components/parameters/ExperimentId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - plan_revision_id
+              properties:
+                plan_revision_id:
+                  type: string
+                  minLength: 1
+      responses:
+        '202':
+          description: Run requested; not proof of device execution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /runs/{run_id}/actions:
+    post:
+      tags:
+      - Runs
+      operationId: requestRunAction
+      description: Cancel and pause are requests, not evidence of physical stop.
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - action
+              properties:
+                action:
+                  type: string
+                  enum:
+                  - pause
+                  - cancel
+                  - resume
+                reason:
+                  type: string
+                  maxLength: 1000
+      responses:
+        '202':
+          description: State transition requested, subject to safe execution confirmation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /experiments/{experiment_id}/events:
+    get:
+      tags:
+      - Experiments
+      operationId: streamExperimentEvents
+      description: SSE id is experiment_seq, never aggregate_seq. Snapshot event_cursor
+        and state are read atomically. Expired cursor returns RESYNC_REQUIRED.
+      parameters:
+      - $ref: '#/components/parameters/ExperimentId'
+      - name: after
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+      - name: Last-Event-ID
+        in: header
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Server-sent events
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /instruments:
+    get:
+      tags:
+      - Instruments
+      operationId: listInstruments
+      responses:
+        '200':
+          description: Instruments visible to the current user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Instrument'
+        '401':
+          $ref: '#/components/responses/Error'
+  /instruments/{instrument_id}:
+    get:
+      tags:
+      - Instruments
+      operationId: getInstrument
+      parameters:
+      - name: instrument_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Instrument metadata and stale-aware status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Instrument'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+  /datasets/{dataset_id}:
+    get:
+      tags:
+      - Datasets
+      operationId: getDatasetManifest
+      parameters:
+      - name: dataset_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Authorized committed dataset metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetManifest'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ExperimentId:
+      name: experiment_id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+      description: Required experiment snapshot revision ETag; plan ID and hash are
+        checked independently.
+  responses:
+    Error:
+      description: Error response; sensitive policy details must not leak to unauthorized
+        users
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+          - code
+          - message
+          - request_id
+          - retryable
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            request_id:
+              type: string
+            retryable:
+              type: boolean
+            details:
+              type: object
+              additionalProperties: true
+    ExperimentCreate:
+      type: object
+      additionalProperties: false
+      required:
+      - title
+      - sample_id
+      - objective
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        sample_id:
+          type: string
+          minLength: 1
+        objective:
+          type: string
+          minLength: 1
+          maxLength: 4000
+    Experiment:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - state
+      - revision
+      - created_at
+      - event_cursor
+      properties:
+        id:
+          type: string
+        state:
+          type: string
+          enum:
+          - DRAFT
+          - PLANNING
+          - READY
+          - RUNNING
+          - PAUSED
+          - COMPLETED
+          - FAILED
+          - NEEDS_ATTENTION
+          - ARCHIVED
+        title:
+          type: string
+        sample_id:
+          type: string
+        objective:
+          type: string
+        revision:
+          type: integer
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+        event_cursor:
+          type: integer
+          minimum: 0
+    ApprovalRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - plan_revision_id
+      - plan_hash
+      - decision
+      properties:
+        plan_revision_id:
+          type: string
+        plan_hash:
+          type: string
+        decision:
+          type: string
+          enum:
+          - approve
+          - reject
+        reason:
+          type: string
+    Approval:
+      type: object
+      additionalProperties: false
+      required:
+      - approval_id
+      - plan_revision_id
+      - plan_hash
+      - state
+      - decided_at
+      properties:
+        approval_id:
+          type: string
+        plan_revision_id:
+          type: string
+        plan_hash:
+          type: string
+        state:
+          type: string
+          enum:
+          - APPROVED
+          - REJECTED
+          - EXPIRED
+          - REVOKED
+        decided_at:
+          type: string
+          format: date-time
+        expires_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    Run:
+      type: object
+      additionalProperties: false
+      required:
+      - run_id
+      - experiment_id
+      - plan_revision_id
+      - state
+      properties:
+        run_id:
+          type: string
+        experiment_id:
+          type: string
+        plan_revision_id:
+          type: string
+        state:
+          type: string
+          enum:
+          - READY
+          - WAITING_RESOURCE
+          - DISPATCHED
+          - RUNNING
+          - VERIFYING
+          - PAUSE_REQUESTED
+          - PAUSED
+          - CANCEL_REQUESTED
+          - CANCELLED
+          - SUCCEEDED
+          - FAILED
+          - UNKNOWN
+          - NEEDS_RECONCILIATION
+    Instrument:
+      type: object
+      additionalProperties: false
+      required:
+      - instrument_id
+      - gateway_id
+      - status
+      - observed_at
+      properties:
+        instrument_id:
+          type: string
+        gateway_id:
+          type: string
+        status:
+          type: string
+          enum:
+          - ONLINE
+          - STALE
+          - OFFLINE
+          - FAULT
+          - INTERLOCKED
+          - UNKNOWN
+        observed_at:
+          type: string
+          format: date-time
+        state:
+          type: object
+          additionalProperties: true
+        capability_version:
+          type: string

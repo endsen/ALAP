@@ -1,0 +1,84 @@
+{
+  "set_temperature@1": {
+    "kind": "set_temperature",
+    "success_kind": "stable_window",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_kelvin"
+      ],
+      "properties": {
+        "target_kelvin": {
+          "type": "number",
+          "minimum": 290,
+          "maximum": 300
+        }
+      }
+    },
+    "setpoint": {
+      "parameter": "target_kelvin",
+      "quantity": "temperature",
+      "unit": "K"
+    }
+  },
+  "set_field@1": {
+    "kind": "set_field",
+    "success_kind": "stable_window",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_tesla"
+      ],
+      "properties": {
+        "target_tesla": {
+          "type": "number",
+          "minimum": -0.01,
+          "maximum": 0.01
+        }
+      }
+    },
+    "setpoint": {
+      "parameter": "target_tesla",
+      "quantity": "field",
+      "unit": "T"
+    }
+  },
+  "iv_measurement@1": {
+    "kind": "measure_iv",
+    "success_kind": "dataset_committed",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start_ampere",
+        "stop_ampere",
+        "points",
+        "compliance_volt"
+      ],
+      "properties": {
+        "start_ampere": {
+          "type": "number",
+          "minimum": -0.001,
+          "maximum": 0.001
+        },
+        "stop_ampere": {
+          "type": "number",
+          "minimum": -0.001,
+          "maximum": 0.001
+        },
+        "points": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 1001
+        },
+        "compliance_volt": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        }
+      }
+    }
+  }
+}

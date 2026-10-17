@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alap.invalid/contracts/agent_manifest.schema.json",
+  "title": "ALAP agent_manifest v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "agent_id",
+    "version",
+    "kind",
+    "model_ref",
+    "max_iterations",
+    "max_runtime_seconds",
+    "allowed_tools",
+    "scoped_instruments",
+    "autonomy_level",
+    "skill_refs",
+    "context_policy",
+    "schema_version"
+  ],
+  "properties": {
+    "agent_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "planner",
+        "instrument",
+        "measurement",
+        "analysis",
+        "reviewer"
+      ]
+    },
+    "model_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "system_prompt_ref": {
+      "type": "string"
+    },
+    "max_iterations": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "max_runtime_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 86400
+    },
+    "allowed_tools": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "scoped_instruments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "scoped_experiments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "autonomy_level": {
+      "type": "string",
+      "enum": [
+        "L0",
+        "L1",
+        "L2",
+        "L3",
+        "L4"
+      ]
+    },
+    "skill_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "context_policy": {
+      "type": "string",
+      "enum": [
+        "experiment_snapshot_only",
+        "scoped_knowledge"
+      ]
+    },
+    "config_hash": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "schema_version": {
+      "const": "2.0"
+    }
+  }
+}
