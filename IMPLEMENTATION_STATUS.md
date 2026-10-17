@@ -5,7 +5,7 @@
 ## 分期交接入口
 
 - 分期计划：`docs/20_DELIVERY_PLAN.md` 的 D01–D13；P0–P7 为技术层次，D 编号为额度分批交付单位。
-- 当前：**D01 已完成本地交付**；远程 CI 未运行，作为明确的后续验证项保留。
+- 当前：**D01 已完成本地交付**；初始代码提交 db2c4c4 已通过 GitHub Actions。
 - 下一期：**D02 · 完整状态与事务设计**，尚未启动。
 - 下一项具体动作：从 `docs/07_EXPERIMENT_ENGINE.md` 与 `docs/19_CONTRACT_DECISIONS.md` 出发，分别定义 Run/Task/Command 的完整转换及证据要求，再实现纯状态规则和测试，最后落实 PostgreSQL 表与事务设计。D02 不包含直接展开所有数据库、Web 或 Agent 模块。
 - 当前无需要续接的运行服务，无真实凭据依赖；`/tmp` 干净环境仅用于复现验证，后续可按 README 重建。
@@ -16,7 +16,7 @@
 | 工作项 | 状态 | 证据与范围 |
 |---|---|---|
 | BLD-001 企划维护 | 完成 | 20 章模块文档、v3.1 合订本与可重复生成命令；保留 v3.0 |
-| BLD-002 工程检查 | 本地完成；远程 CI 未运行 | pyproject、开发依赖锁、统一检查脚本、GitHub Actions 配置 |
+| BLD-002 工程检查 | 本地及初始提交远程 CI 通过 | pyproject、开发依赖锁、统一检查脚本、GitHub Actions 配置 |
 | BLD-003 核心契约 | 第一批完成 | 9 个 Schema，计划/条件/数据/事件/命令；共享结构生成 OpenAPI |
 | BLD-004 领域规则 | 第一批完成 | DAG、资源覆盖、Skill 参数与成功判据、快照版本、不可变字节/hash、来源和时间范围 |
 | BLD-005 完整状态/事务设计 | 下一项 | Run/Task/Command 独立状态表，审批/租约/journal/outbox 的事务边界和恢复 |
@@ -37,7 +37,7 @@ P0 基线和 P1 第一批已经建立；P1 的领域内核将随 BLD-005 补齐�
 
 执行证据见 `reports/foundation-validation.txt`（统一命令输出）：76 项测试、9 份 Schema/实例、完整 OpenAPI、格式/lint、文档与接口生成漂移、依赖一致性检查均通过。
 
-已在独立临时虚拟环境中按 requirements-dev.lock 重新安装依赖和项目，并再次通过同一检查，见 `reports/foundation-clean-environment.txt`。这是本机 Linux/Python 3.14 的干净环境复现；不代表远程 CI 或 Windows/macOS 已验证。当前测试不等价于第 12 章完整 EVAL 系统场景通过。
+已在独立临时虚拟环境中按 requirements-dev.lock 重新安装依赖和项目，并再次通过同一检查，见 `reports/foundation-clean-environment.txt`。这是本机 Linux/Python 3.14 的干净环境复现；Windows/macOS 尚未验证；初始提交的 GitHub Linux CI 已通过。当前测试不等价于第 12 章完整 EVAL 系统场景通过。
 
 ## 下一阶段进入条件
 
@@ -48,6 +48,15 @@ P0 基线和 P1 第一批已经建立；P1 的领域内核将随 BLD-005 补齐�
 
 ## 已知环境边界
 
-- 当前 `.git` 目录不是有效 Git 工作树，且为受限只读目录；本轮未创建提交。源码和 CI 文件已落盘，远程 CI 需以后在有效仓库运行。
+- 当前 `.git` 目录不是有效 Git 工作树，且为受限只读目录；上传使用独立工作树；初始提交已推送到私有仓库 endsen/ALAP，未更改本目录受限 .git。
 - 未配置或使用真实 LLM API Key；真实服务联调仍待对应阶段。
 - 未发现或连接真实仪器；全部例子是模拟契约数据。
+
+## GitHub 上传交接（2026-10-17）
+
+- 私有仓库：https://github.com/endsen/ALAP ，默认分支 main。
+- 初始源码提交：db2c4c47b2895979c4952d3492e4c01996391541；全部 69 个项目文件（含 CI）已上传，虚拟环境、缓存与本机配置未上传。
+- 初始提交 CI 已通过：https://github.com/endsen/ALAP/actions/runs/39026171006 。
+- GitHub workflow 授权已完成；不在项目保存凭据或授权码。
+- 上传工作树：`/tmp/alap-github-dliggqw9`；本项目目录 `.git` 仍受限，不是有效工作树。临时目录丢失时从远程重新 clone 到允许位置，再同步本目录明确变更；先检查远端，不覆盖他人提交。
+- 本次后续提交只更新上传/CI 交接文档，未改变业务代码。下一开发期仍为 D02。
