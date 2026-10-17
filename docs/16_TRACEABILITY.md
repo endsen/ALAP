@@ -60,3 +60,30 @@
 | 跨接口一致性 | tests/test_contract_consistency.py：六种枚举与共享 Schema、OpenAPI 引用一致 | 实际 API 行为（D09） |
 
 D02 完整本地检查输出保存在 reports/d02-validation.txt；不等价于集成/现场 EVAL 通过。
+
+
+## D03 验证映射
+
+| 需求 / 故障场景 | 实现与数据库测试 | 边界 |
+|---|---|---|
+| FR-002 / DB-01 | create_experiment、幂等唯一键；同键并发、不同载荷冲突 | 内部应用服务，HTTP 409 映射在 D09 |
+| FR-003/004/017 / DB-02 | 不可变计划、资源/风险权限、审批 hash/版本/期限、替代与撤销；两连接启动竞争、实际 DB 时钟过期 | READY Run，无物理发放 |
+| FR-001/010 | 显式 principal/membership；禁用、资源范围、跨实验访问及复合外键拒绝 | 真实登录/RBAC 前端尚未接入 |
+| FR-012/027 / DB-04 | 故障注入验证状态/effects/证据/审计/cursor/outbox 全部回滚 | NATS/SSE 在 D05/D09 |
+| FR-012 / DB-12 | REPEATABLE READ 快照期间另一事务提交，快照状态与 cursor 保持一致 | 无浏览器事件订阅 |
+| 工程迁移 | D03 三批空库 up/down/up、数据库约束与不可变触发器 | 生产使用前向修复，不执行破坏性 down |
+
+测试文件：tests/integration/test_persistence.py；结果见 reports/d03-validation.txt。D04–D13 场景未因此完成。
+
+
+## D04 验证映射
+
+| 需求 / 场景 | 实现与测试 | 边界 |
+|---|---|---|
+| FR-003/009，DB-03 | 固定 DAG 任务、三模拟设备、多资源及跨实验竞争 | 内部用例，未部署 worker |
+| FR-004/009，DB-05/06 | 发放前重新授权、持久投递、ACK 丢失及进程退出恢复、重复 ID、乱序回执 | 离线 HMAC，非真机认证 |
+| FR-009，DB-07/11 | 旧 fencing/epoch 拒绝、租约过期保留 claim、握手恢复代际 | 全局保守阻断，未做生产备份恢复演练 |
+| FR-012/027，DB-04 | UNKNOWN 与隔离/审计/outbox 注入失败全部回滚 | 未发布 NATS/SSE |
+| 稳定条件 | 原始时间、质量、单位、容差、斜率、持续窗口及鲜度 | 短时模拟窗口，不是设备校准 |
+
+证据：tests/integration/test_execution.py、tests/test_stability.py、reports/d04-validation.txt。IV 数据发布及完整暂停取消恢复属于 D05，不能据此宣布完整 EVAL 通过。

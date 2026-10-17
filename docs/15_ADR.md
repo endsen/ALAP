@@ -94,3 +94,22 @@ OD-05 中接入方式已确认为 API；模型供应商、真实凭据和具体�
 - ADR-019：租约终态不等于资源可用；claim、fencing 与隔离独立持久化。PostgreSQL 采用显式锁顺序与约束，网络调用在事务外。
 
 状态为 Accepted for development；完整说明见第 21、22 章。真实数据库与设备故障验收尚待 D03–D05。
+
+
+## D03 开发基线决策（2026-10-17）
+
+- ADR-020：PostgreSQL 18 + Psycopg 3.3.6，使用 Alembic 1.20.0（SQLAlchemy 2.1.5）管理三个显式迁移批次。迁移使用审阅后的 SQL，不引入领域 ORM；锁定依赖，数据库集成测试禁止内存替身。[Psycopg 安装](https://www.psycopg.org/psycopg3/docs/basic/install.html)、[Alembic 事务迁移](https://alembic.sqlalchemy.org/en/latest/tutorial.html)。
+- ADR-021：D03 仅创建发放门关闭的 READY Run，固定 task_identities 与 attempt_no=1；实际 Task 表、资源领取及执行放在 D04。审批失效时只对从未发放的 Run 建立静止证据，未知执行态拒绝处理。
+- ADR-022：应用用例以受信任身份和配置端口作为边界，D03 显式测试身份及资源/风险 scope；不把内部 actor ID 参数宣称为 HTTP 认证。身份与成员共享锁串行化权限修改。每次启动用数据库当前时钟核验期限。
+- ADR-023：幂等唯一约束使用 INSERT ON CONFLICT DO NOTHING 等待获胜事务，再在 READ COMMITTED 新语句读取提交结果；避免在已失败事务继续查询。过期记录本期不自动回收，重复键不能重新产生副作用。
+
+状态为 Accepted for development；完整操作及边界见 D03_DATABASE_DEVELOPMENT.md。不代表现场批准。
+
+
+## D04 开发基线决策（2026-10-18）
+
+- ADR-024：中央 PostgreSQL 与近端 SQLite journal 分开持久化；模拟设备动作记录另存文件，以真实进程退出验证不会盲重放。近端文件不充当中央业务权威。
+- ADR-025：发送尝试先于传输提交，未知结果牺牲可用性而不重试动作；显式恢复依赖可验证结果，无法证明时持续隔离。
+- ADR-026：离线 HMAC 及 POSIX 单进程锁只用于当前模拟适配器；生产 mTLS、凭据生命周期及目标操作系统适配另行验收。恢复代际采用全部网关确认的保守全局屏障。
+
+状态为 Accepted for development；不是现场批准。细节见 D04_EXECUTION_DEVELOPMENT.md。

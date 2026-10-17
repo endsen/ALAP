@@ -7,6 +7,22 @@ permissions:
 jobs:
   foundation:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: alap
+          POSTGRES_PASSWORD: alap-test-only
+          POSTGRES_DB: alap_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U alap -d alap_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      ALAP_TEST_DATABASE_URL: postgresql://alap:alap-test-only@127.0.0.1:5432/alap_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

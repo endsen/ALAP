@@ -1300,6 +1300,25 @@ OD-05 中接入方式已确认为 API；模型供应商、真实凭据和具体�
 
 状态为 Accepted for development；完整说明见第 21、22 章。真实数据库与设备故障验收尚待 D03–D05。
 
+
+## D03 开发基线决策（2026-10-17）
+
+- ADR-020：PostgreSQL 18 + Psycopg 3.3.6，使用 Alembic 1.20.0（SQLAlchemy 2.1.5）管理三个显式迁移批次。迁移使用审阅后的 SQL，不引入领域 ORM；锁定依赖，数据库集成测试禁止内存替身。[Psycopg 安装](https://www.psycopg.org/psycopg3/docs/basic/install.html)、[Alembic 事务迁移](https://alembic.sqlalchemy.org/en/latest/tutorial.html)。
+- ADR-021：D03 仅创建发放门关闭的 READY Run，固定 task_identities 与 attempt_no=1；实际 Task 表、资源领取及执行放在 D04。审批失效时只对从未发放的 Run 建立静止证据，未知执行态拒绝处理。
+- ADR-022：应用用例以受信任身份和配置端口作为边界，D03 显式测试身份及资源/风险 scope；不把内部 actor ID 参数宣称为 HTTP 认证。身份与成员共享锁串行化权限修改。每次启动用数据库当前时钟核验期限。
+- ADR-023：幂等唯一约束使用 INSERT ON CONFLICT DO NOTHING 等待获胜事务，再在 READ COMMITTED 新语句读取提交结果；避免在已失败事务继续查询。过期记录本期不自动回收，重复键不能重新产生副作用。
+
+状态为 Accepted for development；完整操作及边界见 D03_DATABASE_DEVELOPMENT.md。不代表现场批准。
+
+
+## D04 开发基线决策（2026-10-18）
+
+- ADR-024：中央 PostgreSQL 与近端 SQLite journal 分开持久化；模拟设备动作记录另存文件，以真实进程退出验证不会盲重放。近端文件不充当中央业务权威。
+- ADR-025：发送尝试先于传输提交，未知结果牺牲可用性而不重试动作；显式恢复依赖可验证结果，无法证明时持续隔离。
+- ADR-026：离线 HMAC 及 POSIX 单进程锁只用于当前模拟适配器；生产 mTLS、凭据生命周期及目标操作系统适配另行验收。恢复代际采用全部网关确认的保守全局屏障。
+
+状态为 Accepted for development；不是现场批准。细节见 D04_EXECUTION_DEVELOPMENT.md。
+
 ---
 
 <!-- 来源: docs/16_TRACEABILITY.md -->
@@ -1366,6 +1385,33 @@ OD-05 中接入方式已确认为 API；模型供应商、真实凭据和具体�
 | 跨接口一致性 | tests/test_contract_consistency.py：六种枚举与共享 Schema、OpenAPI 引用一致 | 实际 API 行为（D09） |
 
 D02 完整本地检查输出保存在 reports/d02-validation.txt；不等价于集成/现场 EVAL 通过。
+
+
+## D03 验证映射
+
+| 需求 / 故障场景 | 实现与数据库测试 | 边界 |
+|---|---|---|
+| FR-002 / DB-01 | create_experiment、幂等唯一键；同键并发、不同载荷冲突 | 内部应用服务，HTTP 409 映射在 D09 |
+| FR-003/004/017 / DB-02 | 不可变计划、资源/风险权限、审批 hash/版本/期限、替代与撤销；两连接启动竞争、实际 DB 时钟过期 | READY Run，无物理发放 |
+| FR-001/010 | 显式 principal/membership；禁用、资源范围、跨实验访问及复合外键拒绝 | 真实登录/RBAC 前端尚未接入 |
+| FR-012/027 / DB-04 | 故障注入验证状态/effects/证据/审计/cursor/outbox 全部回滚 | NATS/SSE 在 D05/D09 |
+| FR-012 / DB-12 | REPEATABLE READ 快照期间另一事务提交，快照状态与 cursor 保持一致 | 无浏览器事件订阅 |
+| 工程迁移 | D03 三批空库 up/down/up、数据库约束与不可变触发器 | 生产使用前向修复，不执行破坏性 down |
+
+测试文件：tests/integration/test_persistence.py；结果见 reports/d03-validation.txt。D04–D13 场景未因此完成。
+
+
+## D04 验证映射
+
+| 需求 / 场景 | 实现与测试 | 边界 |
+|---|---|---|
+| FR-003/009，DB-03 | 固定 DAG 任务、三模拟设备、多资源及跨实验竞争 | 内部用例，未部署 worker |
+| FR-004/009，DB-05/06 | 发放前重新授权、持久投递、ACK 丢失及进程退出恢复、重复 ID、乱序回执 | 离线 HMAC，非真机认证 |
+| FR-009，DB-07/11 | 旧 fencing/epoch 拒绝、租约过期保留 claim、握手恢复代际 | 全局保守阻断，未做生产备份恢复演练 |
+| FR-012/027，DB-04 | UNKNOWN 与隔离/审计/outbox 注入失败全部回滚 | 未发布 NATS/SSE |
+| 稳定条件 | 原始时间、质量、单位、容差、斜率、持续窗口及鲜度 | 短时模拟窗口，不是设备校准 |
+
+证据：tests/integration/test_execution.py、tests/test_stability.py、reports/d04-validation.txt。IV 数据发布及完整暂停取消恢复属于 D05，不能据此宣布完整 EVAL 通过。
 
 ---
 
@@ -1823,7 +1869,7 @@ UNKNOWN 立刻冻结调度并隔离相关资源。只能先进入 NEEDS_RECONCIL
 
 # 22 · D02 PostgreSQL 数据与事务设计
 
-状态：D02 迁移实施基线；本期不创建数据库、不执行迁移，不以 SQLite/内存模拟代替 PostgreSQL。D03 首先实现本章所列基础表和应用用例，D04/D05 继续添加执行与数据表。
+状态：D02 冻结设计，D03 已据此实现三个迁移批次与应用用例；验证结果见 IMPLEMENTATION_STATUS.md。D04/D05 继续添加执行与数据表，不以 SQLite/内存模拟代替 PostgreSQL。
 
 ## 1. 约束与事务选择
 
@@ -1935,7 +1981,9 @@ UI 快照在同一只读 REPEATABLE READ 事务中取实验相关状态及 event
 
 D03 将选定并锁版本的迁移工具与驱动接入真实 PostgreSQL，CI 使用隔离数据库。空库 up/down/up 可作为开发迁移检查；含真实实验审计的生产库不得用破坏性 down 脚本回滚，采用前向修复、备份与经审阅的数据迁移。不得添加“清空数据库重建”作为默认启动行为。
 
-## 6. 后续集成故障用例（本期未执行）
+## 6. 集成故障用例与分期验证
+
+D03 已验证 DB-01/02/04/12 的数据库范围；D04 已验证 DB-03/05/06/07/11 的离线模拟范围。DB-08/09/10 的完整协议留到 D05，HTTP/SSE 与真机验证仍属后续期。具体证据见第 16 章和实施状态。
 
 DB-01：两个连接使用同一幂等键/不同载荷；相同请求只产生一个对象，冲突返回 409。
 DB-02：审批修改/过期与启动并发；持锁后核验，失效许可不能产生新的发放授权。
@@ -1949,3 +1997,24 @@ DB-09：数据文件已存而 DB 提交失败；无正式 Dataset，恢复不重
 DB-10：outbox 已发布未标记，消费者重投；inbox 与效果原子且不重复计费/动作。
 DB-11：DB 备份恢复 token 回退；旧 epoch 拒绝，未握手设备不启用。
 DB-12：UI 快照读取间发生事务提交；状态与游标来自同一快照，续订不静默丢事件。
+
+
+## 7. D03 实施细化
+
+实现位于 `migrations/versions/d03_001～003`、`src/alap/application` 与 `src/alap/adapters/postgres`，操作手册见 `D03_DATABASE_DEVELOPMENT.md`。
+
+- D03 runs 增加固定 `plan_hash` 与 `task_identities`，复合外键同时验证计划/审批/hash；任务身份保存 attempt_no=1，实际 tasks 表留到 D04。
+- 创建实验的 revision/cursor 从 0 开始，创建事件同事务递增为 1；所有后续事实事件递增实验 revision/cursor。每对象 audit/outbox 版本从 0 开始，转换递增 1。
+- principal 共享锁先于业务锁，membership 共享锁在 experiment 后；身份管理事务必须使用相同顺序。设备 control_generation 锁将在 D04 加入，不能据此省略未来代际门禁。
+- 计划 canonical_bytes 是唯一 hash 原文；JSONB 为可查询副本，数据库同时检查字节摘要和 JSON 等价，禁止历史更新/删除。
+- outbox 除蓝图字段外存 schema_version、producer、trace_id，创建时校验共享事件契约；事实包络不可变，published_at 单独更新。
+- 幂等插入采用 ON CONFLICT DO NOTHING；相同键提交后读取已存响应，避免唯一冲突后的失败事务读。30 天期限仅作保留标记，本期不自动复用旧键。
+- expire 在每次许可使用时直接校验数据库当前时间，不依赖 timer；显式 timer 负责过期状态与发放门/effects 同事务落库。
+- D03 Run 发放门始终关闭；无设备写入证据，不能开启调度。审批失效冻结未执行 Run；真实执行态处理在 D04 补齐。
+
+
+## 8. D04 实施细化
+
+实现见 `d04_001_execution.py`、`application/execution.py`、`adapters/gateway/`，操作与限制见 D04_EXECUTION_DEVELOPMENT.md。D03 写入事务现已加入代际共享锁；恢复使用独占代际锁。网关 journal 独立持久化并防止多进程同时持有；中央与网关没有跨库事务，发送前崩溃保守进入 UNKNOWN。新 epoch 采用全部注册网关确认的全局屏障，未完成对账不恢复发放。
+
+D04 仅使用离线认证和模拟设备；stop_requests 预留表不代表停止协议已完成，IV 结果不进入 COMMITTED。D05 必须补齐停止请求在资源释放和恢复中的核验，以及数据提交、消息投递和消费协议。

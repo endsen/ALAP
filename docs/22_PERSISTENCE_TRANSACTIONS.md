@@ -1,6 +1,6 @@
 # 22 · D02 PostgreSQL 数据与事务设计
 
-状态：D02 迁移实施基线；本期不创建数据库、不执行迁移，不以 SQLite/内存模拟代替 PostgreSQL。D03 首先实现本章所列基础表和应用用例，D04/D05 继续添加执行与数据表。
+状态：D02 冻结设计，D03 已据此实现三个迁移批次与应用用例；验证结果见 IMPLEMENTATION_STATUS.md。D04/D05 继续添加执行与数据表，不以 SQLite/内存模拟代替 PostgreSQL。
 
 ## 1. 约束与事务选择
 
@@ -112,7 +112,9 @@ UI 快照在同一只读 REPEATABLE READ 事务中取实验相关状态及 event
 
 D03 将选定并锁版本的迁移工具与驱动接入真实 PostgreSQL，CI 使用隔离数据库。空库 up/down/up 可作为开发迁移检查；含真实实验审计的生产库不得用破坏性 down 脚本回滚，采用前向修复、备份与经审阅的数据迁移。不得添加“清空数据库重建”作为默认启动行为。
 
-## 6. 后续集成故障用例（本期未执行）
+## 6. 集成故障用例与分期验证
+
+D03 已验证 DB-01/02/04/12 的数据库范围；D04 已验证 DB-03/05/06/07/11 的离线模拟范围。DB-08/09/10 的完整协议留到 D05，HTTP/SSE 与真机验证仍属后续期。具体证据见第 16 章和实施状态。
 
 DB-01：两个连接使用同一幂等键/不同载荷；相同请求只产生一个对象，冲突返回 409。
 DB-02：审批修改/过期与启动并发；持锁后核验，失效许可不能产生新的发放授权。
@@ -126,3 +128,24 @@ DB-09：数据文件已存而 DB 提交失败；无正式 Dataset，恢复不重
 DB-10：outbox 已发布未标记，消费者重投；inbox 与效果原子且不重复计费/动作。
 DB-11：DB 备份恢复 token 回退；旧 epoch 拒绝，未握手设备不启用。
 DB-12：UI 快照读取间发生事务提交；状态与游标来自同一快照，续订不静默丢事件。
+
+
+## 7. D03 实施细化
+
+实现位于 `migrations/versions/d03_001～003`、`src/alap/application` 与 `src/alap/adapters/postgres`，操作手册见 `D03_DATABASE_DEVELOPMENT.md`。
+
+- D03 runs 增加固定 `plan_hash` 与 `task_identities`，复合外键同时验证计划/审批/hash；任务身份保存 attempt_no=1，实际 tasks 表留到 D04。
+- 创建实验的 revision/cursor 从 0 开始，创建事件同事务递增为 1；所有后续事实事件递增实验 revision/cursor。每对象 audit/outbox 版本从 0 开始，转换递增 1。
+- principal 共享锁先于业务锁，membership 共享锁在 experiment 后；身份管理事务必须使用相同顺序。设备 control_generation 锁将在 D04 加入，不能据此省略未来代际门禁。
+- 计划 canonical_bytes 是唯一 hash 原文；JSONB 为可查询副本，数据库同时检查字节摘要和 JSON 等价，禁止历史更新/删除。
+- outbox 除蓝图字段外存 schema_version、producer、trace_id，创建时校验共享事件契约；事实包络不可变，published_at 单独更新。
+- 幂等插入采用 ON CONFLICT DO NOTHING；相同键提交后读取已存响应，避免唯一冲突后的失败事务读。30 天期限仅作保留标记，本期不自动复用旧键。
+- expire 在每次许可使用时直接校验数据库当前时间，不依赖 timer；显式 timer 负责过期状态与发放门/effects 同事务落库。
+- D03 Run 发放门始终关闭；无设备写入证据，不能开启调度。审批失效冻结未执行 Run；真实执行态处理在 D04 补齐。
+
+
+## 8. D04 实施细化
+
+实现见 `d04_001_execution.py`、`application/execution.py`、`adapters/gateway/`，操作与限制见 D04_EXECUTION_DEVELOPMENT.md。D03 写入事务现已加入代际共享锁；恢复使用独占代际锁。网关 journal 独立持久化并防止多进程同时持有；中央与网关没有跨库事务，发送前崩溃保守进入 UNKNOWN。新 epoch 采用全部注册网关确认的全局屏障，未完成对账不恢复发放。
+
+D04 仅使用离线认证和模拟设备；stop_requests 预留表不代表停止协议已完成，IV 结果不进入 COMMITTED。D05 必须补齐停止请求在资源释放和恢复中的核验，以及数据提交、消息投递和消费协议。

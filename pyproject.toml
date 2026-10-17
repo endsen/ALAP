@@ -7,10 +7,10 @@ name = "alap"
 version = "0.1.0"
 description = "Autonomous Laboratory Agent Platform — domain and contract foundation"
 requires-python = ">=3.14,<3.15"
-dependencies = ["jsonschema==4.26.0", "referencing==0.37.0", "rfc3339-validator==0.1.4"]
+dependencies = ["jsonschema==4.26.0", "referencing==0.37.0", "rfc3339-validator==0.1.4", "psycopg[binary]==3.3.6"]
 
 [project.optional-dependencies]
-dev = ["PyYAML==6.0.3", "pytest==9.1.1", "ruff==0.17.1", "openapi-spec-validator==0.9.0"]
+dev = ["PyYAML==6.0.3", "pytest==9.1.1", "ruff==0.17.1", "openapi-spec-validator==0.9.0", "alembic==1.20.0", "SQLAlchemy==2.1.5"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -19,6 +19,7 @@ where = ["src"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-ra"
+markers = ["postgres: real PostgreSQL integration tests (ALAP_TEST_DATABASE_URL required)"]
 
 [tool.ruff]
 target-version = "py314"

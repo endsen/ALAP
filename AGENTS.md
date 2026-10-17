@@ -6,7 +6,7 @@
 - 用户明确要求：专用实验 Agent 平台；经 API 接入 LLM，支持主流供应商，首批 OpenAI/DeepSeek；Web 包含独立 Skills、MCP、模型、仪表板、用量、轨迹与知识管理。
 - 按专业工程顺序分层实现，不追求快速演示。实施顺序以 `docs/20_DELIVERY_PLAN.md` 为准，实际完成项见 `IMPLEMENTATION_STATUS.md`。
 - 额度限制下按 D01–D13 分期交付，区别于技术层 P0–P7。每期可跨会话；每期结束保存完成项、验证、遗留问题和下一动作。先读状态再续做，默认不在当期交接后自行跨期。不要假定能读取用户账户剩余额度。
-- 已有 Python 契约与纯领域基础代码；没有可运行 Web/API/Agent/Gateway 服务。不能把计划、fixture 或接口定义称为已实现产品能力。
+- 已有 Python 契约、纯领域状态机及 D03 PostgreSQL/审批、D04 确定性执行与离线模拟网关代码；本期验收见状态文件，没有可运行 Web/API/Agent/Gateway 服务。不能把计划、fixture 或接口定义称为已实现产品能力。
 - 用户已授权安装工作所需依赖；优先使用项目 `.venv`，锁定新增依赖。不为普通可逆开发操作重复询问。
 
 ## 分层与实现边界
@@ -30,6 +30,8 @@
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-dev.lock
 .venv/bin/python -m pip install --no-build-isolation --no-deps -e .
+# 先按 docs/D03_DATABASE_DEVELOPMENT.md 启动隔离 PostgreSQL
+# 并设置 ALAP_TEST_DATABASE_URL；全套检查不允许静默跳过数据库测试
 .venv/bin/python scripts/check.py
 ```
 
@@ -47,5 +49,5 @@ python3 -m venv .venv
 
 - 默认中文；明确区分已设计、已编码、已本地验证、已集成验证和已现场验收。
 - 变更关联 FR/NFR、契约、测试和文档；阶段进度及时写入 IMPLEMENTATION_STATUS.md。
-- 本目录 `.git` 不是有效工作树且只读；远程私有仓库为 `endsen/ALAP`，通过独立工作树上传，初始提交 CI 已通过。续接前读取 IMPLEMENTATION_STATUS.md，不绕过本目录限制。
+- 当前目录 `/Users/endsen/codex/ALAP` 已从 `endsen/ALAP` 正式克隆，是有效 Git 工作树；远程为 origin，默认分支 main。旧环境的临时上传目录不再作为当前路径。Git 写操作仍须遵守会话实际权限；不能把有效工作树误认为已获写权限。续接前检查 git status、remote 与 IMPLEMENTATION_STATUS.md。
 - 使用多 Agent、外部服务或真机不是本文件隐含授权；普通测试使用离线模型替身与模拟仪器。
