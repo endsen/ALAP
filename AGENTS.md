@@ -50,5 +50,5 @@ python3 -m venv .venv
 
 - 默认中文；明确区分已设计、已编码、已本地验证、已集成验证和已现场验收。
 - 变更关联 FR/NFR、契约、测试和文档；阶段进度及时写入 IMPLEMENTATION_STATUS.md。
-- 当前 Linux 项目目录 `/home/endsen/ALAP` 的 `.git` 受限且不是有效工作树；GitHub 检出位于 `/tmp/alap-github-dliggqw9`，同步基线为 a0f0880。不要绕过限制或把历史 macOS 路径当作当前环境；本期变更以本目录为准，上传前核对远端。
+- 当前 Linux 项目目录 `/home/endsen/ALAP` 的 `.git` 受限且不是有效工作树；GitHub 检出位于 `/tmp/alap-github-dliggqw9`，D05–D10 代码已同步并推送至 main，代码基线 0015fa6。不要绕过限制或把历史 macOS 路径当作当前环境；后续变更以本目录为准，上传前核对远端。
 - 使用多 Agent、外部服务或真机不是本文件隐含授权；普通测试使用离线模型替身与模拟仪器。

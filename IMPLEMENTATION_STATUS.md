@@ -5,9 +5,9 @@
 ## 分期交接入口
 
 - 分期计划：`docs/20_DELIVERY_PLAN.md` 的 D01–D13；P0–P7 为技术层次，D 编号为分批交付单位。
-- 当前：**D10 · Web 实验工作区，已完成本地验收**。本轮基于 D05–D09 本地变更；未上传 GitHub，未执行本轮远程 CI。
+- 当前：**D10 · Web 实验工作区，已完成本地验收**。D05–D10 已推送 GitHub `main`，代码提交 `0015fa6`；远程 CI 结果待核验。
 - 下一期：**D11 · Web 平台控制台**。先实现 Agent/模型/Skills/MCP 配置，再推进知识、仪表板、用量、轨迹、审计与设置；尚未启动。
-- 当前环境：Linux `/home/endsen/ALAP`，原 `.git` 受限且无效；独立 Git 检出 `/tmp/alap-github-dliggqw9` 保持同步基线。本地开发变更尚未复制到该检出，不要反向覆盖本目录。
+- 当前环境：Linux `/home/endsen/ALAP`，原 `.git` 受限且无效；独立 Git 检出 `/tmp/alap-github-dliggqw9` 已同步并推送本轮代码（`0015fa6`）。本目录仍为开发工作区，后续同步前先核对远端。
 - D03/D04 的远程 CI 已通过，最新基线 a0f0880 的 202 项结果已核对；下方 macOS 信息是历史开发记录。
 
 ## D10 本地交付（2026-10-19）
@@ -19,7 +19,7 @@
 - 实际模拟链路为浏览器 → 真实 FastAPI/PostgreSQL → 离线 Agent → 人工审批 → 模拟 Gateway/测试执行线程 → HDF5 提交、曲线和下载。3 条命令及 Run 成功结果亦通过 API 核验。断线、冲突和会话撤权浏览器故障注入，后端真实权限/并发验证继续回归。
 - 本地浏览器为已有 Chrome for Testing 145.0.7632.6；CI 已配置 Playwright 安装与两套门禁，但远程 CI 和跨浏览器尚未执行。本期未调用付费 LLM 或真实仪器。
 - 交接与启动见 `docs/D10_WEB_WORKSPACE_DEVELOPMENT.md`。参数修订通过新提案；暂无任意参数编辑器、逐 token UI、生产 SSO、新鲜设备遥测或常驻部署 worker。Skills/MCP/模型/仪表板等管理页面进入 D11。
-- D05–D10 本地变更未上传 GitHub；本期临时 PostgreSQL/NATS、Web/API 服务均已关闭，不将测试 fixture 当作常驻产品服务。
+- D05–D10 已于 2026-10-19 推送 GitHub `main`（`0015fa6`）；本期临时 PostgreSQL/NATS、Web/API 服务均已关闭，不将测试 fixture 当作常驻产品服务。
 
 ## D09 本地交付（2026-10-19）
 
