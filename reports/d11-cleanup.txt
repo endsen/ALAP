@@ -1,0 +1,5 @@
+Remaining isolated test schemas: 0
+Temporary browser identity file exists: False
+Stopped this task’s isolated NATS server.
+waiting for server to shut down..... done
+server stopped

@@ -12,6 +12,15 @@ from alap.application.series import dataset_series
 from alap.domain.rules import DomainError
 
 ADMIN = {
+    "getAgent",
+    "getSkill",
+    "validateAgent",
+    "validateSkill",
+    "listPlatformTools",
+    "listPrincipals",
+    "setPrincipalRole",
+    "getPlatformSettings",
+    "testModel",
     "setExperimentScope",
     "disableMCP",
     "listSkills",
@@ -121,6 +130,47 @@ class APIService:
         self.authorize(actor, op, path, body)
         e = path.get("experiment_id")
         ref = path.get("ref")
+        if op in {"getAgent", "getSkill"}:
+            row = self.store.version("agent" if op == "getAgent" else "skill", ref)
+            return {
+                k: row[k]
+                for k in ("ref", "document", "state", "content_hash", "publisher", "validated_at")
+            }
+        if op in {"validateAgent", "validateSkill"}:
+            if self.configure:
+                self.configure()
+            if op == "validateSkill":
+                return self.registry.validate_skill(ref)
+            bundle = self.registry.validate_agent(ref)
+            return {
+                "ref": ref,
+                "valid": True,
+                "execution": "not_executed",
+                "tools": list(bundle["tools"]),
+                "skills": list(bundle["skills"]),
+            }
+        if op == "listPlatformTools":
+            if self.configure:
+                self.configure()
+            return {"items": [{"ref": ref, **spec} for ref, spec in self.registry.tools.items()]}
+        if op == "listPrincipals":
+            return self.store.principal_page(query.get("cursor", ""), query.get("limit", 20))
+        if op == "setPrincipalRole":
+            return self.store.change_role(
+                actor, path["actor_id"], body["role"], body["expected_role"]
+            )
+        if op == "getPlatformSettings":
+            return {
+                "identity": "local_bearer",
+                "token_max_seconds": 86400,
+                "event_retention": "no_automatic_deletion",
+                "credential_storage": "encrypted",
+                "configuration": "immutable_versions",
+                "live_gateway": bool(self.control and self.control.execution.gateways),
+            }
+        if op == "testModel":
+            require(self.configure is not None, "SERVICE_UNAVAILABLE", "Model manager unavailable")
+            return self.configure.probe(ref)
         if op == "getMe":
             return self.store.identity(actor)
         if op == "createSample":

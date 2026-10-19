@@ -20,6 +20,10 @@ export function Status({ value }: { value: string }) {
         ? "active"
         : "neutral";
   const labels: Record<string, string> = {
+    ENABLED: "已启用",
+    DISABLED: "已禁用",
+    PUBLISHED: "已发布",
+    CURRENT: "当前 Schema",
     UNKNOWN: "状态未知",
     DRAFT: "草案",
     PLANNED: "计划已验证",

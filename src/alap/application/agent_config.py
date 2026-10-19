@@ -89,7 +89,7 @@ class AgentRegistry:
         visiting.remove(ref)
         found[ref] = spec
 
-    def publish_skill(self, ref, publisher):
+    def validate_skill(self, ref):
         row = self.store.version("skill", ref)
         require(row["state"] == "DRAFT", "INVALID_STATE", "Only drafts may publish")
         spec = row["document"]
@@ -110,6 +110,10 @@ class AgentRegistry:
         found = {}
         for dep in spec["dependencies"]:
             self._skill(dep, {ref}, found)
+        return {"ref": ref, "valid": True, "execution": "not_executed"}
+
+    def publish_skill(self, ref, publisher):
+        self.validate_skill(ref)
         self.store.publish("skill", ref, publisher)
 
     def bundle(self, ref, *, published=True):
@@ -196,7 +200,7 @@ class AgentRegistry:
         }
         return json.loads(json.dumps(bundle))
 
-    def publish_agent(self, ref, publisher):
+    def validate_agent(self, ref):
         bundle = self.bundle(ref, published=False)
         capabilities = bundle["model"]["capabilities"]
         require(
@@ -210,6 +214,10 @@ class AgentRegistry:
                 "MODEL_UNAVAILABLE",
                 "Tool capability required",
             )
+        return bundle
+
+    def publish_agent(self, ref, publisher):
+        bundle = self.validate_agent(ref)
         self.store.publish("agent", ref, publisher, bundle=bundle)
         return digest(bundle)
 

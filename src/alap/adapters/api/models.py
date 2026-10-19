@@ -1,12 +1,14 @@
 """Versioned model management shared by API administration and runtime resolution."""
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
+from time import monotonic
+from uuid import uuid4
 
 from alap.adapters.llm.chat import ChatModelClient
 from alap.adapters.llm.transport import ModelFailure, endpoint
 from alap.application.agent_config import split_ref
 from alap.application.experiments import require
-from alap.application.models import Capabilities, ModelProfile, ProviderConnection
+from alap.application.models import Capabilities, ModelProfile, ModelRequest, ProviderConnection
 from alap.domain.rules import DomainError
 
 
@@ -64,3 +66,39 @@ class ModelManager:
             **(document | {"capabilities": Capabilities(**document["capabilities"])})
         )
         return ChatModelClient(self.connection(profile), profile, secrets=self.secrets)
+
+    def probe(self, ref):
+        """Explicit synthetic text request, never experiment data or business tools."""
+        client = self.client(ref)
+        client.profile = replace(
+            client.profile,
+            output_tokens=min(32, client.profile.output_tokens),
+            max_attempts=1,
+            timeout_seconds=min(15, client.profile.timeout_seconds),
+        )
+        started = monotonic()
+        request = ModelRequest(
+            messages=(("user", "Reply OK."),),
+            trace_id=str(uuid4()),
+            total_seconds=15,
+            token_budget=512,
+        )
+        usage, finish, error, attempts = None, False, None, 0
+        for event in client.stream(request, None):
+            if event.kind == "attempt":
+                attempts += 1
+            elif event.kind == "finish":
+                finish = True
+                usage = event.data.get("usage")
+            elif event.kind == "error":
+                error = event.data.get("code", "model_error")
+        return {
+            "ref": ref,
+            "success": finish and error is None,
+            "tested_capability": "text_stream_only",
+            "usage": usage,
+            "attempts": attempts,
+            "elapsed_ms": round((monotonic() - started) * 1000),
+            "error": error,
+            "estimated_cost": None,
+        }

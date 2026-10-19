@@ -152,3 +152,15 @@ tests/integration/test_resources.py、tests/test_mcp_policy.py；完整验收见
 | FR-023/026，NFR-009/012 | 持久 Agent Run/提案/轨迹、未知设备状态、错误和加载提示 | 全平台管理/统计页面 D11；部署 D12 |
 
 实际通过项与报告见 `IMPLEMENTATION_STATUS.md`，启动与测试 fixture 边界见 D10 开发交接。模型采用离线替身，设备为模拟器，不构成真实供应商或现场验收。
+
+## D11 实现追踪
+
+| 需求范围 | 实现和验收证据 | 范围限制 |
+|---|---|---|
+| FR-005/021/022/023 | 控制台 Agent/模型/Skills 版本编辑、校验/发布、差异、禁用、受控测试；tests/integration/test_console.py、Web console.spec.ts | 固定指令策略；Skill 不绕过审批直接执行 |
+| FR-024/028 | 真实回环 MCP 发现与独立授权/撤销；知识来源导入、检索/共享/撤销 | HTTP 子集、文本检索，无 stdio/OAuth/向量索引 |
+| FR-025/026/027 | 当前用户/实验指标、模型/Agent/UTC 日期筛选、分组 Run 下钻、三类轨迹 | 费用和未返回用量显示未知，命令台账非实时通信 |
+| FR-001/029、NFR-002 | 用户/角色比较更新与审计、凭据掩码、直接路由权限、断线禁写、403 清屏 | 本地令牌；企业身份与常驻部署后续验收 |
+| NFR-009/012 | TypeScript、表单边界单元测试、真实 API 浏览器回归、桌面/移动端截图 | Chromium 本机验证，非跨浏览器或压力测试 |
+
+入口：docs/D11_PLATFORM_CONSOLE_DEVELOPMENT.md。完成状态及实际测试数以 IMPLEMENTATION_STATUS.md 和 reports/d11-* 验收报告为准。

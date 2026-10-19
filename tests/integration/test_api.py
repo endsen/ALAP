@@ -579,7 +579,10 @@ def test_factory_assembled_service_and_real_http(api, tmp_path):
             time.sleep(0.02)
         assert server.started
         response = httpx.get(
-            f"http://127.0.0.1:{port}/api/v1/experiments", headers=auth(api), timeout=5
+            f"http://127.0.0.1:{port}/api/v1/experiments",
+            headers=auth(api),
+            timeout=5,
+            trust_env=False,
         )
         assert response.status_code == 200 and response.json()["items"]
     finally:

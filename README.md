@@ -2,15 +2,17 @@
 
 面向实验室的专用 Agent 平台：通过多供应商 API 接入 LLM，由 Planner、Instrument、Analysis Agent 规划和分析实验，由确定性引擎及 Gateway 执行已授权任务。
 
-**当前已实现 D03–D09 后端分层能力；D10 Web 实验工作区已完成本地验收。完整部署与真机验收尚未完成。** 各层实际进度见 [实施状态](IMPLEMENTATION_STATUS.md)。
+**当前已实现 D03–D09 后端分层能力；D10 Web 实验工作区与 D11 平台控制台已完成本地验收。完整部署与真机验收尚未完成。** 各层实际进度见 [实施状态](IMPLEMENTATION_STATUS.md)。
+
+D11 控制台范围、权限和验收见 [D11 交接](docs/D11_PLATFORM_CONSOLE_DEVELOPMENT.md)。
 
 D10 Web 启动、验收入口与边界见 [D10 交接](docs/D10_WEB_WORKSPACE_DEVELOPMENT.md)。
 
 D09 提供身份/权限、管理 API、SSE、用量读模型和加密凭据接口。启动和边界见 [D09 交接](docs/D09_API_IDENTITY_DEVELOPMENT.md)。
 
-D08 已实现受审核的 MCP 只读接入、作用域知识/记忆、已提交数据分析与证据驱动提案；仍为内部接口。协议范围与验证见 [D08 交接](docs/D08_MCP_KNOWLEDGE_ANALYSIS.md)。
+D08 已实现受审核的 MCP 只读接入、作用域知识/记忆、已提交数据分析与证据驱动提案；现已通过管理 API 与控制台接入。协议范围与验证见 [D08 交接](docs/D08_MCP_KNOWLEDGE_ANALYSIS.md)。
 
-D07 已实现 Planner/Instrument 的 LangGraph 决策循环、版本化 Skills、PostgreSQL 检查点和提案 ledger；仅内部接口，尚无 Web。详见 [D07 开发交接](docs/D07_AGENT_SKILLS_DEVELOPMENT.md)。
+D07 已实现 Planner/Instrument 的 LangGraph 决策循环、版本化 Skills、PostgreSQL 检查点和提案 ledger；现已通过管理 API 与 Web 接入。详见 [D07 开发交接](docs/D07_AGENT_SKILLS_DEVELOPMENT.md)。
 
 D06 已实现 OpenAI/DeepSeek 模型协议适配、流式解析、工具提案校验与预算/取消；DeepSeek 真实合成联调通过，OpenAI 仅离线验证。范围和限制见 [D06 开发说明](docs/D06_MODEL_DEVELOPMENT.md)。
 

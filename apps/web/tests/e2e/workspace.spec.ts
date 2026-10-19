@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+const reportPrefix = process.env.ALAP_SCREENSHOT_PREFIX || "d10";
 const state = () =>
   JSON.parse(
     readFileSync(
@@ -34,8 +35,11 @@ test("real simulated experiment: goal, plan, approval, Run, verified curve and d
   page,
 }) => {
   await login(page);
+  await page
+    .getByLabel("选择 Agent", { exact: true })
+    .selectOption("planner@1");
   await page.screenshot({
-    path: "../../reports/d10-workspace.png",
+    path: `../../reports/${reportPrefix}-workspace.png`,
     fullPage: true,
   });
   await page
@@ -55,7 +59,10 @@ test("real simulated experiment: goal, plan, approval, Run, verified curve and d
   await expect(
     page.getByRole("status").filter({ hasText: "实时同步" }),
   ).toBeVisible();
-  await page.screenshot({ path: "../../reports/d10-plan.png", fullPage: true });
+  await page.screenshot({
+    path: `../../reports/${reportPrefix}-plan.png`,
+    fullPage: true,
+  });
   await page.getByRole("button", { name: "创建执行 Run" }).click();
   await confirm(page, "启动 Run");
   await page.getByRole("tab", { name: "实验数据" }).click();
@@ -72,7 +79,10 @@ test("real simulated experiment: goal, plan, approval, Run, verified curve and d
       .subarray(0, 8)
       .toString("hex"),
   ).toBe("894844460d0a1a0a");
-  await page.screenshot({ path: "../../reports/d10-data.png", fullPage: true });
+  await page.screenshot({
+    path: `../../reports/${reportPrefix}-data.png`,
+    fullPage: true,
+  });
   expect(await page.evaluate(() => "injected" in window)).toBe(false);
   expect(
     await page.evaluate(() => [localStorage.length, sessionStorage.length]),
@@ -115,7 +125,7 @@ test("mobile login remains accessible and fits viewport", async ({ page }) => {
     ),
   ).toBe(true);
   await page.screenshot({
-    path: "../../reports/d10-mobile.png",
+    path: `../../reports/${reportPrefix}-mobile.png`,
     fullPage: true,
   });
 });

@@ -48,6 +48,8 @@ export class Client {
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
       if (response.status === 401) this.expired();
+      if (response.status === 403 && typeof window !== "undefined")
+        window.dispatchEvent(new Event("alap:access-denied"));
       throw new APIError(
         body.error?.code || "SERVICE_UNAVAILABLE",
         response.status,

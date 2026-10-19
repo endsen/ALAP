@@ -19,16 +19,19 @@ from alap.adapters.api.models import ModelManager
 from alap.adapters.gateway.auth import Authenticator
 from alap.adapters.gateway.journal import Gateway
 from alap.adapters.gateway.simulator import Simulator, WallClock
+from alap.adapters.mcp.http import MCPConnection, StreamableHTTP
 from alap.adapters.postgres.api import PostgresAPIStore
 from alap.adapters.secrets.encrypted import EncryptedSecrets
 from alap.adapters.storage.hdf5 import Hdf5Store
+from alap.application.agent_resources import AgentResources
 from alap.application.api import APIService
 from alap.application.control import ControlService
 from alap.application.datasets import DatasetService
 from alap.application.execution import ExecutionService
-from alap.application.models import ModelEvent
+from alap.application.models import Capabilities, ModelEvent, ModelProfile
 from tests.integration.conftest import database, rows, scenario
 from tests.integration.test_agents import agents, call, plan_args
+from tests.integration.test_resources import mcp_server
 
 
 def serve():
@@ -97,13 +100,25 @@ def serve():
         engine.finish_recovery("engine")
 
         class OfflineModel:
-            profile = scripted.profile
+            def __init__(self, ref):
+                if ref == "test@1":
+                    self.profile = scripted.profile
+                else:
+                    document = next(
+                        r["document"] for r in store.configs("model") if r["ref"] == ref
+                    )
+                    self.profile = ModelProfile(
+                        **(document | {"capabilities": Capabilities(**document["capabilities"])})
+                    )
 
             def stream(self, request, cancel):
                 yield ModelEvent(
                     "attempt", request.trace_id, "offline-attempt", "offline", "synthetic", {}
                 )
-                snapshot = base.read_snapshot("owner", "EXP-SIM-001", base.transaction.snapshot)
+                run = store.load("owner", request.trace_id.rsplit(":", 1)[0])
+                snapshot = base.read_snapshot(
+                    "owner", run["experiment_id"], base.transaction.snapshot
+                )
                 proposal = plan_args(example, snapshot["experiment"]["revision"])
                 yield ModelEvent(
                     "finish",
@@ -114,7 +129,19 @@ def serve():
                     {"tool_proposals": [call("propose_plan", proposal)], "usage": None},
                 )
 
-        runtime.model_factory = lambda _: OfflineModel()
+        runtime.model_factory = OfflineModel
+        mcp_generator = mcp_server.__wrapped__()
+        _, mcp_connection = next(mcp_generator)
+        resources = AgentResources(
+            store,
+            base.catalog,
+            lambda c: StreamableHTTP(c, vault),
+            MCPConnection,
+            datasets=datasets,
+        )
+        resources.register_connection(mcp_connection)
+        manager = ModelManager(store, registry, vault)
+        manager.resources = resources
         service = APIService(
             base,
             store,
@@ -123,7 +150,27 @@ def serve():
             control=ControlService(engine, engine_actor="engine"),
             datasets=datasets,
             secrets=vault,
-            configure=ModelManager(store, registry, vault),
+            configure=manager,
+            resources=resources,
+        )
+        # Console trials have a separate experiment so duplicate-proposal protection
+        # remains active without contaminating the D10 scientific workflow fixture.
+        base.create_experiment(
+            "owner",
+            experiment_id="EXP-CONSOLE",
+            sample_id="sample",
+            key="console-fixture",
+            title="控制台测试",
+            objective="offline trial",
+        )
+        store.set_experiment_scope(
+            "owner",
+            "EXP-CONSOLE",
+            {
+                "resources": example["proposal"]["requested_resources"],
+                "risk_levels": ["operator_review"],
+            },
+            1,
         )
         statefile = Path(os.environ.get("ALAP_WEB_TEST_STATE", "/tmp/alap-d10-web.json"))
         state = {
@@ -190,6 +237,7 @@ def serve():
         finally:
             stop.set()
             thread.join(timeout=10)
+            mcp_generator.close()
             gateway.close()
             generator.close()
             statefile.unlink(missing_ok=True)

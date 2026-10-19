@@ -13,6 +13,8 @@ import type {
 } from "@/lib/types";
 import { Empty, Loading, Plot, Problem, Status, Time } from "./common";
 import { ExperimentWorkspace } from "./experiment";
+import { ConsolePage } from "./console";
+import { consoleNav } from "@/lib/console";
 
 const nav = [
   ["/experiments", "◫", "实验"],
@@ -34,7 +36,9 @@ export function WorkspaceApp() {
     parts.length > 1;
   const title = workspace
     ? "实验工作区"
-    : nav.find((n) => n[0] === "/" + parts[0])?.[2] || "实验";
+    : nav.find((n) => n[0] === "/" + parts[0])?.[2] ||
+      consoleNav.find((n) => n[0] === parts[0])?.[2] ||
+      "实验";
   return (
     <div className="app-shell">
       <a className="skip" href="#main">
@@ -66,6 +70,23 @@ export function WorkspaceApp() {
             </Link>
           ))}
         </nav>
+        <details className="console-nav" open>
+          <summary>平台与观测</summary>
+          <nav>
+            {consoleNav
+              .filter((n) => !n[3] || session.identity.role === "admin")
+              .map(([route, icon, label]) => (
+                <Link
+                  key={route}
+                  href={`/${route}`}
+                  className={parts[0] === route ? "selected" : ""}
+                >
+                  <span aria-hidden>{icon}</span>
+                  {label}
+                </Link>
+              ))}
+          </nav>
+        </details>
         <div className="sidebar-bottom">
           <span className="dot" />
           受控实验 · 人工审批<p>Agent 提议，授权后执行</p>
@@ -90,7 +111,13 @@ export function WorkspaceApp() {
           </div>
         </header>
         <main id="main" key={pathname}>
-          {workspace ? (
+          {consoleNav.some((n) => n[0] === parts[0]) ? (
+            <ConsolePage
+              client={session.client}
+              identity={session.identity}
+              parts={parts}
+            />
+          ) : workspace ? (
             <ExperimentWorkspace
               client={session.client}
               experiment={parts[1]}

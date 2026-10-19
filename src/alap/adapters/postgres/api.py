@@ -264,6 +264,7 @@ class PostgresAPIStore(PostgresResourceStore):
                         "agent_ref": run["definition_ref"],
                         "utc_day": day,
                         "experiment_id": experiment,
+                        "agent_run_ids": [],
                         "model_completions": 0,
                         "recorded_attempts": 0,
                         "unknown_usage": 0,
@@ -271,6 +272,8 @@ class PostgresAPIStore(PostgresResourceStore):
                         "estimated_cost": None,
                     },
                 )
+                if row["id"] not in group["agent_run_ids"]:
+                    group["agent_run_ids"].append(row["id"])
                 group["model_completions"] += 1
                 group["recorded_attempts"] += len(attempts)
                 usage = event.get("usage")
@@ -422,3 +425,60 @@ class PostgresAPIStore(PostgresResourceStore):
                         {"ref": row["ref"], "kind": m["kind"], "model_ref": m["model_ref"]}
                     )
             return result
+
+    def principal_page(self, cursor, limit):
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT p.id,p.kind,p.disabled_at,COALESCE(r.role,'observer') AS role "
+                "FROM principals p LEFT JOIN platform_roles r ON r.actor_id=p.id "
+                "WHERE p.id>%s ORDER BY p.id LIMIT %s",
+                (cursor, limit + 1),
+            ).fetchall()
+        return {
+            "items": rows[:limit],
+            "next_cursor": rows[limit - 1]["id"] if len(rows) > limit else None,
+        }
+
+    def change_role(self, actor, recipient, role, expected_role):
+        require(actor != recipient, "FORBIDDEN", "Cannot change own role")
+        with self.connect() as db:
+            # Lock identities in stable order; scope grants remain a separate experiment operation.
+            identities = db.execute(
+                "SELECT * FROM principals WHERE id=ANY(%s) ORDER BY id FOR UPDATE",
+                ([actor, recipient],),
+            ).fetchall()
+            require(len(identities) == 2, "NOT_FOUND", "Principal missing")
+            current = db.execute(
+                "SELECT role FROM platform_roles WHERE actor_id=%s", (actor,)
+            ).fetchone()
+            require(
+                current
+                and current["role"] == "admin"
+                and next(p for p in identities if p["id"] == actor)["disabled_at"] is None,
+                "FORBIDDEN",
+                "Active admin required",
+            )
+            require(
+                next(p for p in identities if p["id"] == recipient)["kind"] == "user",
+                "FORBIDDEN",
+                "Only human platform roles can change",
+            )
+            previous = db.execute(
+                "SELECT role FROM platform_roles WHERE actor_id=%s", (recipient,)
+            ).fetchone()
+            require(
+                (previous["role"] if previous else "observer") == expected_role,
+                "STATE_CONFLICT",
+                "Role changed; refresh",
+            )
+            db.execute(
+                "INSERT INTO platform_roles VALUES (%s,%s) ON CONFLICT(actor_id) "
+                "DO UPDATE SET role=EXCLUDED.role",
+                (recipient, role),
+            )
+            db.execute(
+                "INSERT INTO api_audit(actor_id,operation,target) "
+                "VALUES (%s,'setPrincipalRole',%s)",
+                (actor, recipient + ":" + role),
+            )
+        return {"id": recipient, "role": role}

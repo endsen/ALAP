@@ -2609,6 +2609,152 @@ paths:
           $ref: '#/components/responses/Error'
         '503':
           $ref: '#/components/responses/Error'
+  /agents/{ref}:
+    get:
+      operationId: getAgent
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      responses: &id010
+        '200':
+          description: Authorized console result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /agents/{ref}/validate:
+    post:
+      operationId: validateAgent
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses: *id010
+  /skills/{ref}:
+    get:
+      operationId: getSkill
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      responses: *id010
+  /skills/{ref}/validate:
+    post:
+      operationId: validateSkill
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses: *id010
+  /platform/tools:
+    get:
+      operationId: listPlatformTools
+      parameters: []
+      responses: *id010
+  /settings:
+    get:
+      operationId: getPlatformSettings
+      parameters: []
+      responses: *id010
+  /principals:
+    get:
+      operationId: listPrincipals
+      parameters:
+      - name: cursor
+        in: query
+        schema:
+          type: string
+          maxLength: 200
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      responses: *id010
+  /principals/{actor_id}/role:
+    post:
+      operationId: setPrincipalRole
+      parameters:
+      - name: actor_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses: *id010
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - role
+              - expected_role
+              properties:
+                role:
+                  enum:
+                  - admin
+                  - researcher
+                  - observer
+                expected_role:
+                  enum:
+                  - admin
+                  - researcher
+                  - observer
+  /models/{ref}/test:
+    post:
+      operationId: testModel
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses: *id010
 components:
   securitySchemes:
     bearerAuth:
@@ -2867,10 +3013,10 @@ components:
       type: object
       additionalProperties: false
       properties:
-        id: &id010
+        id: &id011
           type: string
-        kind: *id010
-        role: *id010
+        kind: *id011
+        role: *id011
       required:
       - id
       - kind
@@ -2891,9 +3037,9 @@ components:
             type: object
             additionalProperties: false
             properties:
-              id: *id010
-              plan_hash: *id010
-              revision: &id012
+              id: *id011
+              plan_hash: *id011
+              revision: &id013
                 type: integer
                 minimum: 0
             required:
@@ -2904,31 +3050,31 @@ components:
           type: object
           additionalProperties: false
           properties:
-            write: &id011
+            write: &id012
               type: boolean
-            approve: *id011
-            role: *id010
+            approve: *id012
+            role: *id011
             resources:
               type: array
-              items: *id010
+              items: *id011
           required:
           - write
           - approve
           - role
           - resources
-        event_cursor: *id012
+        event_cursor: *id013
         approvals:
           type: array
           items:
             type: object
             additionalProperties: false
             properties:
-              id: *id010
-              plan_revision_id: *id010
-              plan_hash: *id010
-              state: *id010
-              state_version: *id012
-              expires_at: *id010
+              id: *id011
+              plan_revision_id: *id011
+              plan_hash: *id011
+              state: *id011
+              state_version: *id013
+              expires_at: *id011
             required:
             - id
             - plan_revision_id
@@ -2942,10 +3088,10 @@ components:
             type: object
             additionalProperties: false
             properties:
-              id: *id010
-              plan_revision_id: *id010
-              state: *id010
-              state_version: *id012
+              id: *id011
+              plan_revision_id: *id011
+              state: *id011
+              state_version: *id013
             required:
             - id
             - plan_revision_id
@@ -2957,10 +3103,10 @@ components:
             type: object
             additionalProperties: false
             properties:
-              id: *id010
-              run_id: *id010
-              state: *id010
-              state_version: *id012
+              id: *id011
+              run_id: *id011
+              state: *id011
+              state_version: *id013
             required:
             - id
             - run_id
@@ -2972,11 +3118,11 @@ components:
             type: object
             additionalProperties: false
             properties:
-              id: *id010
-              run_id: *id010
-              task_id: *id010
-              state: *id010
-              state_version: *id012
+              id: *id011
+              run_id: *id011
+              task_id: *id011
+              state: *id011
+              state_version: *id013
             required:
             - id
             - run_id
@@ -2989,9 +3135,9 @@ components:
             type: object
             additionalProperties: false
             properties:
-              id: *id010
-              state: *id010
-              state_version: *id012
+              id: *id011
+              state: *id011
+              state_version: *id013
               manifest:
                 anyOf:
                 - $ref: '#/components/schemas/DatasetManifest'
@@ -3016,12 +3162,12 @@ components:
       type: object
       additionalProperties: false
       properties:
-        id: *id010
-        experiment_id: *id010
-        definition_ref: *id010
-        revision: *id012
-        status: *id010
-        goal: *id010
+        id: *id011
+        experiment_id: *id011
+        definition_ref: *id011
+        revision: *id013
+        status: *id011
+        goal: *id011
         result:
           oneOf:
           - type: string
@@ -3047,11 +3193,11 @@ components:
       type: object
       additionalProperties: false
       properties:
-        dataset_id: *id010
-        x_label: *id010
-        x_unit: *id010
-        y_label: *id010
-        y_unit: *id010
+        dataset_id: *id011
+        x_label: *id011
+        x_unit: *id011
+        y_label: *id011
+        y_unit: *id011
         points:
           type: array
           items:
@@ -3060,9 +3206,9 @@ components:
               type: number
             minItems: 2
             maxItems: 2
-        total_points: *id012
-        downsampled: *id011
-        checksum_sha256: *id010
+        total_points: *id013
+        downsampled: *id012
+        checksum_sha256: *id011
       required:
       - dataset_id
       - x_label
@@ -3077,14 +3223,14 @@ components:
       type: object
       additionalProperties: false
       properties:
-        snapshot_version: *id012
-        next_revision: *id012
+        snapshot_version: *id013
+        next_revision: *id013
         policy_versions:
           type: object
-          additionalProperties: *id010
+          additionalProperties: *id011
         capability_versions:
           type: object
-          additionalProperties: *id010
+          additionalProperties: *id011
       required:
       - snapshot_version
       - next_revision
@@ -3094,9 +3240,9 @@ components:
       type: object
       additionalProperties: false
       properties:
-        ref: *id010
-        kind: *id010
-        model_ref: *id010
+        ref: *id011
+        kind: *id011
+        model_ref: *id011
       required:
       - ref
       - kind

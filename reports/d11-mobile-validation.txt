@@ -1,0 +1,41 @@
+
+> alap-web@0.1.0 build
+> next build
+
+▲ Next.js 16.4.2 (Turbopack)
+✓ Running next.config.ts took 17ms
+- Experiments (use with caution):
+  · cpus: 2
+  ⨯ useTypeScriptCli
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 123ms
+  Running TypeScript ...
+  Finished TypeScript in 1208ms ...
+  Collecting page data using 2 workers ...
+  Generating static pages using 2 workers (0/2) ...
+✓ Generating static pages using 2 workers (2/2) in 40ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /_not-found
+└ ƒ /[[...route]]
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+> alap-web@0.1.0 test:e2e
+> playwright test --grep mobile console
+
+[WebServer] (node:25571) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:25680) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/e2e/console.spec.ts:278:5 › mobile console remains within viewport and keyboard confirmation can be dismissed (405ms)
+
+  1 passed (3.6s)
