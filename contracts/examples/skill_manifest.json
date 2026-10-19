@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "skill_id": "iv_guidance",
+  "version": 1,
+  "kind": "instruction",
+  "content": "Only propose measurements. Approval is performed by the experiment engine.",
+  "source": "alap:built-in",
+  "owner": "alap",
+  "dependencies": [],
+  "required_tools": [
+    "propose_plan@1"
+  ],
+  "required_scopes": [
+    "proposal"
+  ],
+  "resources": [],
+  "input_schema": {
+    "type": "object"
+  },
+  "output_schema": {
+    "type": "object"
+  },
+  "preconditions": [
+    "current_snapshot"
+  ],
+  "success_criteria": "validated proposal",
+  "side_effect": "none",
+  "executor": "context"
+}

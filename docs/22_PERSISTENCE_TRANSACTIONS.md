@@ -149,3 +149,27 @@ DB-12：UI 快照读取间发生事务提交；状态与游标来自同一快照
 实现见 `d04_001_execution.py`、`application/execution.py`、`adapters/gateway/`，操作与限制见 D04_EXECUTION_DEVELOPMENT.md。D03 写入事务现已加入代际共享锁；恢复使用独占代际锁。网关 journal 独立持久化并防止多进程同时持有；中央与网关没有跨库事务，发送前崩溃保守进入 UNKNOWN。新 epoch 采用全部注册网关确认的全局屏障，未完成对账不恢复发放。
 
 D04 仅使用离线认证和模拟设备；stop_requests 预留表不代表停止协议已完成，IV 结果不进入 COMMITTED。D05 必须补齐停止请求在资源释放和恢复中的核验，以及数据提交、消息投递和消费协议。
+
+## 9. D05 实施细化
+
+D05-001 增加 datasets、采集 provenance_edges、不可变 device_snapshots；D05-002 增加独立 event_delivery_claims、consumer_inbox、event_projections；D05-003 增加停止确认结果及身份不变约束。完整实现/故障验收见 [D05 开发说明](D05_DATA_RECOVERY_DEVELOPMENT.md)。
+
+文件操作、NATS publish、Gateway 停止与数据发布确认均在数据库事务外。状态/effects/审计/outbox 同事务；消息消费 inbox/投影同事务；停止确认阻止旧包迟到和提前复用资源。DB-08/09/10 已纳入真实数据库与离线模拟集成测试，HTTP/SSE 和真机仍待对应期。当前保留全部事件及孤儿文件，不做破坏性自动清理。
+
+## D07 Agent 持久化补充
+
+迁移 d07_001 增加 agent_registry/agent_runs/agent_trace/agent_tool_invocations/agent_proposals。注册内容、发布时解析的模型/工具/技能绑定和运行 bundle 不可变，状态/检查点版本可推进。Agent 的逻辑 checkpoint 独立于实验 runs/command_ledger，不修改物理执行状态。
+
+同一 Agent Run 使用 session advisory lock 排他推进；模型调用前短事务预留预算，网络调用期间不持有业务事务。工具结果、PROPOSED 提案、trace 与新 checkpoint 同事务提交，调用 ID 唯一约束防重复；成员/资源/快照与禁用状态在提交前重新校验。只有 run 所属 actor 可恢复，成员撤权即拒绝。本期不实现正式计划/API 推进；不能把 agent_proposals 当可执行命令。
+
+## D08 资源与协作持久化补充
+
+d08_001 增加 knowledge_versions/grants、mcp_connections/tools/grants/calls、dataset_analyses、collaboration_claims、proposal_business_keys。知识/连接/目录内容不可覆盖，ACL 与启停单独变化；分析结果不可变并绑定 dataset/checksum/算法。MCP INFLIGHT 在远端调用前提交，未知不得盲重试；调用成功缓存与 Agent 工具 ledger 分离，checkpoint 恢复先复核再复用。
+
+Agent checkpoint 的 external_refs 在加载和提交内锁定复核；提案与业务指纹、工具 ledger/trace/checkpoint 同事务，冲突整体回滚。数据事件 claim 有固定 Run ID、次数/冷却约束，创建和绑定间中断可恢复。历史 D07 提案建立结构指纹映射，不删除或改写已有提案。
+
+## D09 · API 与身份持久化
+
+迁移 d09_001 为实验增加 title/objective/created_at，并增加 platform_roles、api_tokens、api_credentials、platform_configs、api_requests、api_audit。已有实验的 created_at 是迁移时间，不能当作历史采集时间。token 仅存摘要，凭据仅存绑定引用的认证密文；版本配置在应用入口拒绝覆盖，管理审计不可更新/删除。
+
+API 请求以 actor/operation/path/key 区分，HMAC 绑定请求及 If-Match，INFLIGHT 在调用前提交。跨服务操作不声明同事务，崩溃保留未知并要求检查业务结果；原有实验状态/outbox 原子事务保持。权限变化不产生虚构设备事件；SSE 按当前权限复核并可终止，客户端再获取权威快照。

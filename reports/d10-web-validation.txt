@@ -1,0 +1,80 @@
+> npm exec -- openapi-typescript ../../contracts/openapi.yaml -o /tmp/alap-web-contract-2kj56pq7/api.d.ts
+npm notice run alap-web@0.1.0 npx
+npm notice run 'openapi-typescript' ../../contracts/openapi.yaml -o /tmp/alap-web-contract-2kj56pq7/api.d.ts
+✨ openapi-typescript 7.13.0
+🚀 ../../contracts/openapi.yaml → /tmp/alap-web-contract-2kj56pq7/api.d.ts [332.5ms]
+> npm run format:check
+npm notice run alap-web@0.1.0 format:check
+npm notice run prettier --check .
+Checking formatting...
+All matched files use Prettier code style!
+> npm run typecheck
+npm notice run alap-web@0.1.0 typecheck
+npm notice run tsc --noEmit
+> npm test
+npm notice run alap-web@0.1.0 test
+npm notice run node --import tsx --test --test-isolation=none tests/unit/*.test.ts
+✔ ambiguous delivery retains idempotency key and blocks changed payload (38.751832ms)
+✔ 401 expires session and no input contents become error messages (1.005289ms)
+✔ SSE split boundaries, multiline content and heartbeat (1.90475ms)
+✔ dedup, gap and cursor mismatch never fabricate state (0.41436ms)
+✔ oversized or invalid cursors and incomplete frames are not applied (0.428574ms)
+✔ candidate binds exact snapshot, policy and capability versions (0.791679ms)
+✔ diff identifies resources, risks and changed task constraints (0.66908ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 341.060026
+> npm run build
+npm notice run alap-web@0.1.0 build
+npm notice run next build
+▲ Next.js 16.4.2 (Turbopack)
+✓ Running next.config.ts took 174ms
+- Experiments (use with caution):
+  · cpus: 2
+  ⨯ useTypeScriptCli
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1193ms
+  Running TypeScript ...
+  Finished TypeScript in 5.3s ...
+  Collecting page data using 2 workers ...
+  Generating static pages using 2 workers (0/2) ...
+✓ Generating static pages using 2 workers (2/2) in 226ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /_not-found
+└ ƒ /[[...route]]
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+> npm run test:e2e
+npm notice run alap-web@0.1.0 test:e2e
+npm notice run playwright test
+[WebServer] npm notice run alap-web@0.1.0 start
+[WebServer] npm notice run next start --hostname 127.0.0.1 --port 53000
+[WebServer] (node:3157408) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 9 tests using 1 worker
+
+(node:3157465) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/e2e/workspace.spec.ts:33:5 › real simulated experiment: goal, plan, approval, Run, verified curve and download (20.9s)
+  ✓  2 tests/e2e/workspace.spec.ts:81:5 › observer cannot write; reload discards token (1.3s)
+  ✓  3 tests/e2e/workspace.spec.ts:94:5 › SSE disconnect blocks writes and snapshot reconnect restores them (1.5s)
+  ✓  4 tests/e2e/workspace.spec.ts:109:5 › mobile login remains accessible and fits viewport (1.2s)
+  ✓  5 tests/e2e/workspace.spec.ts:122:5 › version conflict keeps confirmation open and does not claim success (1.5s)
+  ✓  6 tests/e2e/workspace.spec.ts:147:5 › SSE access revocation clears protected workspace (1.2s)
+  ✓  7 tests/e2e/workspace.spec.ts:160:5 › create sample and experiment, display unknown instruments (1.9s)
+  ✓  8 tests/e2e/workspace.spec.ts:190:5 › expired identity returns login instead of retaining private content (1.1s)
+  ✓  9 tests/e2e/workspace.spec.ts:208:5 › snapshot loading is explicit; resync event restores authoritative state (2.5s)
+
+  9 passed (39.7s)

@@ -87,3 +87,68 @@ D02 完整本地检查输出保存在 reports/d02-validation.txt；不等价于�
 | 稳定条件 | 原始时间、质量、单位、容差、斜率、持续窗口及鲜度 | 短时模拟窗口，不是设备校准 |
 
 证据：tests/integration/test_execution.py、tests/test_stability.py、reports/d04-validation.txt。IV 数据发布及完整暂停取消恢复属于 D05，不能据此宣布完整 EVAL 通过。
+
+## D05 验证追踪
+
+| 需求/故障 | 实现 | 验证证据 |
+|---|---|---|
+| FR-011 / DB-09 正式数据与恢复 | DatasetService、Hdf5Store、数据/血缘迁移 | test_datasets、test_artifacts：半上传、事务失败、重复提交、损坏、权限与不重复采集 |
+| FR-012 / DB-10 事件投递与去重 | EventService、JetStreamPublisher、inbox/projection | test_events：真实 JetStream ACK 丢失、重投、事务回滚、乱序、游标与权限撤销 |
+| DB-08 暂停/取消竞争 | ControlService、Gateway stop journal | test_control：有限边界暂停、完成竞争、未发送取消、停止未知、迟到原包与重启 |
+| DB-07/11 资源及代际屏障 | release/bind_gateway/finish_recovery | 停止确认未完成时拒绝资源复用和 epoch 切换 |
+| DB-12 一致性快照 | read_snapshot/after | 同事务状态与 cursor、正式 Manifest 可见性、按游标分页补事件 |
+
+本轮统一检查报告为 reports/d05-validation.txt；该报告是本地 Linux 集成证据，未运行本轮远程 CI，不等价于完整生产/现场 EVAL。
+
+## D06 验证追踪
+
+| 需求/验收 | 本期证据 | 后续边界 |
+|---|---|---|
+| FR-021/022 / EVAL-16 | tests/test_models.py：两个供应商同 Planner 请求统一输出、实际模型与版本；DeepSeek 三项真实联调报告 | OpenAI 无真实凭据，未做实联；Agent Planner 在 D07 |
+| EVAL-17 | 分片、重复 ID/键、非法参数/用量、截断、429/超时/取消、预算与响应上限；错误不带远端敏感正文 | 不执行任何设备/工具，多轮 Agent 历史由 D07 扩展 |
+| EVAL-18 | 缺失能力/凭据、配置版本、域名策略、外部 Schema 引用拒绝 | 管理界面、集中密钥与生产身份在后续期 |
+
+证据：reports/d06-validation.txt、reports/d06-deepseek-smoke.json；范围见 docs/D06_MODEL_DEVELOPMENT.md。
+
+## D07 验证追踪
+
+| 需求/验收 | 本期实现与证据 | 后续边界 |
+|---|---|---|
+| FR-020/023 / EVAL-19 | Skill 契约、不可变注册、依赖检查、发布/禁用与运行绑定；tests/integration/test_agents.py | 管理 UI/API、任意代码 worker 未实现 |
+| EVAL-03 | 数据消息与系统策略隔离、工具 allowlist、参数/资源/成员权限再次验证 | 不是模型抗注入准确率统计 |
+| EVAL-08 | 事务回滚后恢复、已提交提案不重复、inflight 模型保守终止；真实 PostgreSQL/LangGraph | 无模型到 Gateway 直连；现场恢复由执行层验收 |
+| EVAL-01/02 | 合法目标产生契约有效提案，越界参数、证据与快照被拒绝 | 本期不自动审批、保存正式计划或执行设备 |
+| FR-021/022 | 多轮工具消息配对，协议历史错误在联网前拒绝；tests/test_models.py | 本期没有新增真实 LLM 规划联调 |
+
+上下文预算与完整交换测试见 tests/test_agent_context.py；全套结果见 reports/d07-validation.txt。
+
+## D08 验证追踪
+
+| 需求/验收 | 本期证据 | 后续边界 |
+|---|---|---|
+| FR-024 / EVAL-20 | 回环真实 HTTP MCP、发现无授权、Schema 变化撤销、作用域注入、防重放和错误测试 | 不含公网兼容性/OAuth/stdio worker |
+| FR-028 / EVAL-23 | 来源版本/ACL、实验/仪器/Agent 记忆隔离、旧 checkpoint 撤权生效 | 首版子串检索，无向量 RAG |
+| EVAL-10/13 | 实际 HDF5 checksum、COMMITTED 门禁、分析血缘、数据事件/计划结构去重、预算与中断恢复 | 描述统计不代替物理判据；无常驻协作 worker |
+
+tests/integration/test_resources.py、tests/test_mcp_policy.py；完整验收见 reports/d08-validation.txt，范围见 D08 开发交接。
+
+## D09 实现追踪
+
+身份/授权、管理 API、SSE 和密钥接口由 `application/api.py`、`adapters/api`、`adapters/postgres/api.py` 与 `adapters/secrets/encrypted.py` 实现；核心 REST 和管理操作以 `contracts/openapi.base.yaml` operationId 定位。`tests/integration/test_api.py` 覆盖无身份、角色/实验/仪器隔离、审批版本、并发/未知不重放、SSE 重放/撤权、凭据保密、管理生命周期、真实 HTTP 与数据下载；既有 D03–D08 门禁继续回归。生产身份供应商、完整计费、部署容量和现场未用本期测试代替。
+
+| D09 需求范围 | 本期实现与验证 | 仍待后续验收 |
+|---|---|---|
+| FR-001/002/004/013，NFR-002 | 真正令牌、角色/范围检查、审批链、版本冲突、并发幂等和未知不重放 | Web 操作与生产身份提供方 |
+| FR-010/011/012 | 校验后的数据下载、事务内事件页范围检查、SSE 续传/撤权 | 浏览器重连体验与负载 |
+| FR-022/023/024/028/029 | 版本配置、凭据加密、Skill/Agent/MCP/知识管理 HTTP | 供应商连通性测试 UI、SSO、主密钥轮换 |
+| FR-025/026/027，NFR-009/012 | 实验仪表板读模型；按供应商/模型/Agent/UTC 日统计已记录用量；受限 trace/提案与审计 | 费用价格版本、完整 Gateway 流量、生产 TLS 与性能 |
+
+## D10 实现追踪
+
+| 需求范围 | 实现与验证位置 | 保留边界 |
+|---|---|---|
+| FR-001/002/004/013，NFR-002 | `apps/web/src/components` 目标、计划差异、审批确认、状态请求；浏览器全流程、只读和冲突路径 | 任意参数编辑器、SSO 尚未实现 |
+| FR-010/011/012 | `lib/events.ts`、`lib/hooks.ts` 游标/重连；`application/series.py` 校验曲线；单元/API/浏览器测试 | 压力容量、实时遥测属后续验收 |
+| FR-023/026，NFR-009/012 | 持久 Agent Run/提案/轨迹、未知设备状态、错误和加载提示 | 全平台管理/统计页面 D11；部署 D12 |
+
+实际通过项与报告见 `IMPLEMENTATION_STATUS.md`，启动与测试 fixture 边界见 D10 开发交接。模型采用离线替身，设备为模拟器，不构成真实供应商或现场验收。

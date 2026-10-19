@@ -1,0 +1,22 @@
+npm notice run alap-web@0.1.0 test:e2e
+npm notice run playwright test
+[WebServer] npm notice run alap-web@0.1.0 start
+[WebServer] npm notice run next start --hostname 127.0.0.1 --port 53000
+[WebServer] (node:3161527) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 9 tests using 1 worker
+
+(node:3161604) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/e2e/workspace.spec.ts:33:5 › real simulated experiment: goal, plan, approval, Run, verified curve and download (20.8s)
+  ✓  2 tests/e2e/workspace.spec.ts:81:5 › observer cannot write; reload discards token (1.1s)
+  ✓  3 tests/e2e/workspace.spec.ts:94:5 › SSE disconnect blocks writes and snapshot reconnect restores them (1.3s)
+  ✓  4 tests/e2e/workspace.spec.ts:109:5 › mobile login remains accessible and fits viewport (834ms)
+  ✓  5 tests/e2e/workspace.spec.ts:122:5 › version conflict keeps confirmation open and does not claim success (1.1s)
+  ✓  6 tests/e2e/workspace.spec.ts:147:5 › SSE access revocation clears protected workspace (941ms)
+  ✓  7 tests/e2e/workspace.spec.ts:160:5 › create sample and experiment, display unknown instruments (1.5s)
+  ✓  8 tests/e2e/workspace.spec.ts:190:5 › expired identity returns login instead of retaining private content (908ms)
+  ✓  9 tests/e2e/workspace.spec.ts:208:5 › snapshot loading is explicit; resync event restores authoritative state (2.4s)
+
+  9 passed (37.6s)

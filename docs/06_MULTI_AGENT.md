@@ -82,3 +82,7 @@
 ## 8. 示例：磁场历史影响零场 IV
 
 `Planner(设置测量目标)` → `Temp Agent(报告温度稳定建议)` → `Scheduler(核验温控稳定)` → `Magnet Gateway(经授权设定磁场与回零)` → `SourceMeter Gateway(IV 扫描)` → `Dataset COMMITTED` → `Analysis Agent(计算 Ic± 与 η)` → `Planner(提出密集磁场扫描建议)` → `Operator Approval` → `下一 Run`。稳定判据必须基于传感器读数、滑动窗口和设备规程；“磁场目标为 0”不意味着样品内部无残余磁通。
+
+## D08 内部协作实现
+
+AnalysisCoordinator 从权威 dataset.committed 事件生成作用域分析引用，再启动 Analysis 或 Planner。以 actor/experiment/definition/证据指纹去重，固定 Run ID 修复创建与 claim 绑定间中断；新证据受冷却与次数预算约束。跨 Run 的相同结构计划由业务指纹约束阻断，未做自然语言近似去重。本期没有常驻多 Agent 事件 worker，也不通过自然语言协商授予执行权。

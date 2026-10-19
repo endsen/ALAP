@@ -99,3 +99,11 @@ LangGraph checkpointer 可持久化智能体线程并支持交互中断；**恢�
 ## 12. v3.1 管理能力
 
 多供应商 API 的配置、能力矩阵、统一流、错误/用量规范见第 18 章。Skills 分为 instruction/execution，MCP 发现与授权分离，平台管理流程见第 17 章。角色均由 ALAP 实现，不依赖供应商托管 Agent。MCP 是工具接入方式，Skills 是版本化能力，两者都受同一权限层约束。
+
+## 13. D07 实现落点
+
+Planner/Instrument 的 model/tools/recover 条件路由已用 LangGraph 实现。采用 ALAP PostgreSQL JSON checkpoint，与工具 ledger、PROPOSED 提案原子提交；不使用独立自动重放机制处理实验副作用。已有结果恢复不重做，未提交的模型调用保守终止。角色/Skill/工具/模型快照固定，运行时重新检查成员权限、版本禁用、预算和快照。多轮 tool 消息成对校验，上下文裁剪记录来源并保留安全边界。具体可运行范围、验证和未实现状态见 D07_AGENT_SKILLS_DEVELOPMENT.md；正式计划审核/API、WAITING_INPUT、MCP/知识与 Analysis 属于后续期。
+
+## 14. D08 实现落点
+
+Analysis 角色、受控 MCP 只读工具、scoped_knowledge 与数据分析工具已接入同一运行循环。知识、记忆和分析都带来源引用，checkpoint 恢复及提交重新检查授权/启停/数据状态；资料不能成为权限。Context Builder 可注入不可静默丢弃的分析证据。首版为文本子串检索和确定性 IV 描述统计，没有向量 RAG、自动知识写入或物理判据推断。协议与算法边界见 D08_MCP_KNOWLEDGE_ANALYSIS.md。

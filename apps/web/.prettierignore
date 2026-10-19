@@ -1,0 +1,6 @@
+.next
+node_modules
+src/generated
+package-lock.json
+next-env.d.ts
+test-results

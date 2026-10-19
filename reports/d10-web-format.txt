@@ -1,0 +1,20 @@
+next.config.ts 88ms
+package.json 32ms (unchanged)
+playwright.config.ts 9ms
+src/app/[[...route]]/page.tsx 8ms
+src/app/layout.tsx 9ms
+src/app/style.css 156ms
+src/components/common.tsx 53ms
+src/components/experiment.tsx 89ms
+src/components/plans.tsx 62ms
+src/components/workspace.tsx 64ms
+src/lib/api.ts 27ms
+src/lib/events.ts 18ms
+src/lib/hooks.ts 26ms
+src/lib/plan.ts 8ms
+src/lib/types.ts 3ms
+tests/e2e/workspace.spec.ts 40ms
+tests/unit/api.test.ts 10ms
+tests/unit/events.test.ts 12ms
+tests/unit/plan.test.ts 9ms
+tsconfig.json 4ms

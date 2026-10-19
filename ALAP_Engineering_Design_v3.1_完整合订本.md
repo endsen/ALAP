@@ -394,6 +394,10 @@ Web/HTTP/Worker/Gateway 入口 → 应用用例 → 领域模型与端口；Post
 - Observer 不能通过页面或直接 API 调用获得设备写权限。
 - 页面必须区分“命令已发送”“设备已确认执行”“读回验证成功”三个状态。
 
+## D10 实现切片
+
+`apps/web` 已按三栏工作区实现目标会话、结构化提案、计划版本/依赖/参数查看与审批确认、实验/只读设备/数据曲线页面。导航由持久根布局保持内存会话，整页刷新重新登录。Agent 文本结果与结构化提案结果分别展示；不把后者当作可执行指令。SSE 驱动权威快照刷新，失联禁用写入，撤权清除工作区。完整平台管理按 D11 实施；验收记录见实施状态与 D10 开发交接。
+
 ---
 
 <!-- 来源: docs/05_AGENT_PLATFORM.md -->
@@ -500,6 +504,14 @@ LangGraph checkpointer 可持久化智能体线程并支持交互中断；**恢�
 
 多供应商 API 的配置、能力矩阵、统一流、错误/用量规范见第 18 章。Skills 分为 instruction/execution，MCP 发现与授权分离，平台管理流程见第 17 章。角色均由 ALAP 实现，不依赖供应商托管 Agent。MCP 是工具接入方式，Skills 是版本化能力，两者都受同一权限层约束。
 
+## 13. D07 实现落点
+
+Planner/Instrument 的 model/tools/recover 条件路由已用 LangGraph 实现。采用 ALAP PostgreSQL JSON checkpoint，与工具 ledger、PROPOSED 提案原子提交；不使用独立自动重放机制处理实验副作用。已有结果恢复不重做，未提交的模型调用保守终止。角色/Skill/工具/模型快照固定，运行时重新检查成员权限、版本禁用、预算和快照。多轮 tool 消息成对校验，上下文裁剪记录来源并保留安全边界。具体可运行范围、验证和未实现状态见 D07_AGENT_SKILLS_DEVELOPMENT.md；正式计划审核/API、WAITING_INPUT、MCP/知识与 Analysis 属于后续期。
+
+## 14. D08 实现落点
+
+Analysis 角色、受控 MCP 只读工具、scoped_knowledge 与数据分析工具已接入同一运行循环。知识、记忆和分析都带来源引用，checkpoint 恢复及提交重新检查授权/启停/数据状态；资料不能成为权限。Context Builder 可注入不可静默丢弃的分析证据。首版为文本子串检索和确定性 IV 描述统计，没有向量 RAG、自动知识写入或物理判据推断。协议与算法边界见 D08_MCP_KNOWLEDGE_ANALYSIS.md。
+
 ---
 
 <!-- 来源: docs/06_MULTI_AGENT.md -->
@@ -588,6 +600,10 @@ LangGraph checkpointer 可持久化智能体线程并支持交互中断；**恢�
 ## 8. 示例：磁场历史影响零场 IV
 
 `Planner(设置测量目标)` → `Temp Agent(报告温度稳定建议)` → `Scheduler(核验温控稳定)` → `Magnet Gateway(经授权设定磁场与回零)` → `SourceMeter Gateway(IV 扫描)` → `Dataset COMMITTED` → `Analysis Agent(计算 Ic± 与 η)` → `Planner(提出密集磁场扫描建议)` → `Operator Approval` → `下一 Run`。稳定判据必须基于传感器读数、滑动窗口和设备规程；“磁场目标为 0”不意味着样品内部无残余磁通。
+
+## D08 内部协作实现
+
+AnalysisCoordinator 从权威 dataset.committed 事件生成作用域分析引用，再启动 Analysis 或 Planner。以 actor/experiment/definition/证据指纹去重，固定 Run ID 修复创建与 claim 绑定间中断；新证据受冷却与次数预算约束。跨 Run 的相同结构计划由业务指纹约束阻断，未做自然语言近似去重。本期没有常驻多 Agent 事件 worker，也不通过自然语言协商授予执行权。
 
 ---
 
@@ -920,6 +936,14 @@ v3.1 初次开发契约采用 2.0，尚无已部署旧协议；后续破坏性�
 
 共享结构由 JSON Schema 生成至 OpenAPI；路由源为 `contracts/openapi.base.yaml`，生成命令及漂移检查见根目录 README。规划中的平台管理路由在 P3/P4 补齐，不代表当前已有服务。
 
+## 9. D09 已实现接口对齐
+
+D09 已接入契约驱动 FastAPI。早期上表的审批/Run 请求细节以当前 `openapi.base.yaml` 为准：计划提交是完整版本，审批分请求与决定，Run 绑定 approval_id；这些变更在尚无部署客户端阶段完成。身份首版采用可信运维签发的本地 opaque Bearer token，主体/角色/资源范围按请求复核。基础管理接口、当前主体用量、凭据写入与 SSE 已实现；企业 OIDC、集群限流、完整计费和 Web 不在本期验收中。运行控制的 If-Match 对应 Run state_version，凭据首次写入为 -1。详见 D09_API_IDENTITY_DEVELOPMENT.md。
+
+## D10 工作区读模型增量
+
+`GET /me` 返回主体 id/kind/平台 role；实验 snapshot 附带当前成员权限和计划 hash 索引。`GET /experiments/{id}/available-agents` 只列已发布且覆盖当前实验和设备 scope 的 Agent；`GET /experiments/{id}/plan-context` 要求写权限，返回精确快照/下一计划版本及设备策略/能力版本，不对旧提案自动换版本。Agent Run 的 result 可为文本、含 proposal_ids 的对象或 null。`GET /datasets/{id}/series` 返回校验后的有限 IV 点序列与 checksum/降采样信息，权限依据与下载一致；原始 HDF5 下载仍是完整数据依据。
+
 ---
 
 <!-- 来源: docs/11_SAFETY_SECURITY.md -->
@@ -999,6 +1023,10 @@ v3.1 初次开发契约采用 2.0，尚无已部署旧协议；后续破坏性�
 ## 10. v3.1 平台扩展边界
 
 Skills 导入、MCP 工具描述与模型回答都不能授予权限。MCP/模型端点配置须校验网络目的地与凭据访问；未知工具默认不执行。密钥不进入模型上下文、SSE、错误详情、调用日志或公开配置。细则见第 17、18 章。
+
+## D09 应用边界落实
+
+HTTP actor 仅来自数据库核验的短期 token；平台管理员权限与实验/仪器权限分离。新实验不自动获得设备范围，管理员显式赋权，owner 只能在自身范围内分享。密钥使用外部主密钥进行认证加密，API 无明文读取入口；重复请求指纹使用 HMAC，错误/审计不保存请求体。数据下载前后验证仪器范围；SSE 流中撤权会终止，缓存重放不代替当前权限。部署 TLS、企业 OIDC 和主密钥轮换仍需后续验收，详见 D09 交接。
 
 ---
 
@@ -1319,6 +1347,58 @@ OD-05 中接入方式已确认为 API；模型供应商、真实凭据和具体�
 
 状态为 Accepted for development；不是现场批准。细节见 D04_EXECUTION_DEVELOPMENT.md。
 
+## D05 开发基线决策
+
+- ADR-027：首个正式采集适配为 IV/HDF5；不可覆盖文件先持久化，Dataset/血缘/event 后原子提交。Manifest 引用原发放读回快照，不能拿计划版本冒充设备观察。
+- ADR-028：JetStream 为至少一次通知；发布 claim 独立存储，旧 token 不确认新领取；inbox 与投影效果原子提交，乱序不会回退对象。
+- ADR-029：停止为独立持久请求，绑定原 epoch/命令/载荷；模拟有限动作边界确认，提前停止记录拦截迟到原包。所有停止已确认才允许资源释放/代际切换。
+
+以上为开发基线，不代替生产身份/网络安全或真实设备急停审批。验证范围与限制见 D05 开发说明。
+
+## D06 开发基线决策
+
+- ADR-030：首版提供显式 Chat Completions 协议，OpenAI/DeepSeek 参数独立映射；能力声明不等同实际兼容。Responses 与自定义端点另行验收。
+- ADR-031：模型仅产生提案；SSE 终态、唯一调用 ID、授权输入工具集合和 Schema 全部校验后才交付。部分流失败不重试拼接，不自动切换供应商。
+- ADR-032：官方域名 HTTPS allowlist、无重定向/环境代理、环境变量 SecretStore；token 保守预留约束尝试预算，未知 usage 不为零。生产密钥/出站策略与费用账单需后续服务实现。
+
+状态：Accepted for development。协议与现场/生产验收分别记录，详见 D06 开发交接。
+
+## D07 开发基线决策
+
+- ADR-033：LangGraph 负责 Agent 条件路由，ALAP PostgreSQL 负责 JSON checkpoint/提案/工具 ledger 同事务提交；不以框架回放代替副作用幂等。
+- ADR-034：Agent/Skill 导入不执行；发布静态契约/依赖/权限校验后固定版本。运行 bundle 固定，但禁用或撤权阻止后续调用；execution Skill 只交给实验引擎。
+- ADR-035：模型调用前预留预算并提交 inflight；未提交结果的模型调用恢复时失败，不盲重试。上下文以完整安全边界和配对工具交换为单位，记录裁剪来源。
+
+状态：Accepted for development。生产身份、管理 API、交互式恢复与长期知识仍需后续验收。
+
+## D08 开发基线决策
+
+- ADR-036：MCP 首版固定 2025-11-25 Streamable HTTP 子集，审核 IP/URL、拒绝重定向/环境代理；发现不授权，仅可信管理员批准的结构化作用域只读工具可进入 Agent。
+- ADR-037：知识/记忆/分析携带不可变来源版本与 hash，ACL/成员/数据状态在读取、checkpoint 恢复及提交时重新检查；旧上下文不延续撤销权限。
+- ADR-038：远端调用先写 INFLIGHT，未知结果不重放，已成功结果供 checkpoint 恢复复用；数据事件唤醒按证据去重和预算限制，计划按结构内容建立数据库唯一业务指纹。
+
+状态：Accepted for development。协议版本扩展、身份服务、常驻 worker 和科学算法验收分别交付。
+
+## ADR-039 · D09 本地身份与独立资源授权
+
+采用可撤销、短时效、数据库仅存摘要的 opaque Bearer token 作为本地部署首个身份适配。管理角色与实验/仪器/风险授权独立；可信运维初始化身份，不提供匿名自助升级。OIDC/JWKS/refresh-token 适配留给企业部署扩展，不能将当前身份实现称为 SSO。
+
+## ADR-040 · 通用 API 幂等保守恢复
+
+模型/远端调用不能与 HTTP 请求账本假装处于一个数据库事务。API 先写 INFLIGHT，再调用已有业务用例，最后保存脱敏结果；中断窗口返回 EXECUTION_UNKNOWN 而非自动重试。已知请求重放仍复核当前权限，检索/分析不缓存已过期授权结果。D03 原子业务幂等继续有效。
+
+## ADR-041 · 单一接口契约与未知指标
+
+HTTP 路由和请求校验来自生成的 OpenAPI，版本化共享结构仍来自 JSON Schema。仪器没有新鲜遥测时为 UNKNOWN；usage 未返回时标未知，费用/延迟无依据为 null。D09 使用数据库 trace 聚合当前主体实验指标，不包装为供应商账单或全平台可观测性。
+
+## ADR-042 · D10 同源 Web 与内存身份
+
+Web 使用 Next.js App Router；浏览器调用同源 API，由构建时受控服务地址代理。opaque Bearer 只放内存，不进入 localStorage/sessionStorage/URL；刷新重新登录。企业 SSO 与持久会话另行设计。前端权限只服务交互，后端逐请求鉴权才是依据。
+
+## ADR-043 · D10 事件驱动快照与有限预览
+
+SSE 通知到达后重新读取权威快照，游标缺口触发重同步；失联禁用写操作，撤权清除数据。曲线端点通过数据服务先后检查 scope/checksum，限制有限 IV 序列和预览点数，原始文件单独下载。审批和 Run 操作绑定版本，未知提交保留幂等键，不自动生成新请求重放。
+
 ---
 
 <!-- 来源: docs/16_TRACEABILITY.md -->
@@ -1412,6 +1492,71 @@ D02 完整本地检查输出保存在 reports/d02-validation.txt；不等价于�
 | 稳定条件 | 原始时间、质量、单位、容差、斜率、持续窗口及鲜度 | 短时模拟窗口，不是设备校准 |
 
 证据：tests/integration/test_execution.py、tests/test_stability.py、reports/d04-validation.txt。IV 数据发布及完整暂停取消恢复属于 D05，不能据此宣布完整 EVAL 通过。
+
+## D05 验证追踪
+
+| 需求/故障 | 实现 | 验证证据 |
+|---|---|---|
+| FR-011 / DB-09 正式数据与恢复 | DatasetService、Hdf5Store、数据/血缘迁移 | test_datasets、test_artifacts：半上传、事务失败、重复提交、损坏、权限与不重复采集 |
+| FR-012 / DB-10 事件投递与去重 | EventService、JetStreamPublisher、inbox/projection | test_events：真实 JetStream ACK 丢失、重投、事务回滚、乱序、游标与权限撤销 |
+| DB-08 暂停/取消竞争 | ControlService、Gateway stop journal | test_control：有限边界暂停、完成竞争、未发送取消、停止未知、迟到原包与重启 |
+| DB-07/11 资源及代际屏障 | release/bind_gateway/finish_recovery | 停止确认未完成时拒绝资源复用和 epoch 切换 |
+| DB-12 一致性快照 | read_snapshot/after | 同事务状态与 cursor、正式 Manifest 可见性、按游标分页补事件 |
+
+本轮统一检查报告为 reports/d05-validation.txt；该报告是本地 Linux 集成证据，未运行本轮远程 CI，不等价于完整生产/现场 EVAL。
+
+## D06 验证追踪
+
+| 需求/验收 | 本期证据 | 后续边界 |
+|---|---|---|
+| FR-021/022 / EVAL-16 | tests/test_models.py：两个供应商同 Planner 请求统一输出、实际模型与版本；DeepSeek 三项真实联调报告 | OpenAI 无真实凭据，未做实联；Agent Planner 在 D07 |
+| EVAL-17 | 分片、重复 ID/键、非法参数/用量、截断、429/超时/取消、预算与响应上限；错误不带远端敏感正文 | 不执行任何设备/工具，多轮 Agent 历史由 D07 扩展 |
+| EVAL-18 | 缺失能力/凭据、配置版本、域名策略、外部 Schema 引用拒绝 | 管理界面、集中密钥与生产身份在后续期 |
+
+证据：reports/d06-validation.txt、reports/d06-deepseek-smoke.json；范围见 docs/D06_MODEL_DEVELOPMENT.md。
+
+## D07 验证追踪
+
+| 需求/验收 | 本期实现与证据 | 后续边界 |
+|---|---|---|
+| FR-020/023 / EVAL-19 | Skill 契约、不可变注册、依赖检查、发布/禁用与运行绑定；tests/integration/test_agents.py | 管理 UI/API、任意代码 worker 未实现 |
+| EVAL-03 | 数据消息与系统策略隔离、工具 allowlist、参数/资源/成员权限再次验证 | 不是模型抗注入准确率统计 |
+| EVAL-08 | 事务回滚后恢复、已提交提案不重复、inflight 模型保守终止；真实 PostgreSQL/LangGraph | 无模型到 Gateway 直连；现场恢复由执行层验收 |
+| EVAL-01/02 | 合法目标产生契约有效提案，越界参数、证据与快照被拒绝 | 本期不自动审批、保存正式计划或执行设备 |
+| FR-021/022 | 多轮工具消息配对，协议历史错误在联网前拒绝；tests/test_models.py | 本期没有新增真实 LLM 规划联调 |
+
+上下文预算与完整交换测试见 tests/test_agent_context.py；全套结果见 reports/d07-validation.txt。
+
+## D08 验证追踪
+
+| 需求/验收 | 本期证据 | 后续边界 |
+|---|---|---|
+| FR-024 / EVAL-20 | 回环真实 HTTP MCP、发现无授权、Schema 变化撤销、作用域注入、防重放和错误测试 | 不含公网兼容性/OAuth/stdio worker |
+| FR-028 / EVAL-23 | 来源版本/ACL、实验/仪器/Agent 记忆隔离、旧 checkpoint 撤权生效 | 首版子串检索，无向量 RAG |
+| EVAL-10/13 | 实际 HDF5 checksum、COMMITTED 门禁、分析血缘、数据事件/计划结构去重、预算与中断恢复 | 描述统计不代替物理判据；无常驻协作 worker |
+
+tests/integration/test_resources.py、tests/test_mcp_policy.py；完整验收见 reports/d08-validation.txt，范围见 D08 开发交接。
+
+## D09 实现追踪
+
+身份/授权、管理 API、SSE 和密钥接口由 `application/api.py`、`adapters/api`、`adapters/postgres/api.py` 与 `adapters/secrets/encrypted.py` 实现；核心 REST 和管理操作以 `contracts/openapi.base.yaml` operationId 定位。`tests/integration/test_api.py` 覆盖无身份、角色/实验/仪器隔离、审批版本、并发/未知不重放、SSE 重放/撤权、凭据保密、管理生命周期、真实 HTTP 与数据下载；既有 D03–D08 门禁继续回归。生产身份供应商、完整计费、部署容量和现场未用本期测试代替。
+
+| D09 需求范围 | 本期实现与验证 | 仍待后续验收 |
+|---|---|---|
+| FR-001/002/004/013，NFR-002 | 真正令牌、角色/范围检查、审批链、版本冲突、并发幂等和未知不重放 | Web 操作与生产身份提供方 |
+| FR-010/011/012 | 校验后的数据下载、事务内事件页范围检查、SSE 续传/撤权 | 浏览器重连体验与负载 |
+| FR-022/023/024/028/029 | 版本配置、凭据加密、Skill/Agent/MCP/知识管理 HTTP | 供应商连通性测试 UI、SSO、主密钥轮换 |
+| FR-025/026/027，NFR-009/012 | 实验仪表板读模型；按供应商/模型/Agent/UTC 日统计已记录用量；受限 trace/提案与审计 | 费用价格版本、完整 Gateway 流量、生产 TLS 与性能 |
+
+## D10 实现追踪
+
+| 需求范围 | 实现与验证位置 | 保留边界 |
+|---|---|---|
+| FR-001/002/004/013，NFR-002 | `apps/web/src/components` 目标、计划差异、审批确认、状态请求；浏览器全流程、只读和冲突路径 | 任意参数编辑器、SSO 尚未实现 |
+| FR-010/011/012 | `lib/events.ts`、`lib/hooks.ts` 游标/重连；`application/series.py` 校验曲线；单元/API/浏览器测试 | 压力容量、实时遥测属后续验收 |
+| FR-023/026，NFR-009/012 | 持久 Agent Run/提案/轨迹、未知设备状态、错误和加载提示 | 全平台管理/统计页面 D11；部署 D12 |
+
+实际通过项与报告见 `IMPLEMENTATION_STATUS.md`，启动与测试 fixture 边界见 D10 开发交接。模型采用离线替身，设备为模拟器，不构成真实供应商或现场验收。
 
 ---
 
@@ -1517,6 +1662,12 @@ EVAL-17：工具参数分片、截断、非 JSON、重复调用 ID、限流、�
 
 EVAL-18：无模型能力或无凭据时显示明确不可用；配置读取、日志、错误响应不含密钥。真实服务冒烟测试与离线适配器测试分别报告。
 
+## D06 实现落点（2026-10-18）
+
+首版使用显式 Chat Completions 协议和供应商参数分支，ModelClient/冻结配置位于 application，标准库 HTTPS 和解析器位于 adapters/llm。只允许官方 HTTPS 地址；自定义/本地端点待独立网络策略，Responses/其他供应商待独立适配。JSON 模式为供应商 JSON object 加本地 Schema 验证，不等同服务端 strict。
+
+工具流片段不可执行，只有校验完成的 finish 携带提案；能力缺失和版本不匹配在联网前拒绝。失败尝试占用保守 token 预留，费用目录和持久用量在后续服务层。多轮工具历史由 D07 补齐；没有自动 failover。开发范围、官方协议来源及真实/离线验证分别见 D06_MODEL_DEVELOPMENT.md，不能据此称 Web 模型管理或生产密钥管理已完成。
+
 ---
 
 <!-- 来源: docs/19_CONTRACT_DECISIONS.md -->
@@ -1610,12 +1761,12 @@ P3 的 Agent 测试可调用 P2 应用端口，无需提前做 Web。P4 不另�
 | D02 · 完整状态与事务设计 | Run/Task/Command 独立状态表、审批/租约/数据状态、转换规则、数据库与事务方案 | P1/P2 设计 | 每条转换有触发、守卫、证据和失败语义；纯状态测试通过；输出迁移设计；本期已完成本地交付，证据见 IMPLEMENTATION_STATUS.md |
 | D03 · 数据库与审批 | PostgreSQL 迁移、Repository、实验/计划版本、审批、幂等与并发校验 | P2 | 真实数据库迁移、回滚、重复请求及审批失效测试通过 |
 | D04 · 执行引擎与模拟网关 | DAG 调度、三模拟设备、租约/fencing/epoch、CommandLedger、近端 journal | P2 | 并发互斥、旧租约拒绝、ACK 丢失不重放、重启对账通过 |
-| D05 · 数据与事件恢复 | Dataset 持久化/提交、血缘、outbox、NATS、实验事件游标、暂停取消恢复 | P2 | 半成品不发布、重复/乱序幂等、取消待确认、持久事件恢复通过 |
-| D06 · 多供应商模型接入 | ModelClient、连接/模型配置、OpenAI/DeepSeek 适配、流式/工具/错误/用量 | P3 | 离线协议与异常测试通过；真实凭据联调单独登记，不虚报通过 |
-| D07 · 专用 Agent 与 Skills | LangGraph Runtime、Planner/Instrument 基础、版本化角色/工具/技能、预算与 Trace | P3 | 目标转结构化计划、技能版本锁定、越权阻断、恢复不重放副作用 |
-| D08 · MCP、知识与分析协作 | MCP 连接/发现/授权、作用域知识/记忆、Analysis 与有证据再规划 | P3 | 工具发现不授权、知识隔离、已提交数据分析、提案去重与预算测试 |
-| D09 · 应用 API 与权限 | FastAPI、身份/RBAC/ABAC、全部管理接口与读模型、SSE、统计聚合、凭据接口 | P4 | API 契约、真实数据库集成、401/403/409/422、隔离/脱敏与补偿通过 |
-| D10 · Web 实验工作区 | 导航与通用组件、会话、计划审批、实验/设备/数据页面、实时状态 | P5 | 使用真实 API 完成模拟实验；加载/错误/断线/未知状态浏览器测试 |
+| D05 · 数据与事件恢复 | Dataset 持久化/提交、血缘、outbox、NATS、实验事件游标、暂停取消恢复 | P2 | 半成品不发布、重复/乱序幂等、取消待确认、持久事件恢复通过；本期本地验收见 IMPLEMENTATION_STATUS.md |
+| D06 · 多供应商模型接入 | ModelClient、连接/模型配置、OpenAI/DeepSeek 适配、流式/工具/错误/用量 | P3 | 离线协议与异常测试、DeepSeek 真实合成联调已完成；OpenAI 仅离线。详见 D06 开发交接与实施状态 |
+| D07 · 专用 Agent 与 Skills | LangGraph Runtime、Planner/Instrument 基础、版本化角色/工具/技能、预算与 Trace | P3 | 内部目标→结构化提案、技能版本锁定、越权阻断、事务恢复已实现；验收与边界见 D07 交接和实施状态 |
+| D08 · MCP、知识与分析协作 | MCP 连接/发现/授权、作用域知识/记忆、Analysis 与有证据再规划 | P3 | MCP 明确子集、知识隔离、已提交数据分析与提案去重/预算已实现；验收与边界见 D08 交接及实施状态 |
+| D09 · 应用 API 与权限 | FastAPI、身份/RBAC/ABAC、全部管理接口与读模型、SSE、统计聚合、凭据接口 | P4 | 本地身份、契约驱动 API、管理/读模型、SSE 与凭据已实现；验收和企业身份/部署边界见 D09 交接及实施状态 |
+| D10 · Web 实验工作区 | 导航与通用组件、会话、计划审批、实验/设备/数据页面、实时状态 | P5 | 已使用真实 API 完成模拟实验；加载/错误/断线/未知状态浏览器测试通过。范围与本地证据见 D10 交接及实施状态 |
 | D11 · Web 平台控制台 | Agent、模型、Skills、MCP、知识、仪表板、用量、轨迹、审计与设置 | P5 | 第 17 章页面基础功能齐备；权限、配置版本和统计下钻可验证 |
 | D12 · 集成、部署与验收 | Compose、完整 E2E、故障/注入、长时间模拟、备份恢复、运维文档 | P6 | 按 FR/NFR 整理验收证据，未通过项不得算完成；形成模拟平台交付版本 |
 | D13 · 单设备现场试点 | 设备/桥接适配、现场范围与只读检查、有限写及恢复演练 | P7 | G1/G2 现场资料与负责人签署齐备；试点不代表无人值守 |
@@ -2018,3 +2169,27 @@ DB-12：UI 快照读取间发生事务提交；状态与游标来自同一快照
 实现见 `d04_001_execution.py`、`application/execution.py`、`adapters/gateway/`，操作与限制见 D04_EXECUTION_DEVELOPMENT.md。D03 写入事务现已加入代际共享锁；恢复使用独占代际锁。网关 journal 独立持久化并防止多进程同时持有；中央与网关没有跨库事务，发送前崩溃保守进入 UNKNOWN。新 epoch 采用全部注册网关确认的全局屏障，未完成对账不恢复发放。
 
 D04 仅使用离线认证和模拟设备；stop_requests 预留表不代表停止协议已完成，IV 结果不进入 COMMITTED。D05 必须补齐停止请求在资源释放和恢复中的核验，以及数据提交、消息投递和消费协议。
+
+## 9. D05 实施细化
+
+D05-001 增加 datasets、采集 provenance_edges、不可变 device_snapshots；D05-002 增加独立 event_delivery_claims、consumer_inbox、event_projections；D05-003 增加停止确认结果及身份不变约束。完整实现/故障验收见 [D05 开发说明](docs/D05_DATA_RECOVERY_DEVELOPMENT.md)。
+
+文件操作、NATS publish、Gateway 停止与数据发布确认均在数据库事务外。状态/effects/审计/outbox 同事务；消息消费 inbox/投影同事务；停止确认阻止旧包迟到和提前复用资源。DB-08/09/10 已纳入真实数据库与离线模拟集成测试，HTTP/SSE 和真机仍待对应期。当前保留全部事件及孤儿文件，不做破坏性自动清理。
+
+## D07 Agent 持久化补充
+
+迁移 d07_001 增加 agent_registry/agent_runs/agent_trace/agent_tool_invocations/agent_proposals。注册内容、发布时解析的模型/工具/技能绑定和运行 bundle 不可变，状态/检查点版本可推进。Agent 的逻辑 checkpoint 独立于实验 runs/command_ledger，不修改物理执行状态。
+
+同一 Agent Run 使用 session advisory lock 排他推进；模型调用前短事务预留预算，网络调用期间不持有业务事务。工具结果、PROPOSED 提案、trace 与新 checkpoint 同事务提交，调用 ID 唯一约束防重复；成员/资源/快照与禁用状态在提交前重新校验。只有 run 所属 actor 可恢复，成员撤权即拒绝。本期不实现正式计划/API 推进；不能把 agent_proposals 当可执行命令。
+
+## D08 资源与协作持久化补充
+
+d08_001 增加 knowledge_versions/grants、mcp_connections/tools/grants/calls、dataset_analyses、collaboration_claims、proposal_business_keys。知识/连接/目录内容不可覆盖，ACL 与启停单独变化；分析结果不可变并绑定 dataset/checksum/算法。MCP INFLIGHT 在远端调用前提交，未知不得盲重试；调用成功缓存与 Agent 工具 ledger 分离，checkpoint 恢复先复核再复用。
+
+Agent checkpoint 的 external_refs 在加载和提交内锁定复核；提案与业务指纹、工具 ledger/trace/checkpoint 同事务，冲突整体回滚。数据事件 claim 有固定 Run ID、次数/冷却约束，创建和绑定间中断可恢复。历史 D07 提案建立结构指纹映射，不删除或改写已有提案。
+
+## D09 · API 与身份持久化
+
+迁移 d09_001 为实验增加 title/objective/created_at，并增加 platform_roles、api_tokens、api_credentials、platform_configs、api_requests、api_audit。已有实验的 created_at 是迁移时间，不能当作历史采集时间。token 仅存摘要，凭据仅存绑定引用的认证密文；版本配置在应用入口拒绝覆盖，管理审计不可更新/删除。
+
+API 请求以 actor/operation/path/key 区分，HMAC 绑定请求及 If-Match，INFLIGHT 在调用前提交。跨服务操作不声明同事务，崩溃保留未知并要求检查业务结果；原有实验状态/outbox 原子事务保持。权限变化不产生虚构设备事件；SSE 按当前权限复核并可终止，客户端再获取权威快照。

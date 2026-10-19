@@ -101,6 +101,7 @@ class Simulator:
             return json.loads(rows[0]["result"]) if rows else None
 
     def execute(self, command, task):
+        started_at = self.clock.now().isoformat()
         identity = command["instrument_id"]
         expected = {
             "set_temperature": "sim-temp",
@@ -134,6 +135,10 @@ class Simulator:
                         "status": "LOCAL_ONLY",
                     },
                 }
+            result["acquisition_interval"] = {
+                "start_utc": started_at,
+                "end_utc": self.clock.now().isoformat(),
+            }
             db.execute(
                 "INSERT INTO actions(command_id,device,result) VALUES (?,?,?)",
                 (command["command_id"], identity, json.dumps(result)),

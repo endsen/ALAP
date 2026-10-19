@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-18",
+  "provider": "deepseek",
+  "actual_model": "deepseek-flash",
+  "input_class": "synthetic_only",
+  "tool_execution_count": 0,
+  "cases": [
+    {"case": "text", "passed": true, "prompt_tokens": 41, "completion_tokens": 15, "total_tokens": 56, "elapsed_ms": 446},
+    {"case": "json", "passed": true, "prompt_tokens": 65, "completion_tokens": 47, "total_tokens": 112, "elapsed_ms": 804},
+    {"case": "tools", "passed": true, "prompt_tokens": 311, "completion_tokens": 52, "total_tokens": 363, "elapsed_ms": 753}
+  ],
+  "total_reported_tokens": 531,
+  "openai_live_test": "not_run_no_credentials"
+}

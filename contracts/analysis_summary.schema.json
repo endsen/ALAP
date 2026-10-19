@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alap.invalid/contracts/analysis_summary.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "algorithm",
+    "dataset_id",
+    "checksum_sha256",
+    "sample_count",
+    "resistance_ohm",
+    "offset_volt",
+    "residual_rms_volt",
+    "interpretation"
+  ],
+  "properties": {
+    "algorithm": {
+      "const": "iv-linear-summary@1"
+    },
+    "dataset_id": {
+      "type": "string"
+    },
+    "checksum_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "sample_count": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 100001
+    },
+    "resistance_ohm": {
+      "type": "number"
+    },
+    "offset_volt": {
+      "type": "number"
+    },
+    "residual_rms_volt": {
+      "type": "number"
+    },
+    "interpretation": {
+      "type": "string"
+    }
+  }
+}

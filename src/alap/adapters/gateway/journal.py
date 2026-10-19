@@ -60,6 +60,8 @@ class Gateway:
               lease TEXT,run TEXT,plan_hash TEXT);
             CREATE TABLE IF NOT EXISTS commands(id TEXT PRIMARY KEY,device TEXT,payload_hash TEXT,
               package_hash TEXT,state TEXT,command TEXT,task TEXT,result TEXT);
+            CREATE TABLE IF NOT EXISTS stop_results(
+              id TEXT PRIMARY KEY, request_hash TEXT NOT NULL, response TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS receipts(seq INTEGER PRIMARY KEY AUTOINCREMENT,
               command_id TEXT NOT NULL,body TEXT NOT NULL);
             """)
@@ -226,6 +228,130 @@ class Gateway:
                 # Absence alone is not proof that a previously sent packet cannot arrive later.
                 raise DomainError("JOURNAL_MISSING", "No journal entry; do not resend")
             return self._receipt(db, row)
+
+    @serialized
+    def stop(self, signed):
+        """Finite simulator boundary stop, durably tombstones even not-yet-arrived commands."""
+        request = self.auth.open(signed)
+        if request.get("operation") != "stop" or request.get("gateway_id") != self.identity:
+            raise DomainError("STOP_INVALID", "Authenticated stop identity required")
+        package = request["package"]
+        command, task = package["command"], package["task"]
+        self.catalog.validate_command(command)
+        self.catalog.validate("plan_task", task)
+        request_hash = freeze_revision(request).plan_hash
+        payload_hash = freeze_revision(command).plan_hash
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            previous = db.execute(
+                "SELECT * FROM stop_results WHERE id=?", (request["stop_id"],)
+            ).fetchone()
+            if previous:
+                if previous["request_hash"] != request_hash:
+                    raise DomainError("STOP_CONFLICT", "Stop ID already bound to another request")
+                return json.loads(previous["response"])
+            if db.execute("SELECT epoch FROM config").fetchone()[0] != command["control_epoch"]:
+                raise DomainError("OLD_EPOCH", "Stop must address the original current epoch")
+            row = db.execute(
+                "SELECT * FROM commands WHERE id=?", (command["command_id"],)
+            ).fetchone()
+            package_hash = freeze_revision(package).plan_hash
+            if row and (row["payload_hash"] != payload_hash or row["package_hash"] != package_hash):
+                raise DomainError("STOP_CONFLICT", "Original command bytes differ")
+            if not row:
+                result = {
+                    "safe_stop_confirmed": True,
+                    "never_executed": True,
+                    "completed_at": self.simulator.clock.now().isoformat(),
+                }
+                db.execute(
+                    "INSERT INTO commands VALUES(?,?,?,?,?,?,?,?)",
+                    (
+                        command["command_id"],
+                        command["instrument_id"],
+                        payload_hash,
+                        package_hash,
+                        "CANCELLED",
+                        json.dumps(command),
+                        json.dumps(task),
+                        json.dumps(result),
+                    ),
+                )
+            elif row["state"] not in TERMINAL | {"VERIFYING"}:
+                result = self.simulator.durable_result(command["command_id"])
+                if result is None:
+                    state = "CANCELLED"
+                    result = {"safe_stop_confirmed": True, "never_executed": True}
+                else:
+                    # This adapter owns an exclusive finite simulator; no real-instrument inference.
+                    state = "VERIFYING"
+                    if task["success_condition"]["kind"] == "stable_window":
+                        result["samples"] = self.simulator.window(task["success_condition"])
+                        check_stable(
+                            task["success_condition"], result["samples"], self.simulator.clock.now()
+                        )
+                        state = "SUCCEEDED"
+                result["completed_at"] = self.simulator.clock.now().isoformat()
+                db.execute(
+                    "UPDATE commands SET state=?,result=? WHERE id=?",
+                    (state, json.dumps(result), command["command_id"]),
+                )
+            row = db.execute(
+                "SELECT * FROM commands WHERE id=?", (command["command_id"],)
+            ).fetchone()
+            response = self.auth.seal(
+                {
+                    "stop_id": request["stop_id"],
+                    "gateway_id": self.identity,
+                    "command_id": command["command_id"],
+                    "payload_hash": payload_hash,
+                    "epoch": command["control_epoch"],
+                    "quiescent": True,
+                    "receipt": self._receipt(db, row),
+                }
+            )
+            db.execute(
+                "INSERT INTO stop_results VALUES(?,?,?)",
+                (request["stop_id"], request_hash, json.dumps(response)),
+            )
+            return response
+
+    @serialized
+    def confirm_dataset(self, signed):
+        """Trusted central publication acknowledgment, distinct from physical execution."""
+        value = self.auth.open(signed)
+        if value.get("operation") != "confirm_dataset" or value.get("gateway_id") != self.identity:
+            raise DomainError("DATASET_ACK_INVALID", "Authenticated publication receipt required")
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT * FROM commands WHERE id=?", (value["command_id"],)).fetchone()
+            if row is None:
+                raise DomainError("JOURNAL_MISSING", "No acquisition journal entry")
+            command = json.loads(row["command"])
+            result = json.loads(row["result"]) if row["result"] else {}
+            task = json.loads(row["task"])
+            if (
+                row["payload_hash"] != value["payload_hash"]
+                or command["control_epoch"] != value["epoch"]
+                or task["success_condition"]["kind"] != "dataset_committed"
+                or row["state"] not in ("VERIFYING", "SUCCEEDED")
+                or not result.get("artifact")
+                or freeze_revision(result["artifact"]).plan_hash != value["artifact_hash"]
+            ):
+                raise DomainError("DATASET_ACK_INVALID", "Acquisition identity or result differs")
+            proof = {"dataset_id": value["dataset_id"], "checksum_sha256": value["checksum_sha256"]}
+            if "dataset" in result and result["dataset"] != proof:
+                raise DomainError(
+                    "DATASET_ACK_INVALID", "Publication already bound to another result"
+                )
+            result["dataset"] = proof
+            db.execute(
+                "UPDATE commands SET state='SUCCEEDED',result=? WHERE id=?",
+                (json.dumps(result), row["id"]),
+            )
+            return self._receipt(
+                db, db.execute("SELECT * FROM commands WHERE id=?", (row["id"],)).fetchone()
+            )
 
     @serialized
     def accept(self, signed, *, crash_at=None):

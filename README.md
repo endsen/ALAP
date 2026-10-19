@@ -2,7 +2,19 @@
 
 面向实验室的专用 Agent 平台：通过多供应商 API 接入 LLM，由 Planner、Instrument、Analysis Agent 规划和分析实验，由确定性引擎及 Gateway 执行已授权任务。
 
-**当前已实现 D03 数据库/审批与 D04 确定性执行、三设备模拟网关及故障对账。尚无 Web、HTTP API、Agent Runtime 或部署的设备执行服务。** 各层实际进度见 [实施状态](IMPLEMENTATION_STATUS.md)。
+**当前已实现 D03–D09 后端分层能力；D10 Web 实验工作区已完成本地验收。完整部署与真机验收尚未完成。** 各层实际进度见 [实施状态](IMPLEMENTATION_STATUS.md)。
+
+D10 Web 启动、验收入口与边界见 [D10 交接](docs/D10_WEB_WORKSPACE_DEVELOPMENT.md)。
+
+D09 提供身份/权限、管理 API、SSE、用量读模型和加密凭据接口。启动和边界见 [D09 交接](docs/D09_API_IDENTITY_DEVELOPMENT.md)。
+
+D08 已实现受审核的 MCP 只读接入、作用域知识/记忆、已提交数据分析与证据驱动提案；仍为内部接口。协议范围与验证见 [D08 交接](docs/D08_MCP_KNOWLEDGE_ANALYSIS.md)。
+
+D07 已实现 Planner/Instrument 的 LangGraph 决策循环、版本化 Skills、PostgreSQL 检查点和提案 ledger；仅内部接口，尚无 Web。详见 [D07 开发交接](docs/D07_AGENT_SKILLS_DEVELOPMENT.md)。
+
+D06 已实现 OpenAI/DeepSeek 模型协议适配、流式解析、工具提案校验与预算/取消；DeepSeek 真实合成联调通过，OpenAI 仅离线验证。范围和限制见 [D06 开发说明](docs/D06_MODEL_DEVELOPMENT.md)。
+
+D05 已实现 HDF5 正式数据提交、JetStream/outbox/inbox、持久游标及暂停取消/停止确认；仅内部用例与模拟网关，尚无常驻服务。运行说明见 [D05 开发说明](docs/D05_DATA_RECOVERY_DEVELOPMENT.md)。
 
 ## 文档入口
 
@@ -19,18 +31,19 @@
 
 ## 本地环境与检查
 
-基础层当前使用 Python 3.14（当前本机 3.14.8）；框架与硬件 SDK 在后续各层接入时验证兼容性，不能假定本阶段环境已适合所有驱动。版本调整需更新工程配置、锁文件及 CI。
+基础层当前使用 Python 3.14（当前 Linux 本机 3.14.7）；框架与硬件 SDK 在后续各层接入时验证兼容性，不能假定本阶段环境已适合所有驱动。版本调整需更新工程配置、锁文件及 CI。
 
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-dev.lock
 .venv/bin/python -m pip install --no-build-isolation --no-deps -e .
 
-# 先按 D03 开发说明启动隔离 PostgreSQL 并设置 ALAP_TEST_DATABASE_URL
+# 按 D05 开发说明启动隔离 PostgreSQL 和 JetStream
+# 设置 ALAP_TEST_DATABASE_URL、ALAP_TEST_NATS_URL
 .venv/bin/python scripts/check.py
 ```
 
-检查包括 Ruff、状态转换参考表漂移、文档生成漂移、OpenAPI 生成漂移、10 份 JSON Schema 及实例、完整 OpenAPI 规范、领域/契约测试、依赖一致性。全套检查不调用外部模型、不连接仪器；D03 集成测试需要真实隔离 PostgreSQL 数据库，通过 `ALAP_TEST_DATABASE_URL` 指定。环境与启动方法见 [D03 开发说明](docs/D03_DATABASE_DEVELOPMENT.md)。`requirements-contracts.txt` 保留最早 v3.0 校验依赖；当前开发环境以 `requirements-dev.lock` 为准。
+检查包括 Ruff、状态转换参考表漂移、文档生成漂移、OpenAPI 生成漂移、13 份 JSON Schema 及实例、完整 OpenAPI 规范、领域/契约测试、依赖一致性。全套检查不调用外部模型、不连接仪器；集成测试需要真实隔离 PostgreSQL 和 JetStream，通过 `ALAP_TEST_DATABASE_URL`、`ALAP_TEST_NATS_URL` 指定。环境与启动方法见 [D05 开发说明](docs/D05_DATA_RECOVERY_DEVELOPMENT.md)。`requirements-contracts.txt` 保留最早 v3.0 校验依赖；当前开发环境以 `requirements-dev.lock` 为准。
 
 编辑 `docs/` 或契约源后更新生成文件：
 

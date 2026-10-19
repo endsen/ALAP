@@ -9,3 +9,8 @@ dist/
 .env
 .env.*
 !.env.example
+node_modules/
+.next/
+*.tsbuildinfo
+apps/web/test-results/
+apps/web/playwright-report/

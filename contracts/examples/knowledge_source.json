@@ -1,0 +1,10 @@
+{
+  "source_id": "guide",
+  "version": 1,
+  "kind": "document",
+  "resources": [
+    "keithley-01"
+  ],
+  "content": "Synthetic IV guide. Check approvals before proposing a run.",
+  "source_uri": "alap:synthetic-guide"
+}

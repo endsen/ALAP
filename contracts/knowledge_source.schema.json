@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alap.invalid/contracts/knowledge_source.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source_id",
+    "version",
+    "kind",
+    "resources",
+    "content",
+    "source_uri"
+  ],
+  "properties": {
+    "source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "kind": {
+      "enum": [
+        "document",
+        "memory"
+      ]
+    },
+    "agent_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "content": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100000
+    },
+    "source_uri": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

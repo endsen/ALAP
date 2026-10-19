@@ -1,0 +1,1 @@
+PASS: SIGTERM exits cleanly; token file and isolated database schema removed

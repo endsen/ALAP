@@ -1,0 +1,19 @@
+npm notice run alap-web@0.1.0 typecheck
+npm notice run tsc --noEmit
+npm notice run alap-web@0.1.0 test
+npm notice run node --import tsx --test --test-isolation=none tests/unit/*.test.ts
+✔ ambiguous delivery retains idempotency key and blocks changed payload (36.216318ms)
+✔ 401 expires session and no input contents become error messages (0.974535ms)
+✔ SSE split boundaries, multiline content and heartbeat (1.901471ms)
+✔ dedup, gap and cursor mismatch never fabricate state (0.448239ms)
+✔ oversized or invalid cursors and incomplete frames are not applied (0.434274ms)
+✔ candidate binds exact snapshot, policy and capability versions (0.784676ms)
+✔ diff identifies resources, risks and changed task constraints (0.659674ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 163.88894

@@ -3,8 +3,8 @@ openapi: 3.1.0
 info:
   title: ALAP Web & Experiment API
   version: 3.1.0-development
-  description: Engineering design contract. Not a deployed API. All mutations require
-    server-side authorization; no raw instrument command route is publicly exposed.
+  description: D09 authenticated application API. Local opaque bearer tokens; no public
+    hardware dispatch. Contract source for runtime request validation.
 servers:
 - url: /api/v1
 security:
@@ -47,6 +47,14 @@ paths:
           $ref: '#/components/responses/Error'
         '422':
           $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
     get:
       tags:
       - Experiments
@@ -84,6 +92,20 @@ paths:
                     - 'null'
         '401':
           $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
   /experiments/{experiment_id}:
     get:
       tags:
@@ -110,145 +132,38 @@ paths:
           $ref: '#/components/responses/Error'
         '404':
           $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
   /experiments/{experiment_id}/proposals:
     post:
-      tags:
-      - Experiments
       operationId: createProposal
-      description: Store a candidate plan. This does not authorize any physical command.
       parameters:
-      - $ref: '#/components/parameters/ExperimentId'
-      - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PlanProposalCreate'
-      responses:
-        '201':
-          description: Plan proposal stored for validation and review
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PlanProposal'
-        '401':
-          $ref: '#/components/responses/Error'
-        '403':
-          $ref: '#/components/responses/Error'
-        '409':
-          $ref: '#/components/responses/Error'
-        '422':
-          $ref: '#/components/responses/Error'
-  /experiments/{experiment_id}/approvals:
-    post:
-      tags:
-      - Approvals
-      operationId: approvePlan
-      description: Requires appropriate approval permission and safety policy.
-      parameters:
-      - $ref: '#/components/parameters/ExperimentId'
-      - $ref: '#/components/parameters/IdempotencyKey'
-      - $ref: '#/components/parameters/IfMatch'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ApprovalRequest'
-      responses:
-        '201':
-          description: Bound approval stored; no hardware command yet
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Approval'
-        '401':
-          $ref: '#/components/responses/Error'
-        '403':
-          $ref: '#/components/responses/Error'
-        '409':
-          $ref: '#/components/responses/Error'
-        '422':
-          $ref: '#/components/responses/Error'
-  /experiments/{experiment_id}/runs:
-    post:
-      tags:
-      - Runs
-      operationId: startRun
-      description: Start an approved plan; scheduler and gateway still independently
-        validate.
-      parameters:
-      - $ref: '#/components/parameters/ExperimentId'
-      - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required:
-              - plan_revision_id
-              properties:
-                plan_revision_id:
-                  type: string
-                  minLength: 1
-      responses:
-        '202':
-          description: Run requested; not proof of device execution
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Run'
-        '401':
-          $ref: '#/components/responses/Error'
-        '403':
-          $ref: '#/components/responses/Error'
-        '409':
-          $ref: '#/components/responses/Error'
-        '422':
-          $ref: '#/components/responses/Error'
-  /runs/{run_id}/actions:
-    post:
-      tags:
-      - Runs
-      operationId: requestRunAction
-      description: Cancel and pause are requests, not evidence of physical stop.
-      parameters:
-      - name: run_id
+      - name: experiment_id
         in: path
         required: true
         schema:
           type: string
           minLength: 1
-      - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required:
-              - action
-              properties:
-                action:
-                  type: string
-                  enum:
-                  - pause
-                  - cancel
-                  - resume
-                reason:
-                  type: string
-                  maxLength: 1000
+          maxLength: 200
+      - &id001
+        $ref: '#/components/parameters/IdempotencyKey'
+      - &id002
+        $ref: '#/components/parameters/IfMatch'
       responses:
-        '202':
-          description: State transition requested, subject to safe execution confirmation
+        '201':
+          description: Authorized result
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/Run'
+              schema: &id003
+                type: object
         '401':
           $ref: '#/components/responses/Error'
         '403':
@@ -257,6 +172,178 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanRevision'
+  /experiments/{experiment_id}/approvals:
+    post:
+      operationId: approvePlan
+      parameters:
+      - name: experiment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      - *id002
+      responses:
+        '201':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                approval_id:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                decision:
+                  enum:
+                  - approve
+                  - reject
+                  - revoke
+                state_version: &id008
+                  type: integer
+                  minimum: 0
+              required:
+              - approval_id
+              - decision
+              - state_version
+  /experiments/{experiment_id}/runs:
+    post:
+      operationId: startRun
+      parameters:
+      - name: experiment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      - *id002
+      responses:
+        '202':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                approval_id:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+              required:
+              - approval_id
+  /runs/{run_id}/actions:
+    post:
+      operationId: requestRunAction
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '202':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                action:
+                  enum:
+                  - pause
+                  - resume
+                  - cancel
+              required:
+              - action
   /experiments/{experiment_id}/events:
     get:
       tags:
@@ -288,6 +375,16 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
   /instruments:
     get:
       tags:
@@ -303,6 +400,20 @@ paths:
                 items:
                   $ref: '#/components/schemas/Instrument'
         '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
           $ref: '#/components/responses/Error'
   /instruments/{instrument_id}:
     get:
@@ -326,6 +437,18 @@ paths:
         '403':
           $ref: '#/components/responses/Error'
         '404':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
           $ref: '#/components/responses/Error'
   /datasets/{dataset_id}:
     get:
@@ -352,12 +475,2146 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /experiments/{experiment_id}/approval-requests:
+    post:
+      operationId: requestApproval
+      parameters:
+      - name: experiment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      - *id002
+      responses:
+        '201':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                plan_revision_id:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                plan_hash:
+                  type: string
+                  pattern: ^[a-f0-9]{64}$
+                expires_at:
+                  type: string
+                  format: date-time
+              required:
+              - plan_revision_id
+              - plan_hash
+              - expires_at
+  /experiments/{experiment_id}/snapshot:
+    get:
+      operationId: getSnapshot
+      parameters:
+      - name: experiment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceSnapshot'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /me:
+    get:
+      operationId: getMe
+      parameters: []
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionIdentity'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /samples:
+    post:
+      operationId: createSample
+      parameters:
+      - *id001
+      responses:
+        '201':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                metadata:
+                  type: object
+                  maxProperties: 30
+              required:
+              - id
+              - metadata
+    get:
+      operationId: listSamples
+      parameters: []
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /experiments/{experiment_id}/members/{actor_id}:
+    put:
+      operationId: updateMembership
+      parameters:
+      - name: experiment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - name: actor_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      - *id002
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                role:
+                  enum:
+                  - observer
+                  - operator
+                  - approver
+                scope: &id009
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    resources:
+                      type: array
+                      items:
+                        type: string
+                        minLength: 1
+                        maxLength: 200
+                      uniqueItems: true
+                      maxItems: 100
+                    risk_levels:
+                      type: array
+                      items:
+                        enum:
+                        - read_only
+                        - low_risk_write
+                        - operator_review
+                        - high_risk
+                      uniqueItems: true
+                  required:
+                  - resources
+                  - risk_levels
+                revoked:
+                  type: boolean
+              required:
+              - role
+              - scope
+              - revoked
+  /skills:
+    get:
+      operationId: listSkills
+      parameters:
+      - &id004
+        name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      - &id005
+        name: cursor
+        in: query
+        schema:
+          type: string
+          maxLength: 200
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: importSkill
+      parameters:
+      - *id001
+      responses:
+        '201':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkillManifest'
+  /skills/{ref}/publish:
+    post:
+      operationId: publishSkill
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /skills/{ref}/disable:
+    post:
+      operationId: disableSkill
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /agents:
+    get:
+      operationId: listAgents
+      parameters:
+      - *id004
+      - *id005
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: importAgent
+      parameters:
+      - *id001
+      responses:
+        '201':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentConfig'
+  /agents/{ref}/publish:
+    post:
+      operationId: publishAgent
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /agents/{ref}/disable:
+    post:
+      operationId: disableAgent
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /agent-runs:
+    post:
+      operationId: createAgentRun
+      parameters:
+      - *id001
+      responses:
+        '201':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                experiment_id:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                definition_ref:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                goal:
+                  type: string
+                  minLength: 1
+                  maxLength: 16000
+              required:
+              - experiment_id
+              - definition_ref
+              - goal
+  /experiments/{experiment_id}/agent-runs:
+    get:
+      operationId: listAgentRuns
+      parameters:
+      - name: experiment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id004
+      - *id005
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AgentRunView'
+                required:
+                - items
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /agent-runs/{agent_run_id}:
+    get:
+      operationId: getAgentRun
+      parameters:
+      - name: agent_run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentRunView'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /agent-runs/{agent_run_id}/advance:
+    post:
+      operationId: advanceAgentRun
+      parameters:
+      - name: agent_run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      responses:
+        '202':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /agent-runs/{agent_run_id}/cancel:
+    post:
+      operationId: cancelAgentRun
+      parameters:
+      - name: agent_run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /agent-runs/{agent_run_id}/trace:
+    get:
+      operationId: getTrace
+      parameters:
+      - name: agent_run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /experiments/{experiment_id}/usage:
+    get:
+      operationId: getUsage
+      parameters:
+      - name: experiment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /experiments/{experiment_id}/dashboard:
+    get:
+      operationId: getDashboard
+      parameters:
+      - name: experiment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /connections:
+    get:
+      operationId: listConnections
+      parameters: []
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: putConnection
+      parameters:
+      - *id001
+      responses:
+        '201':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                version:
+                  type: integer
+                  minimum: 1
+                vendor:
+                  enum:
+                  - openai
+                  - deepseek
+                base_url:
+                  type: string
+                  minLength: 1
+                  maxLength: 300
+                secret_ref:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+              required:
+              - id
+              - version
+              - vendor
+              - base_url
+              - secret_ref
+  /connections/{ref}/disable:
+    post:
+      operationId: disableConnection
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      - *id002
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /models:
+    get:
+      operationId: listModels
+      parameters: []
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: putModel
+      parameters:
+      - *id001
+      responses:
+        '201':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                version:
+                  type: integer
+                  minimum: 1
+                connection_id:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                connection_version:
+                  type: integer
+                  minimum: 1
+                model:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                context_tokens:
+                  type: integer
+                  minimum: 2
+                  maximum: 10000000
+                output_tokens:
+                  type: integer
+                  minimum: 1
+                capabilities:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    streaming: &id006
+                      enum:
+                      - declared
+                      - unsupported
+                      - unknown
+                    tools: *id006
+                    structured: *id006
+                    vision: *id006
+                    usage: *id006
+                  required:
+                  - streaming
+                  - tools
+                  - structured
+                  - vision
+                  - usage
+                timeout_seconds:
+                  type: number
+                  exclusiveMinimum: 0
+                  maximum: 300
+                max_attempts:
+                  type: integer
+                  minimum: 1
+                  maximum: 3
+              required:
+              - id
+              - version
+              - connection_id
+              - connection_version
+              - model
+              - context_tokens
+              - output_tokens
+              - capabilities
+  /models/{ref}/disable:
+    post:
+      operationId: disableModel
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      - *id002
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /credentials:
+    get:
+      operationId: listCredentials
+      parameters: []
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /credentials/{ref}:
+    put:
+      operationId: putCredential
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      - *id002
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                value:
+                  type: string
+                  minLength: 1
+                  maxLength: 8192
+              required:
+              - value
+  /credentials/{ref}/disable:
+    post:
+      operationId: disableCredential
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      - *id002
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /mcp:
+    get:
+      operationId: listMCP
+      parameters: []
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: putMCP
+      parameters:
+      - *id001
+      responses:
+        '201':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                version:
+                  type: integer
+                  minimum: 1
+                url:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+                address:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                secret_ref:
+                  type:
+                  - string
+                  - 'null'
+                  maxLength: 200
+                allow_loopback:
+                  const: false
+                timeout:
+                  type: number
+                  exclusiveMinimum: 0
+                  maximum: 60
+                response_limit:
+                  type: integer
+                  minimum: 1024
+                  maximum: 1048576
+              required:
+              - id
+              - version
+              - url
+              - address
+  /mcp/{ref}/discover:
+    post:
+      operationId: discoverMCP
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /mcp/tools/{tool_id}/grant:
+    post:
+      operationId: grantMCP
+      parameters:
+      - name: tool_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: &id007
+              type: object
+              additionalProperties: false
+              properties:
+                actor_id:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                experiment_id:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                resources:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                    maxLength: 200
+                  uniqueItems: true
+                  maxItems: 100
+              required:
+              - actor_id
+              - experiment_id
+              - resources
+  /mcp/tools/{tool_id}/revoke:
+    post:
+      operationId: revokeMCP
+      parameters:
+      - name: tool_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: *id007
+  /experiments/{experiment_id}/knowledge:
+    post:
+      operationId: importKnowledge
+      parameters:
+      - name: experiment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      responses:
+        '201':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KnowledgeSource'
+    get:
+      operationId: listKnowledge
+      parameters:
+      - name: experiment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      - name: agent_ref
+        in: query
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /knowledge/search:
+    post:
+      operationId: searchKnowledge
+      parameters:
+      - *id001
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                experiment_id:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                query:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+                resources:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                    maxLength: 200
+                  maxItems: 100
+                agent_ref:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+              required:
+              - experiment_id
+              - query
+              - resources
+  /knowledge/{source_id}/share:
+    post:
+      operationId: shareKnowledge
+      parameters:
+      - name: source_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                actor_id:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                revoked:
+                  type: boolean
+              required:
+              - actor_id
+              - revoked
+  /datasets/{dataset_id}/analysis:
+    post:
+      operationId: analyzeDataset
+      parameters:
+      - name: dataset_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                experiment_id:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                resources:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                    maxLength: 200
+                  maxItems: 100
+              required:
+              - experiment_id
+              - resources
+  /datasets/{dataset_id}/download:
+    get:
+      operationId: downloadDataset
+      parameters:
+      - name: dataset_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/x-hdf5:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /audit:
+    get:
+      operationId: listAudit
+      parameters:
+      - name: after
+        in: query
+        schema: *id008
+      - *id004
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /principals/{actor_id}/disable:
+    post:
+      operationId: disablePrincipal
+      parameters:
+      - name: actor_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /principals/{actor_id}/revoke-tokens:
+    post:
+      operationId: revokeToken
+      parameters:
+      - name: actor_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - *id001
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /experiments/{experiment_id}/scope:
+    put:
+      operationId: setExperimentScope
+      parameters:
+      - name: experiment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: *id009
+  /mcp/{ref}/disable:
+    post:
+      operationId: disableMCP
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /knowledge/{source_id}/disable:
+    post:
+      operationId: disableKnowledge
+      parameters:
+      - name: source_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /runs/{run_id}:
+    get:
+      operationId: getRun
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      responses:
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                type: object
+  /agent-runs/{agent_run_id}/proposals:
+    get:
+      operationId: getAgentProposals
+      parameters:
+      - name: agent_run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /experiments/{experiment_id}/available-agents:
+    get:
+      operationId: listRunnableAgents
+      parameters:
+      - name: experiment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      responses:
+        '200':
+          description: Authorized read model
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RunnableAgent'
+                required:
+                - items
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /experiments/{experiment_id}/plan-context:
+    get:
+      operationId: getPlanContext
+      parameters:
+      - name: experiment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      responses:
+        '200':
+          description: Authorized read model
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanContext'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /datasets/{dataset_id}/series:
+    get:
+      operationId: getDatasetSeries
+      parameters:
+      - name: dataset_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+      responses:
+        '200':
+          description: Authorized read model
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetSeries'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
+      bearerFormat: opaque
   parameters:
     ExperimentId:
       name: experiment_id
@@ -461,6 +2718,7 @@ components:
           - FAILED
           - NEEDS_ATTENTION
           - ARCHIVED
+          - PLANNED
         title:
           type: string
         sample_id:
@@ -569,13 +2827,280 @@ components:
           - INTERLOCKED
           - UNKNOWN
         observed_at:
-          type: string
+          type:
+          - string
+          - 'null'
           format: date-time
         state:
           type: object
           additionalProperties: true
         capability_version:
           type: string
+        id:
+          type: string
+          minLength: 1
+          maxLength: 200
+    AgentConfig:
+      type: object
+      additionalProperties: false
+      properties:
+        manifest:
+          $ref: '#/components/schemas/AgentManifest'
+        token_budget:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        context_bytes:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        max_tool_calls:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+      required:
+      - manifest
+      - token_budget
+      - context_bytes
+      - max_tool_calls
+    SessionIdentity:
+      type: object
+      additionalProperties: false
+      properties:
+        id: &id010
+          type: string
+        kind: *id010
+        role: *id010
+      required:
+      - id
+      - kind
+      - role
+    WorkspaceSnapshot:
+      type: object
+      additionalProperties: false
+      properties:
+        experiment:
+          $ref: '#/components/schemas/Experiment'
+        plans:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanRevision'
+        plan_summaries:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              id: *id010
+              plan_hash: *id010
+              revision: &id012
+                type: integer
+                minimum: 0
+            required:
+            - id
+            - plan_hash
+            - revision
+        permissions:
+          type: object
+          additionalProperties: false
+          properties:
+            write: &id011
+              type: boolean
+            approve: *id011
+            role: *id010
+            resources:
+              type: array
+              items: *id010
+          required:
+          - write
+          - approve
+          - role
+          - resources
+        event_cursor: *id012
+        approvals:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              id: *id010
+              plan_revision_id: *id010
+              plan_hash: *id010
+              state: *id010
+              state_version: *id012
+              expires_at: *id010
+            required:
+            - id
+            - plan_revision_id
+            - plan_hash
+            - state
+            - state_version
+            - expires_at
+        runs:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              id: *id010
+              plan_revision_id: *id010
+              state: *id010
+              state_version: *id012
+            required:
+            - id
+            - plan_revision_id
+            - state
+            - state_version
+        tasks:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              id: *id010
+              run_id: *id010
+              state: *id010
+              state_version: *id012
+            required:
+            - id
+            - run_id
+            - state
+            - state_version
+        commands:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              id: *id010
+              run_id: *id010
+              task_id: *id010
+              state: *id010
+              state_version: *id012
+            required:
+            - id
+            - run_id
+            - task_id
+            - state
+            - state_version
+        datasets:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              id: *id010
+              state: *id010
+              state_version: *id012
+              manifest:
+                anyOf:
+                - $ref: '#/components/schemas/DatasetManifest'
+                - type: 'null'
+            required:
+            - id
+            - state
+            - state_version
+            - manifest
+      required:
+      - experiment
+      - plans
+      - plan_summaries
+      - permissions
+      - event_cursor
+      - approvals
+      - runs
+      - tasks
+      - commands
+      - datasets
+    AgentRunView:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id010
+        experiment_id: *id010
+        definition_ref: *id010
+        revision: *id012
+        status: *id010
+        goal: *id010
+        result:
+          oneOf:
+          - type: string
+          - type: 'null'
+          - type: object
+            additionalProperties: false
+            required:
+            - proposal_ids
+            properties:
+              proposal_ids:
+                type: array
+                items:
+                  type: string
+      required:
+      - id
+      - experiment_id
+      - definition_ref
+      - revision
+      - status
+      - goal
+      - result
+    DatasetSeries:
+      type: object
+      additionalProperties: false
+      properties:
+        dataset_id: *id010
+        x_label: *id010
+        x_unit: *id010
+        y_label: *id010
+        y_unit: *id010
+        points:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+            minItems: 2
+            maxItems: 2
+        total_points: *id012
+        downsampled: *id011
+        checksum_sha256: *id010
+      required:
+      - dataset_id
+      - x_label
+      - x_unit
+      - y_label
+      - y_unit
+      - points
+      - total_points
+      - downsampled
+      - checksum_sha256
+    PlanContext:
+      type: object
+      additionalProperties: false
+      properties:
+        snapshot_version: *id012
+        next_revision: *id012
+        policy_versions:
+          type: object
+          additionalProperties: *id010
+        capability_versions:
+          type: object
+          additionalProperties: *id010
+      required:
+      - snapshot_version
+      - next_revision
+      - policy_versions
+      - capability_versions
+    RunnableAgent:
+      type: object
+      additionalProperties: false
+      properties:
+        ref: *id010
+        kind: *id010
+        model_ref: *id010
+      required:
+      - ref
+      - kind
+      - model_ref
     StableCondition:
       title: ALAP stable_condition v2
       type: object
@@ -960,6 +3485,159 @@ components:
           pattern: ^[a-fA-F0-9]{64}$
         schema_version:
           const: '2.0'
+    SkillManifest:
+      title: ALAP skill manifest v1
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - skill_id
+      - version
+      - kind
+      - content
+      - source
+      - owner
+      - dependencies
+      - required_tools
+      - required_scopes
+      - resources
+      - input_schema
+      - output_schema
+      - preconditions
+      - success_criteria
+      - side_effect
+      - executor
+      properties:
+        schema_version:
+          const: '1.0'
+        skill_id:
+          type: string
+          pattern: ^[a-zA-Z][a-zA-Z0-9_-]*$
+        version:
+          type: integer
+          minimum: 1
+        kind:
+          enum:
+          - instruction
+          - execution
+        content:
+          type: string
+          maxLength: 32000
+        source:
+          type: string
+          minLength: 1
+        owner:
+          type: string
+          minLength: 1
+        dependencies:
+          type: array
+          items:
+            type: string
+            pattern: ^[a-zA-Z][a-zA-Z0-9_-]*@[1-9][0-9]*$
+          uniqueItems: true
+        required_tools:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+        required_scopes:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+        resources:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+        input_schema:
+          type: object
+        output_schema:
+          type: object
+        preconditions:
+          type: array
+          items:
+            type: string
+        success_criteria:
+          type: string
+          minLength: 1
+        side_effect:
+          enum:
+          - none
+          - proposal
+          - physical_write
+        executor:
+          enum:
+          - context
+          - engine
+    KnowledgeSource:
+      type: object
+      additionalProperties: false
+      required:
+      - source_id
+      - version
+      - kind
+      - resources
+      - content
+      - source_uri
+      properties:
+        source_id:
+          type: string
+          minLength: 1
+        version:
+          type: integer
+          minimum: 1
+        kind:
+          enum:
+          - document
+          - memory
+        agent_ref:
+          type: string
+          minLength: 1
+        resources:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+        content:
+          type: string
+          minLength: 1
+          maxLength: 100000
+        source_uri:
+          type: string
+          minLength: 1
+    AnalysisSummary:
+      type: object
+      additionalProperties: false
+      required:
+      - algorithm
+      - dataset_id
+      - checksum_sha256
+      - sample_count
+      - resistance_ohm
+      - offset_volt
+      - residual_rms_volt
+      - interpretation
+      properties:
+        algorithm:
+          const: iv-linear-summary@1
+        dataset_id:
+          type: string
+        checksum_sha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        sample_count:
+          type: integer
+          minimum: 2
+          maximum: 100001
+        resistance_ohm:
+          type: number
+        offset_volt:
+          type: number
+        residual_rms_volt:
+          type: number
+        interpretation:
+          type: string
     CapabilityManifest:
       title: ALAP capability v2
       type: object

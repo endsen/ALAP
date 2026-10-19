@@ -1,0 +1,24 @@
+npm notice run alap-web@0.1.0 build
+npm notice run next build
+▲ Next.js 16.4.2 (Turbopack)
+✓ Running next.config.ts took 72ms
+- Experiments (use with caution):
+  · cpus: 2
+  ⨯ useTypeScriptCli
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1344ms
+  Running TypeScript ...
+  Finished TypeScript in 4.7s ...
+  Collecting page data using 2 workers ...
+  Generating static pages using 2 workers (0/2) ...
+✓ Generating static pages using 2 workers (2/2) in 168ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /_not-found
+└ ƒ /[[...route]]
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

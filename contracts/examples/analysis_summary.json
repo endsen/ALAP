@@ -1,0 +1,10 @@
+{
+  "algorithm": "iv-linear-summary@1",
+  "dataset_id": "DATA-001",
+  "checksum_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "sample_count": 21,
+  "resistance_ohm": 100,
+  "offset_volt": 0.0,
+  "residual_rms_volt": 0.0,
+  "interpretation": "linear descriptive fit, not an Ic or physical-state claim"
+}

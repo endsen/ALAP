@@ -22,6 +22,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
+      ALAP_TEST_NATS_URL: nats://127.0.0.1:4222
       ALAP_TEST_DATABASE_URL: postgresql://alap:alap-test-only@127.0.0.1:5432/alap_test
     steps:
       - uses: actions/checkout@v4
@@ -32,4 +33,17 @@ jobs:
           cache-dependency-path: requirements-dev.lock
       - run: python -m pip install -r requirements-dev.lock
       - run: python -m pip install --no-build-isolation --no-deps -e .
+      - name: Start isolated JetStream
+        run: docker run -d --name alap-nats -p 127.0.0.1:4222:4222 nats:2.15.1 -js
       - run: python scripts/check.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm --prefix apps/web ci
+      - run: npm --prefix apps/web exec -- playwright install --with-deps chromium --only-shell
+      - run: python scripts/check_web.py
+      - name: Stop JetStream
+        if: always()
+        run: docker rm -f alap-nats

@@ -1,0 +1,12 @@
+import type { components } from "@/generated/api";
+export type Snapshot = components["schemas"]["WorkspaceSnapshot"];
+export type Experiment = components["schemas"]["Experiment"];
+export type AgentRun = components["schemas"]["AgentRunView"];
+export type Proposal = components["schemas"]["PlanProposalRecord"];
+export type Plan = components["schemas"]["PlanRevision"];
+export type Identity = components["schemas"]["SessionIdentity"];
+export type Series = components["schemas"]["DatasetSeries"];
+export type Manifest = components["schemas"]["DatasetManifest"];
+export type Agent = components["schemas"]["RunnableAgent"];
+export type PlanContext = components["schemas"]["PlanContext"];
+export type Instrument = components["schemas"]["Instrument"];

@@ -194,13 +194,14 @@ class ExperimentService:
                 "occurred_at": now,
             },
         )
+        public_event = "succeeded" if kind == "task" and str(to_state) == "SUCCEEDED" else event
         envelope = {
             "event_id": new_id(),
             "experiment_id": experiment["id"],
             "experiment_seq": experiment["event_cursor"],
             "aggregate_id": identity,
             "aggregate_seq": new_version,
-            "event_type": f"{kind}.{event}.v1",
+            "event_type": f"{kind}.{public_event}.v1",
             "schema_version": "2.0",
             "producer": "alap-application",
             "trace_id": trace,
@@ -245,7 +246,7 @@ class ExperimentService:
             repo.complete_request(actor, operation, scope, key, response)
             return response
 
-    def create_experiment(self, actor, *, experiment_id, sample_id, key):
+    def create_experiment(self, actor, *, experiment_id, sample_id, key, title="", objective=""):
         def action(repo, _):
             sample = repo.get("samples", sample_id, lock=True)
             require(sample["owner_id"] == actor, "FORBIDDEN", "Sample owner permission required")
@@ -256,6 +257,8 @@ class ExperimentService:
                 "revision": 0,
                 "event_cursor": 0,
                 "state": "DRAFT",
+                "title": title,
+                "objective": objective,
             }
             repo.insert("experiments", experiment)
             # Membership provisioning is an explicit identity administration concern.
@@ -277,7 +280,12 @@ class ExperimentService:
             "create_experiment",
             sample_id,
             key,
-            {"experiment_id": experiment_id, "sample_id": sample_id},
+            {
+                "experiment_id": experiment_id,
+                "sample_id": sample_id,
+                "title": title,
+                "objective": objective,
+            },
             action,
         )
 
@@ -745,8 +753,26 @@ class ExperimentService:
             return {
                 "experiment": experiment,
                 "plans": plans,
+                "plan_summaries": [
+                    {"id": p["id"], "plan_hash": p["plan_hash"], "revision": p["revision"]}
+                    for p in repo.plans(experiment_id)
+                ],
                 "events": repo.events(experiment_id),
                 "event_cursor": experiment["event_cursor"],
                 "approvals": repo.approvals(experiment_id),
                 "runs": repo.runs(experiment_id),
+                "tasks": repo.find("tasks", {"experiment_id": experiment_id}),
+                "commands": [
+                    {k: c[k] for k in ("id", "run_id", "task_id", "state", "state_version")}
+                    for c in repo.find("command_ledger", {"experiment_id": experiment_id})
+                ],
+                "datasets": [
+                    {
+                        "id": d["id"],
+                        "state": d["state"],
+                        "state_version": d["state_version"],
+                        "manifest": d["manifest_json"] if d["state"] == "COMMITTED" else None,
+                    }
+                    for d in repo.find("datasets", {"experiment_id": experiment_id})
+                ],
             }

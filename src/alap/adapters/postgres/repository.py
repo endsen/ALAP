@@ -12,6 +12,9 @@ from alap.domain.rules import DomainError
 
 TABLES = frozenset(
     {
+        "device_snapshots",
+        "datasets",
+        "provenance_edges",
         "tasks",
         "leases",
         "instruments",
@@ -35,6 +38,8 @@ TABLES = frozenset(
 )
 JSON_FIELDS = frozenset(
     {
+        "result_json",
+        "manifest_json",
         "definition",
         "raw_receipt",
         "metadata",
@@ -213,6 +218,84 @@ class PostgresRepository:
             "INSERT INTO task_dependencies(run_id,task_id,depends_on_id) VALUES (%s,%s,%s)",
             (run, task, parent),
         )
+
+    def claim_events(self, token, limit):
+        rows = self.connection.execute(
+            """SELECT o.* FROM outbox_events o LEFT JOIN event_delivery_claims c USING(event_id)
+            WHERE o.published_at IS NULL AND (c.event_id IS NULL OR c.expires_at<=clock_timestamp())
+            ORDER BY o.experiment_id,o.experiment_seq LIMIT %s FOR UPDATE OF o SKIP LOCKED""",
+            (limit,),
+        ).fetchall()
+        for row in rows:
+            self.connection.execute(
+                """INSERT INTO event_delivery_claims
+                VALUES(%s,%s,clock_timestamp()+interval '30 seconds')
+                ON CONFLICT(event_id) DO UPDATE
+                SET token=EXCLUDED.token,expires_at=EXCLUDED.expires_at""",
+                (row["event_id"], token),
+            )
+        return rows
+
+    def mark_published(self, event_id, token):
+        row = self.connection.execute(
+            "SELECT published_at FROM outbox_events WHERE event_id=%s FOR UPDATE", (event_id,)
+        ).fetchone()
+        claim = self.connection.execute(
+            "SELECT token FROM event_delivery_claims WHERE event_id=%s", (event_id,)
+        ).fetchone()
+        if row is None or row["published_at"] is not None or not claim or claim["token"] != token:
+            return False
+        self.connection.execute(
+            "UPDATE outbox_events SET published_at=clock_timestamp() WHERE event_id=%s", (event_id,)
+        )
+        return True
+
+    def event(self, identity):
+        row = self.connection.execute(
+            "SELECT * FROM outbox_events WHERE event_id=%s", (identity,)
+        ).fetchone()
+        if row is None:
+            raise DomainError("EVENT_CONFLICT", "Unknown authoritative event")
+        return row
+
+    def events_after(self, experiment, cursor, limit):
+        return self.connection.execute(
+            """SELECT * FROM outbox_events WHERE experiment_id=%s AND experiment_seq>%s
+            ORDER BY experiment_seq LIMIT %s""",
+            (experiment, cursor, limit),
+        ).fetchall()
+
+    def apply_event(self, consumer, row, payload_hash):
+        inserted = self.connection.execute(
+            """INSERT INTO consumer_inbox VALUES(%s,%s,%s,clock_timestamp())
+            ON CONFLICT DO NOTHING RETURNING event_id""",
+            (consumer, row["event_id"], payload_hash),
+        ).fetchone()
+        if not inserted:
+            saved = self.connection.execute(
+                "SELECT payload_hash FROM consumer_inbox WHERE consumer_id=%s AND event_id=%s",
+                (consumer, row["event_id"]),
+            ).fetchone()
+            if saved["payload_hash"] != payload_hash:
+                raise DomainError("EVENT_CONFLICT", "Inbox identity bound to another payload")
+            return False
+        self.connection.execute(
+            """INSERT INTO event_projections VALUES(%s,%s,%s,%s,%s,%s,%s)
+            ON CONFLICT(consumer_id,experiment_id,aggregate_type,aggregate_id) DO UPDATE
+            SET aggregate_seq=EXCLUDED.aggregate_seq,event_id=EXCLUDED.event_id,
+            payload=EXCLUDED.payload
+            WHERE event_projections.aggregate_seq<EXCLUDED.aggregate_seq""",
+            (
+                consumer,
+                row["experiment_id"],
+                row["aggregate_type"],
+                row["aggregate_id"],
+                row["aggregate_seq"],
+                row["event_id"],
+                Jsonb(row["payload"]),
+            ),
+        )
+        return True
 
 
 class PostgresUnitOfWork:

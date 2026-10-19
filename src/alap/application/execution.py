@@ -93,11 +93,25 @@ class ExecutionService:
                     "resource_controls", control["id"], {"quarantined": True, "reason": event}
                 )
                 control["quarantined"] = True
-        require(
-            Effect.REQUEST_SAFE_STOP not in decision.effects,
-            "STOP_PROTOCOL_REQUIRED",
-            "Stop effects must use the explicit stop protocol",
-        )
+        if Effect.ENABLE_DISPATCH in decision.effects:
+            repo.update("runs", ctx["run"]["id"], {"dispatch_blocked": False})
+            ctx["run"]["dispatch_blocked"] = False
+        if Effect.REQUEST_SAFE_STOP in decision.effects:
+            for command in ctx["commands"]:
+                if command["state"] in COMMAND_TERMINAL | {"NOT_DISPATCHED"}:
+                    continue
+                if not repo.find("stop_requests", {"command_id": command["id"]}):
+                    repo.insert(
+                        "stop_requests",
+                        {
+                            "id": new_id(),
+                            "command_id": command["id"],
+                            "actor_id": actor,
+                            "reason": event,
+                            "state": "PENDING",
+                            "dedup_key": "stop:" + command["id"],
+                        },
+                    )
         self.base._event(
             repo,
             ctx["experiment"],
@@ -175,7 +189,7 @@ class ExecutionService:
             ctx = self._locked(repo, actor, run_id)
             run = ctx["run"]
             require(
-                run["state"] in ("READY", "WAITING_RESOURCE"),
+                run["state"] in ("READY", "WAITING_RESOURCE", "PAUSED"),
                 "RUN_NOT_READY",
                 "Cannot acquire for active run",
             )
@@ -334,7 +348,7 @@ class ExecutionService:
             leases = self._lease_facts(repo, ctx)
             row = next(t for t in ctx["tasks"] if t["plan_task_id"] == plan_task_id)
             previous = next((c for c in ctx["commands"] if c["task_id"] == row["id"]), None)
-            if previous:
+            if previous and previous["state"] != "NOT_DISPATCHED":
                 return previous["id"]
             require(
                 ctx["run"]["state"] in ("READY", "RUNNING"),
@@ -360,6 +374,8 @@ class ExecutionService:
                 repo.update("runs", run_id, {"dispatch_blocked": False})
                 ctx["run"]["dispatch_blocked"] = False
                 self._change(repo, ctx, ctx["run"], Kind.RUN, "start", actor, facts)
+            if previous:
+                return previous["id"]
             if row["state"] == "PENDING":
                 self._change(
                     repo,
@@ -521,12 +537,17 @@ class ExecutionService:
     def ingest(self, actor, command_id, signed, *, reconcile=False):
         receipt = self.auth.open(signed)
         current_readbacks = []
-        if reconcile and receipt["state"] == "SUCCEEDED":
+        if reconcile and receipt["state"] in ("SUCCEEDED", "VERIFYING"):
             with self.transaction() as repo:
                 self._engine(repo, actor)
                 initial = repo.get("command_ledger", command_id)
                 task = repo.get("tasks", initial["task_id"])["definition"]
-            current_readbacks = self._readbacks({"preconditions": [task["success_condition"]]})
+            conditions = (
+                [task["success_condition"]]
+                if task["success_condition"]["kind"] == "stable_window"
+                else task["preconditions"]
+            )
+            current_readbacks = self._readbacks({"preconditions": conditions})
         with self.transaction() as repo:
             self._engine(repo, actor)
             initial = repo.get("command_ledger", command_id)
@@ -597,7 +618,7 @@ class ExecutionService:
                     "Unknown outcomes require explicit reconciliation",
                 )
                 require(
-                    receipt["state"] in ("SUCCEEDED", "REJECTED_BEFORE_EXECUTE"),
+                    receipt["state"] in ("SUCCEEDED", "VERIFYING", "REJECTED_BEFORE_EXECUTE"),
                     "RECONCILIATION_PENDING",
                     "No verified durable result",
                 )
@@ -736,21 +757,39 @@ class ExecutionService:
                     )
             if receipt["state"] == "VERIFYING":
                 return  # IV data is local only; Dataset COMMITTED is explicitly D05.
-            require(
-                task["definition"]["success_condition"]["kind"] == "stable_window",
-                "DATASET_NOT_COMMITTED",
-                "Data-producing command cannot claim committed success",
-            )
-            # Preserve original readback times; validate the recorded completion window.
-            observed = datetime.fromisoformat(receipt["observed_at"])
-            require(observed <= repo.now(), "INVALID_RECEIPT_TIME", "Future receipt rejected")
-            check_stable(
-                task["definition"]["success_condition"], receipt["result"]["samples"], observed
-            )
-            no_dataset = {
-                "skill_ref": task["definition"]["skill_ref"],
-                "reason": "stable_window skill has no dataset",
-            }
+            if task["definition"]["success_condition"]["kind"] == "stable_window":
+                observed = datetime.fromisoformat(receipt["observed_at"])
+                require(observed <= repo.now(), "INVALID_RECEIPT_TIME", "Future receipt rejected")
+                check_stable(
+                    task["definition"]["success_condition"], receipt["result"]["samples"], observed
+                )
+                dataset_evidence = {
+                    "skill_ref": task["definition"]["skill_ref"],
+                    "reason": "stable_window skill has no dataset",
+                }
+            else:
+                datasets = repo.find("datasets", {"command_id": command_id}, lock=True)
+                proof = receipt["result"].get("dataset", {})
+                require(
+                    len(datasets) == 1
+                    and datasets[0]["state"] == "COMMITTED"
+                    and proof.get("dataset_id") == datasets[0]["id"]
+                    and proof.get("checksum_sha256") == datasets[0]["checksum"],
+                    "DATASET_NOT_COMMITTED",
+                    "Verified committed acquisition required",
+                )
+                original = self.auth.open(
+                    repo.get("gateway_receipts", datasets[0]["receipt_id"])["raw_receipt"]
+                )
+                require(
+                    receipt["result"]["artifact"] == original["result"]["artifact"],
+                    "DATA_SOURCE_MISMATCH",
+                    "Completion result differs from stored acquisition",
+                )
+                dataset_evidence = {
+                    "dataset_id": datasets[0]["id"],
+                    "sha256": datasets[0]["checksum"],
+                }
             self._change(
                 repo,
                 ctx,
@@ -762,7 +801,7 @@ class ExecutionService:
                     "gateway_authenticated": {"gateway": receipt["gateway_id"]},
                     "success_verified": {"receipt": identity},
                     "result_durable": {"receipt": identity},
-                    "datasets_committed": no_dataset,
+                    "datasets_committed": dataset_evidence,
                 },
                 authority=Authority.GATEWAY,
             )
@@ -794,66 +833,121 @@ class ExecutionService:
                 {
                     "command_succeeded": {"command": command_id},
                     "success_verified": {"receipt": identity},
-                    "datasets_committed": no_dataset,
+                    "datasets_committed": dataset_evidence,
                 },
             )
-            if reconcile:
-                if all(c["state"] in COMMAND_TERMINAL for c in ctx["commands"]):
-                    self._change(
-                        repo,
-                        ctx,
-                        ctx["run"],
-                        Kind.RUN,
-                        "reconciled_pause",
-                        actor,
-                        {
-                            "reconciliation_complete": {"receipt": identity},
-                            "children_quiescent": {"commands": [c["id"] for c in ctx["commands"]]},
-                        },
-                        authority=Authority.RECONCILER,
-                    )
-            elif all(t["state"] == "SUCCEEDED" for t in ctx["tasks"]):
-                facts = {
-                    "all_tasks_succeeded": {"tasks": [t["id"] for t in ctx["tasks"]]},
-                    "children_quiescent": {"commands": [c["id"] for c in ctx["commands"]]},
-                }
-                if ctx["run"]["state"] == "PAUSE_REQUESTED":
-                    self._change(
-                        repo,
-                        ctx,
-                        ctx["run"],
-                        Kind.RUN,
-                        "completion_won_race",
-                        actor,
-                        {**facts, "datasets_committed": no_dataset},
-                    )
-                else:
-                    self._change(repo, ctx, ctx["run"], Kind.RUN, "tasks_succeeded", actor, facts)
-                    self._change(
-                        repo,
-                        ctx,
-                        ctx["run"],
-                        Kind.RUN,
-                        "complete",
-                        actor,
-                        {**facts, "datasets_committed": no_dataset},
-                    )
-                repo.update("runs", ctx["run"]["id"], {"dispatch_blocked": True})
-            elif ctx["run"]["state"] == "PAUSE_REQUESTED" and all(
-                c["state"] in COMMAND_TERMINAL | {"NOT_DISPATCHED"} for c in ctx["commands"]
-            ):
+            self._settle_run(repo, ctx, actor)
+
+    def _settle_run(self, repo, ctx, actor):
+        run = ctx["run"]
+        if not self._stops_confirmed(repo, ctx):
+            return
+        terminal = all(c["state"] in COMMAND_TERMINAL for c in ctx["commands"])
+        succeeded = len(ctx["tasks"]) == len(run["task_identities"]) and all(
+            t["state"] == "SUCCEEDED" for t in ctx["tasks"]
+        )
+        tasks_done = all(
+            t["state"] in ("SUCCEEDED", "FAILED", "CANCELLED", "SKIPPED") for t in ctx["tasks"]
+        )
+        facts = {"children_quiescent": {"commands": [c["id"] for c in ctx["commands"]]}}
+        cancelled = any(
+            repo.find("stop_requests", {"command_id": c["id"]}) for c in ctx["commands"]
+        )
+        if terminal and tasks_done and succeeded:
+            datasets = repo.find("datasets", {"run_id": run["id"]}, lock=True)
+            required = {
+                t["id"]
+                for t in ctx["tasks"]
+                if t["definition"]["success_condition"]["kind"] == "dataset_committed"
+            }
+            require(
+                required <= {d["task_id"] for d in datasets if d["state"] == "COMMITTED"},
+                "DATASET_NOT_COMMITTED",
+                "All required datasets must remain committed",
+            )
+            complete = {
+                **facts,
+                "all_tasks_succeeded": {"tasks": [t["id"] for t in ctx["tasks"]]},
+                "datasets_committed": {
+                    "datasets": [d["id"] for d in datasets],
+                    "non_data_skills": [
+                        t["definition"]["skill_ref"]
+                        for t in ctx["tasks"]
+                        if t["id"] not in required
+                    ],
+                },
+            }
+            if run["state"] in ("PAUSE_REQUESTED", "CANCEL_REQUESTED"):
+                self._change(repo, ctx, run, Kind.RUN, "completion_won_race", actor, complete)
+            elif run["state"] == "RUNNING":
                 self._change(
                     repo,
                     ctx,
-                    ctx["run"],
+                    run,
                     Kind.RUN,
-                    "pause_confirmed",
+                    "tasks_succeeded",
+                    actor,
+                    {k: v for k, v in complete.items() if k != "datasets_committed"},
+                )
+                self._change(repo, ctx, run, Kind.RUN, "complete", actor, complete)
+            elif run["state"] == "NEEDS_RECONCILIATION" and cancelled:
+                self._change(
+                    repo,
+                    ctx,
+                    run,
+                    Kind.RUN,
+                    "reconciled_success",
                     actor,
                     {
-                        "children_quiescent": {"commands": [c["id"] for c in ctx["commands"]]},
-                        "dispatch_disabled": {"run": ctx["run"]["id"]},
+                        **facts,
+                        "all_tasks_succeeded": complete["all_tasks_succeeded"],
+                        "reconciliation_complete": {"stops": "confirmed"},
                     },
+                    authority=Authority.RECONCILER,
                 )
+                self._change(repo, ctx, run, Kind.RUN, "complete", actor, complete)
+            elif run["state"] == "NEEDS_RECONCILIATION":
+                self._change(
+                    repo,
+                    ctx,
+                    run,
+                    Kind.RUN,
+                    "reconciled_pause",
+                    actor,
+                    {**facts, "reconciliation_complete": {"commands": "confirmed"}},
+                    authority=Authority.RECONCILER,
+                )
+            repo.update("runs", run["id"], {"dispatch_blocked": True})
+        elif terminal and tasks_done and run["state"] == "CANCEL_REQUESTED":
+            self._change(
+                repo,
+                ctx,
+                run,
+                Kind.RUN,
+                "cancel_confirmed",
+                actor,
+                {**facts, "cancellation_complete": {"tasks": "confirmed"}},
+            )
+        elif terminal and run["state"] == "NEEDS_RECONCILIATION":
+            event = "reconciled_cancel" if cancelled and tasks_done else "reconciled_pause"
+            evidence = {**facts, "reconciliation_complete": {"commands": "confirmed"}}
+            if event == "reconciled_cancel":
+                evidence["cancellation_complete"] = {"tasks": "confirmed"}
+            self._change(
+                repo, ctx, run, Kind.RUN, event, actor, evidence, authority=Authority.RECONCILER
+            )
+        elif run["state"] == "PAUSE_REQUESTED" and all(
+            c["state"] in COMMAND_TERMINAL | {"NOT_DISPATCHED"} for c in ctx["commands"]
+        ):
+            self._change(
+                repo,
+                ctx,
+                run,
+                Kind.RUN,
+                "pause_confirmed",
+                actor,
+                {**facts, "dispatch_disabled": {"run": run["id"]}},
+            )
 
     def reconcile(self, actor, command_id, *, recover_gateway=False):
         with self.transaction() as repo:
@@ -919,6 +1013,7 @@ class ExecutionService:
         reports = self._gateway_reports(resources)
         with self.transaction() as repo:
             ctx = self._locked(repo, actor, run_id, authorize=False, active=False)
+            require(self._stops_confirmed(repo, ctx), "STOP_PENDING", "Stop confirmations required")
             require(ctx["run"]["dispatch_blocked"], "DISPATCH_ENABLED", "Freeze run before release")
             require(
                 all(c["state"] in COMMAND_TERMINAL for c in ctx["commands"]),
@@ -1016,6 +1111,13 @@ class ExecutionService:
                 )
             return epoch
 
+    def _stops_confirmed(self, repo, ctx):
+        return all(
+            s["state"] == "CONFIRMED"
+            for c in ctx["commands"]
+            for s in repo.find("stop_requests", {"command_id": c["id"]})
+        )
+
     def bind_gateway(self, actor, gateway_id):
         with self.transaction() as repo:
             self._engine(repo, actor)
@@ -1024,6 +1126,11 @@ class ExecutionService:
                 generation["mode"] == "RECOVERING",
                 "RECOVERY_REQUIRED",
                 "Handshake only in recovery",
+            )
+            require(
+                all(s["state"] == "CONFIRMED" for s in repo.find("stop_requests", {})),
+                "STOP_PENDING",
+                "Confirm outstanding stops before changing gateway epoch",
             )
             repo.get("gateways", gateway_id)
             epoch = str(generation["epoch"])
@@ -1082,6 +1189,11 @@ class ExecutionService:
                 all(c["state"] in COMMAND_TERMINAL for c in commands),
                 "RECONCILIATION_PENDING",
                 "All previous commands must be reconciled first",
+            )
+            require(
+                all(s["state"] == "CONFIRMED" for s in repo.find("stop_requests", {})),
+                "STOP_PENDING",
+                "All stops must be confirmed before recovery completes",
             )
             by_experiment = {e["id"]: e for e in experiments}
             for run in runs:

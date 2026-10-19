@@ -72,3 +72,11 @@ CI 校验 OpenAPI YAML 可解析、所有 JSON Schema 为合法 draft 2020-12；
 v3.1 初次开发契约采用 2.0，尚无已部署旧协议；后续破坏性更改显式升版本。每个 Manifest 带 `schema_version`；版本升级有向后兼容窗口及迁移脚本；已运行 Run 锁定其计划和能力版本。设备 capability 与安全策略更新时，新任务必须按新版本验证；已运行的受控任务依设备规程停止/完成，不能静默换安全阈值。
 
 共享结构由 JSON Schema 生成至 OpenAPI；路由源为 `contracts/openapi.base.yaml`，生成命令及漂移检查见根目录 README。规划中的平台管理路由在 P3/P4 补齐，不代表当前已有服务。
+
+## 9. D09 已实现接口对齐
+
+D09 已接入契约驱动 FastAPI。早期上表的审批/Run 请求细节以当前 `openapi.base.yaml` 为准：计划提交是完整版本，审批分请求与决定，Run 绑定 approval_id；这些变更在尚无部署客户端阶段完成。身份首版采用可信运维签发的本地 opaque Bearer token，主体/角色/资源范围按请求复核。基础管理接口、当前主体用量、凭据写入与 SSE 已实现；企业 OIDC、集群限流、完整计费和 Web 不在本期验收中。运行控制的 If-Match 对应 Run state_version，凭据首次写入为 -1。详见 D09_API_IDENTITY_DEVELOPMENT.md。
+
+## D10 工作区读模型增量
+
+`GET /me` 返回主体 id/kind/平台 role；实验 snapshot 附带当前成员权限和计划 hash 索引。`GET /experiments/{id}/available-agents` 只列已发布且覆盖当前实验和设备 scope 的 Agent；`GET /experiments/{id}/plan-context` 要求写权限，返回精确快照/下一计划版本及设备策略/能力版本，不对旧提案自动换版本。Agent Run 的 result 可为文本、含 proposal_ids 的对象或 null。`GET /datasets/{id}/series` 返回校验后的有限 IV 点序列与 checksum/降采样信息，权限依据与下载一致；原始 HDF5 下载仍是完整数据依据。

@@ -36,3 +36,9 @@ EVAL-16：相同 Planner 输入分别使用 OpenAI/DeepSeek 适配器，产出�
 EVAL-17：工具参数分片、截断、非 JSON、重复调用 ID、限流、超时、取消、缺失 usage、敏感错误消息均有测试；不会产生未授权副作用。
 
 EVAL-18：无模型能力或无凭据时显示明确不可用；配置读取、日志、错误响应不含密钥。真实服务冒烟测试与离线适配器测试分别报告。
+
+## D06 实现落点（2026-10-18）
+
+首版使用显式 Chat Completions 协议和供应商参数分支，ModelClient/冻结配置位于 application，标准库 HTTPS 和解析器位于 adapters/llm。只允许官方 HTTPS 地址；自定义/本地端点待独立网络策略，Responses/其他供应商待独立适配。JSON 模式为供应商 JSON object 加本地 Schema 验证，不等同服务端 strict。
+
+工具流片段不可执行，只有校验完成的 finish 携带提案；能力缺失和版本不匹配在联网前拒绝。失败尝试占用保守 token 预留，费用目录和持久用量在后续服务层。多轮工具历史由 D07 补齐；没有自动 failover。开发范围、官方协议来源及真实/离线验证分别见 D06_MODEL_DEVELOPMENT.md，不能据此称 Web 模型管理或生产密钥管理已完成。

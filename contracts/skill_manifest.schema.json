@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alap.invalid/contracts/skill_manifest.schema.json",
+  "title": "ALAP skill manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "skill_id",
+    "version",
+    "kind",
+    "content",
+    "source",
+    "owner",
+    "dependencies",
+    "required_tools",
+    "required_scopes",
+    "resources",
+    "input_schema",
+    "output_schema",
+    "preconditions",
+    "success_criteria",
+    "side_effect",
+    "executor"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "skill_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "kind": {
+      "enum": [
+        "instruction",
+        "execution"
+      ]
+    },
+    "content": {
+      "type": "string",
+      "maxLength": 32000
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*@[1-9][0-9]*$"
+      },
+      "uniqueItems": true
+    },
+    "required_tools": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "required_scopes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "input_schema": {
+      "type": "object"
+    },
+    "output_schema": {
+      "type": "object"
+    },
+    "preconditions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "success_criteria": {
+      "type": "string",
+      "minLength": 1
+    },
+    "side_effect": {
+      "enum": [
+        "none",
+        "proposal",
+        "physical_write"
+      ]
+    },
+    "executor": {
+      "enum": [
+        "context",
+        "engine"
+      ]
+    }
+  }
+}
