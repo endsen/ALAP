@@ -5,7 +5,7 @@
 ## 分期交接入口
 
 - 分期计划：`docs/20_DELIVERY_PLAN.md` 的 D01–D13；P0–P7 为技术层次，D 编号为分批交付单位。
-- 当前：**D11 · Web 平台控制台，已完成本地验收**。D01–D11 基础交付完成；D11 改动在本地，尚未提交/推送，本期远程 CI 未运行。
+- 当前：**D11 · Web 平台控制台，已完成本地验收**。D01–D11 基础交付完成；D11 实现提交 `483f23d` 已推送到 GitHub `main`；远程 CI 见下方交付记录。
 - 下一期：**D12 · 集成、部署与验收，尚未开始**。先完成明确的常驻进程装配、Compose/运维配置，再验证完整 E2E、长时间模拟、故障注入及备份恢复；不以测试 fixture 充当生产 scheduler。
 - 当前环境：macOS `/Users/endsen/codex/ALAP`，有效 Git 工作树；Linux 路径是另一开发环境的历史记录。本地远程基线为 93ab50f，依赖已按锁文件同步。
 - D05–D10 实现提交 0015fa6 与交接提交 93ab50f 的远程 CI 均已通过，已于 2026-10-19 核对：https://github.com/endsen/ALAP/actions/runs/39201132173 。此结果不替代 D11 的远程验收。
@@ -19,7 +19,7 @@
 - Web 门禁：类型生成/TypeScript/Prettier、**10 项单元测试、18 项 Chromium 浏览器测试**、生产构建通过。报告 `reports/d11-web-validation.txt`。移动导航修正后重新构建并专项复验通过，见 `reports/d11-mobile-validation.txt`。
 - 已查看桌面模型与移动设置截图；Skill/审计和旧工作区回归截图为 `reports/d11-*.png`。D10 历史截图保留不覆盖。测试使用独立控制台实验，保留版本绑定/跨 Run 提案去重，不通过放松安全规则使测试通过。
 - 本机：Python 3.14.8、PostgreSQL 18.6、NATS 2.15.1、Node 24.22.0、锁定 Playwright Chromium。按既有锁文件安装依赖，没有新增依赖版本；安装的 Node 24 通过 PATH 显式使用，未切换系统默认 Node。
-- 当前为本地集成/浏览器验收，非远程 CI、跨浏览器、生产部署或真机验收。临时 PostgreSQL/JetStream 与浏览器测试服务验收后停止；没有注册开机服务。
+- 本地集成/浏览器验收已完成；远程 CI 单独记录，不代表跨浏览器、生产部署或真机验收。临时 PostgreSQL/JetStream 与浏览器测试服务验收后停止；没有注册开机服务。
 - 详细路由、启动、验证和边界见 `docs/D11_PLATFORM_CONSOLE_DEVELOPMENT.md`。固定指令策略、文本检索、HTTP MCP 子集、当前用户/实验统计等边界如实保留；完整计费、自动保留清理、企业 SSO、常驻部署和现场仍待对应后续工程。
 
 ## D10 本地交付（2026-10-19）
@@ -192,3 +192,9 @@ P0–P5 的 D01–D11 基础交付已建立，含模型/Agent/管理 API、实�
 - 本次交接文档另作后续提交；上面的 CI 结果明确对应实现提交，不冒充后续提交结果。
 - 推送前检查远程无分叉、暂存差异格式及常见凭据模式；未纳入虚拟环境、缓存、临时数据库或 journal 文件。
 - 本条为 D03/D04 上传时的历史保存点；当前期见顶部。Windows 与真机验收未完成。
+
+## D11 GitHub 交付（2026-10-19）
+
+- 实现提交：`483f23d`（`feat: deliver D11 platform console`），已推送到 `origin/main`。
+- GitHub Actions：https://github.com/endsen/ALAP/actions/runs/39265691351 。该实现提交的后端与 Web 门禁均已通过。本记录为随后追加的文档交接，不能将实现提交的 CI 结果等同于交接提交的 CI 结果。
+- 本次仅交付 D11；D12 尚未启动。

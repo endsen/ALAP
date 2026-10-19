@@ -62,4 +62,4 @@ ALAP_SCREENSHOT_PREFIX=d11-regression .venv/bin/python scripts/check_web.py
 - `reports/d11-web-validation.txt`：10 项前端单元、18 项浏览器用例、类型/格式/生成一致性及生产构建通过。
 - `reports/d11-mobile-validation.txt`：移动导航修正后的生产构建及专项浏览器复验通过。
 - 已人工检查桌面模型页与移动设置页截图，导航无文字挤压、页面无横向溢出；完整截图见 `reports/d11-*.png`。
-- 当前 D11 尚未提交/推送，远程 CI 未运行。临时测试服务收尾停止，D12 未启动。
+- D11 实现提交 `483f23d` 已推送到 GitHub `main`；远程 CI：https://github.com/endsen/ALAP/actions/runs/39265691351 （实现提交后端及 Web 门禁均已通过）。临时测试服务收尾停止，D12 未启动。
