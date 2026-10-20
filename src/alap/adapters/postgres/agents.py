@@ -1,12 +1,14 @@
 """Agent storage, distinct from experiment execution. No network I/O in transactions."""
 
 from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import timedelta
 
 import psycopg
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
+from alap.adapters.postgres.read_locks import lock_read
 from alap.application.experiments import digest, require
 from alap.domain.rules import freeze_revision
 
@@ -14,6 +16,7 @@ from alap.domain.rules import freeze_revision
 class PostgresAgentStore:
     def __init__(self, dsn):
         self.dsn = dsn
+        self._owner = ContextVar("agent_owner", default=None)
 
     def connect(self, **kwargs):
         return psycopg.connect(self.dsn, row_factory=dict_row, **kwargs)
@@ -71,15 +74,16 @@ class PostgresAgentStore:
             require(changed == 1, "NOT_FOUND", "Registry version missing")
 
     def _access(self, db, actor, experiment_id, resources, *, proposal=False):
+        lock_read(db, "experiment", experiment_id)
+        lock_read(db, "principal", actor)
+        lock_read(db, "membership", experiment_id, actor)
         experiment = db.execute(
-            "SELECT * FROM experiments WHERE id=%s FOR SHARE", (experiment_id,)
+            "SELECT * FROM experiments WHERE id=%s", (experiment_id,)
         ).fetchone()
-        principal = db.execute(
-            "SELECT * FROM principals WHERE id=%s FOR SHARE", (actor,)
-        ).fetchone()
+        principal = db.execute("SELECT * FROM principals WHERE id=%s", (actor,)).fetchone()
         membership = db.execute(
             """SELECT * FROM experiment_memberships
-          WHERE experiment_id=%s AND actor_id=%s FOR SHARE""",
+          WHERE experiment_id=%s AND actor_id=%s""",
             (experiment_id, actor),
         ).fetchone()
         require(
@@ -139,8 +143,9 @@ class PostgresAgentStore:
     def _active(self, db, bundle, ref):
         refs = [("agent", ref), *(("skill", r) for r in bundle["skills"])]
         for kind, reference in sorted(refs):
+            lock_read(db, "registry", kind, reference)
             row = db.execute(
-                "SELECT state FROM agent_registry WHERE kind=%s AND ref=%s FOR SHARE",
+                "SELECT state FROM agent_registry WHERE kind=%s AND ref=%s",
                 (kind, reference),
             ).fetchone()
             require(
@@ -218,13 +223,50 @@ class PostgresAgentStore:
                 "SELECT pg_try_advisory_lock(hashtextextended(%s,7)) AS locked", (identity,)
             ).fetchone()["locked"]
             require(locked, "RUN_BUSY", "Another worker owns this Agent run")
+            token = self._owner.set((identity, db))
             try:
                 yield
             finally:
-                db.execute("SELECT pg_advisory_unlock(hashtextextended(%s,7))", (identity,))
+                self._owner.reset(token)
+                # Closing this dedicated session releases its lock, including on errors.
+
+    @contextmanager
+    def _commit_connection(self, identity):
+        owner = self._owner.get()
+        if owner is None:
+            with self.connect() as db:
+                yield db
+        else:
+            require(owner[0] == identity, "RUN_BUSY", "Different Agent run owns this session")
+            # Use the lock session itself: a dead owner cannot reconnect to commit.
+            with owner[1].transaction():
+                yield owner[1]
+
+    def authorize_worker(self, actor):
+        with self.connect() as db:
+            principal = db.execute("SELECT * FROM principals WHERE id=%s", (actor,)).fetchone()
+            require(
+                principal is not None
+                and principal["disabled_at"] is None
+                and principal["kind"] == "service"
+                and principal["issuer"] == "alap-agents",
+                "FORBIDDEN",
+                "Explicit Agent worker identity required",
+            )
+
+    def worker_candidates(self, actor, experiments, *, after="", limit=20):
+        require(type(limit) is int and 1 <= limit <= 100, "INVALID_LIMIT", "Batch size 1..100")
+        self.authorize_worker(actor)
+        with self.connect() as db:
+            return db.execute(
+                """SELECT id,actor_id FROM agent_runs WHERE experiment_id=ANY(%s)
+                AND checkpoint->>'status' IN ('READY','RUNNING') AND id>%s
+                ORDER BY id LIMIT %s""",
+                (list(experiments), after, limit),
+            ).fetchall()
 
     def commit(self, run, checkpoint, event, *, invocations=(), proposals=(), check_snapshot=False):
-        with self.connect() as db:
+        with self._commit_connection(run["id"]) as db:
             manifest = run["bundle"]["config"]["manifest"]
             exp, membership = self._access(
                 db,

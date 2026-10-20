@@ -24,7 +24,7 @@ class LangGraphAgentRunner:
         self.runtime = runtime
 
     def _invoke(self, actor, identity, cancel, *, continuous):
-        with self.runtime.store.exclusive(identity), tracing_context(enabled=False):
+        with tracing_context(enabled=False):
 
             def inspect(state):
                 run = self.runtime.store.load(state["actor"], state["run_id"])

@@ -36,7 +36,9 @@ class EventService:
             "Explicit event worker identity required",
         )
 
-    async def publish_once(self, actor, publisher: EventPublisher, *, limit=100):
+    async def publish_once(
+        self, actor, publisher: EventPublisher, *, limit=100, stopping=lambda: False
+    ):
         require(type(limit) is int and 1 <= limit <= 100, "INVALID_LIMIT", "Batch size 1..100")
         token = new_id()
         with self.transaction() as repo:
@@ -44,6 +46,10 @@ class EventService:
             batch = repo.claim_events(token, limit)
         published = 0
         for row in batch:
+            if stopping():
+                break
+            with self.transaction() as repo:
+                self._service(repo, actor)
             value = envelope(row)
             self.base.catalog.validate("event", value)
             await publisher.publish(value)  # Await durable broker ACK with no DB locks held.

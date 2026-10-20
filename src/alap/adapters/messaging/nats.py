@@ -12,8 +12,10 @@ class JetStreamPublisher:
         self.stream, self.subject = stream, subject
 
     @classmethod
-    async def connect(cls, url, *, stream, subject):
-        connection = await nats.connect(url, connect_timeout=3, max_reconnect_attempts=2)
+    async def connect(cls, url, *, stream, subject, error_cb=None):
+        connection = await nats.connect(
+            url, connect_timeout=3, max_reconnect_attempts=2, error_cb=error_cb
+        )
         return cls(connection, stream, subject)
 
     async def publish(self, event):

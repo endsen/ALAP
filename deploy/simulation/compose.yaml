@@ -1,0 +1,166 @@
+name: alap-simulation
+x-service: &service
+  init: true
+  user: "0:0" # Host user in rootless Docker; this stack is not a rootful production profile.
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  tmpfs: ["/tmp:size=128m,mode=1777"]
+  stop_grace_period: 90s
+  logging:
+    driver: json-file
+    options: {max-size: 10m, max-file: "3"}
+x-backend: &backend
+  <<: *service
+  image: alap-backend:simulation
+  build:
+    context: ../..
+    dockerfile: deploy/simulation/backend.Dockerfile
+    args:
+      PYTHON_IMAGE: ${PYTHON_IMAGE:?Use images.env}
+      HTTP_PROXY: ${BUILD_HTTP_PROXY:-}
+      HTTPS_PROXY: ${BUILD_HTTP_PROXY:-}
+      NO_PROXY: localhost,127.0.0.1,::1,postgres,nats,api,gateway
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:?Use images.env}
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres.password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=trust
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./postgres-tls.sh:/docker-entrypoint-initdb.d/10-tls.sh:ro
+      - ${SIM_ROOT:?Private absolute directory}/postgres.password:/run/secrets/postgres.password:ro
+      - ${SIM_ROOT}/postgres.crt:/run/secrets/postgres.crt:ro
+      - ${SIM_ROOT}/postgres.key:/run/secrets/postgres.key:ro
+    networks: [database]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres -d postgres]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    shm_size: 128m
+  nats:
+    <<: *service
+    image: ${NATS_IMAGE:?Use images.env}
+    command: [--config, /config/nats.conf]
+    volumes:
+      - nats-data:/data
+      - ${SIM_ROOT}/nats.conf:/config/nats.conf:ro
+      - ${SIM_ROOT}/nats.crt:/config/nats.crt:ro
+      - ${SIM_ROOT}/nats.key:/run/secrets/nats.key:ro
+    networks: [events]
+  initialize:
+    <<: *backend
+    profiles: [maintenance]
+    command: [python, deploy/simulation/initialize.py]
+    environment:
+      SSL_CERT_FILE: /config/ca.crt
+    volumes:
+      - ${SIM_ROOT}:/private
+      - ${SIM_ROOT}/ca.crt:/config/ca.crt:ro
+    networks: [database, events]
+    depends_on:
+      postgres: {condition: service_healthy}
+      nats: {condition: service_started}
+  gateway:
+    <<: *backend
+    command: [python, -m, alap.adapters.gateway.server, --config, /config/gateway.json, --host, 0.0.0.0, --cert, /config/gateway.crt, --key, /run/secrets/gateway.key, --client-ca, /config/ca.crt]
+    volumes:
+      - gateway-data:/data
+      - ${SIM_ROOT}/gateway.json:/config/gateway.json:ro
+      - ${SIM_ROOT}/gateway.crt:/config/gateway.crt:ro
+      - ${SIM_ROOT}/gateway.key:/run/secrets/gateway.key:ro
+      - ${SIM_ROOT}/ca.crt:/config/ca.crt:ro
+      - ${SIM_ROOT}/gateway.signing:/run/secrets/gateway.signing:ro
+    networks: [devices]
+  api:
+    <<: *backend
+    command: [uvicorn, alap.adapters.api.bootstrap:factory, --factory, --host, 0.0.0.0, --port, "8000", --no-access-log]
+    environment:
+      ALAP_DATABASE_URL_FILE: /run/secrets/database.dsn
+      ALAP_MASTER_KEY_FILE: /run/secrets/master.key
+      ALAP_API_SETTINGS: /config/api.json
+    volumes:
+      - artifacts:/artifacts:ro
+      - ${SIM_ROOT}/deployment/components/api.dsn:/run/secrets/database.dsn:ro
+      - ${SIM_ROOT}/master.key:/run/secrets/master.key:ro
+      - ${SIM_ROOT}/api.json:/config/api.json:ro
+      - ${SIM_ROOT}/ca.crt:/config/ca.crt:ro
+      - ${SIM_ROOT}/api-client.crt:/config/api-client.crt:ro
+      - ${SIM_ROOT}/api-client.key:/run/secrets/api-client.key:ro
+      - ${SIM_ROOT}/gateway.signing:/run/secrets/gateway.signing:ro
+    networks: [database, devices, web, egress]
+    depends_on:
+      postgres: {condition: service_healthy}
+      gateway: {condition: service_started}
+  engine:
+    <<: *backend
+    command: [python, -m, alap.adapters.engine.server, --config, /config/engine.json]
+    environment:
+      ALAP_DATABASE_URL_FILE: /run/secrets/database.dsn
+    volumes:
+      - artifacts:/artifacts
+      - ${SIM_ROOT}/deployment/components/engine.dsn:/run/secrets/database.dsn:ro
+      - ${SIM_ROOT}/engine.json:/config/engine.json:ro
+      - ${SIM_ROOT}/ca.crt:/config/ca.crt:ro
+      - ${SIM_ROOT}/engine-client.crt:/config/engine-client.crt:ro
+      - ${SIM_ROOT}/engine-client.key:/run/secrets/engine-client.key:ro
+      - ${SIM_ROOT}/gateway.signing:/run/secrets/gateway.signing:ro
+    networks: [database, devices]
+    depends_on:
+      postgres: {condition: service_healthy}
+      gateway: {condition: service_started}
+  agent:
+    <<: *backend
+    command: [python, -m, alap.adapters.agents.server, --config, /config/agent.json]
+    environment:
+      ALAP_DATABASE_URL_FILE: /run/secrets/database.dsn
+      ALAP_MASTER_KEY_FILE: /run/secrets/master.key
+    volumes:
+      - artifacts:/artifacts:ro
+      - ${SIM_ROOT}/deployment/components/agent.dsn:/run/secrets/database.dsn:ro
+      - ${SIM_ROOT}/master.key:/run/secrets/master.key:ro
+      - ${SIM_ROOT}/agent.json:/config/agent.json:ro
+      - ${SIM_ROOT}/ca.crt:/config/ca.crt:ro
+    networks: [database, egress]
+    depends_on:
+      postgres: {condition: service_healthy}
+  outbox:
+    <<: *backend
+    command: [python, -m, alap.adapters.messaging.server, --config, /config/outbox.json]
+    environment:
+      ALAP_DATABASE_URL_FILE: /run/secrets/database.dsn
+      SSL_CERT_FILE: /config/ca.crt
+    volumes:
+      - ${SIM_ROOT}/deployment/components/outbox.dsn:/run/secrets/database.dsn:ro
+      - ${SIM_ROOT}/outbox.json:/config/outbox.json:ro
+      - ${SIM_ROOT}/ca.crt:/config/ca.crt:ro
+    networks: [database, events]
+    depends_on:
+      postgres: {condition: service_healthy}
+      nats: {condition: service_started}
+  web:
+    <<: *service
+    image: alap-web:simulation
+    build:
+      context: ../..
+      dockerfile: deploy/simulation/web.Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:?Use images.env}
+        HTTP_PROXY: ${BUILD_HTTP_PROXY:-}
+        HTTPS_PROXY: ${BUILD_HTTP_PROXY:-}
+    ports: ["127.0.0.1:${WEB_PORT:-3000}:3000"]
+    networks: [web]
+    depends_on: [api]
+volumes:
+  postgres-data:
+  nats-data:
+  gateway-data:
+  artifacts:
+networks:
+  database: {internal: true}
+  devices: {internal: true}
+  events: {internal: true}
+  web: {}
+  egress: {}

@@ -555,6 +555,7 @@ def test_factory_assembled_service_and_real_http(api, tmp_path):
     import uvicorn
 
     from alap.adapters.api.bootstrap import build_service
+    from alap.adapters.gateway.transport import HTTPGateway
 
     base = api[1].base
     settings = {
@@ -564,7 +565,14 @@ def test_factory_assembled_service_and_real_http(api, tmp_path):
         "artifact_root": str(tmp_path),
         "engine_actor": "engine",
     }
+    signing_key = tmp_path / "gateway.key"
+    signing_key.write_bytes(b"x" * 31 + b"\n")
+    settings["gateway_transport"] = {
+        "signing_key_file": str(signing_key),
+        "endpoints": {"gw": {"url": "http://127.0.0.1:8091"}},
+    }
     service = build_service(api[4], Fernet.generate_key(), settings)
+    assert isinstance(service.control.execution.gateways["gw"], HTTPGateway)
     app = create_app(service, replay_key=b"z" * 32, stream_seconds=0)
     sock = socket.socket()
     sock.bind(("127.0.0.1", 0))

@@ -1255,6 +1255,90 @@ class ExecutionService:
                 )
             repo.update("control_generation", "current", {"mode": "ACTIVE"})
 
+    def cancel_prepared_on_recovery(self, actor, run_id):
+        """Retire an interrupted Run, only with transactional proof of no pending IO.
+
+        Never infer nonexecution from an absent Gateway receipt. Attempted or
+        unknown commands must first be reconciled, including dataset completion.
+        This deliberately cancels the remaining Run instead of minting a new
+        physical attempt under an old approval.
+        """
+        with self.transaction() as repo:
+            ctx = self._locked(repo, actor, run_id, authorize=False, active=False)
+            require(
+                ctx["generation"]["mode"] == "RECOVERING",
+                "RECOVERY_REQUIRED",
+                "Prepared command retirement is restricted to startup recovery",
+            )
+            pending = [c for c in ctx["commands"] if c["state"] == "NOT_DISPATCHED"]
+            if not pending:
+                return 0
+            require(
+                all(c["state"] in COMMAND_TERMINAL | {"NOT_DISPATCHED"} for c in ctx["commands"])
+                and self._stops_confirmed(repo, ctx),
+                "RECONCILIATION_PENDING",
+                "Attempted commands and stops must be reconciled first",
+            )
+            quiet_states = {"PENDING", "READY", "WAITING_RESOURCE"}
+            terminal_tasks = {"SUCCEEDED", "FAILED", "CANCELLED", "SKIPPED"}
+            require(
+                all(t["state"] in quiet_states | terminal_tasks for t in ctx["tasks"]),
+                "RECONCILIATION_PENDING",
+                "Tasks must have no unresolved physical or dataset work",
+            )
+            for command in pending:
+                delivery = repo.get("command_deliveries", command["id"], lock=True)
+                require(
+                    delivery["status"] == "PENDING" and delivery["delivery_attempt_id"] is None,
+                    "DELIVERY_PROOF_INVALID",
+                    "Prepared state alone is not proof of nonexecution",
+                )
+            policy = {
+                "recovery_engine": actor,
+                "policy": "startup_cancel_unsent_v1",
+                "epoch": str(ctx["generation"]["epoch"]),
+            }
+            if ctx["run"]["state"] != "CANCEL_REQUESTED":
+                self._change(
+                    repo,
+                    ctx,
+                    ctx["run"],
+                    Kind.RUN,
+                    "cancel",
+                    actor,
+                    {"control_authorized": policy},
+                    authority=Authority.OPERATOR,
+                )
+            for command in pending:
+                self._change(
+                    repo,
+                    ctx,
+                    command,
+                    Kind.COMMAND,
+                    "cancel",
+                    actor,
+                    {
+                        "no_dispatch": {"command": command["id"], "delivery": "PENDING"},
+                        "cancellation_authorized": policy,
+                    },
+                )
+            for task in ctx["tasks"]:
+                if task["state"] in quiet_states:
+                    self._change(
+                        repo,
+                        ctx,
+                        task,
+                        Kind.TASK,
+                        "cancel",
+                        actor,
+                        {
+                            "no_dispatch": {"task": task["id"]},
+                            "run_cancel_requested": {"run": run_id, **policy},
+                        },
+                    )
+            self._settle_run(repo, ctx, actor)
+            return len(pending)
+
     def renew(self, actor, run_id, *, duration_s=60):
         require(0 < duration_s <= 300, "INVALID_LEASE", "Finite renewal window required")
         with self.transaction() as repo:

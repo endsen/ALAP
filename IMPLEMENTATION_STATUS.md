@@ -1,14 +1,72 @@
 # ALAP 实施状态
 
-更新：2026-10-19。本文件区分“已设计”“已实现”“本地验证”“集成/现场验证”。整体平台尚未完成。
+更新：2026-10-20。本文件区分“已设计”“已实现”“本地验证”“集成/现场验证”。整体平台尚未完成。
 
 ## 分期交接入口
 
 - 分期计划：`docs/20_DELIVERY_PLAN.md` 的 D01–D13；P0–P7 为技术层次，D 编号为分批交付单位。
-- 当前：**D11 · Web 平台控制台，已完成本地验收**。D01–D11 基础交付完成；D11 实现提交 `483f23d` 已推送到 GitHub `main`；远程 CI 见下方交付记录。
-- 下一期：**D12 · 集成、部署与验收，尚未开始**。先完成明确的常驻进程装配、Compose/运维配置，再验证完整 E2E、长时间模拟、故障注入及备份恢复；不以测试 fixture 充当生产 scheduler。
-- 当前环境：macOS `/Users/endsen/codex/ALAP`，有效 Git 工作树；Linux 路径是另一开发环境的历史记录。本地远程基线为 93ab50f，依赖已按锁文件同步。
+- 当前：**D12 · 集成、部署与验收，进行中**。D01–D11 基础交付完成；本地已同步 GitHub `836ec53`。D12a Gateway 进程边界已完成本地验收；D12b.1 单实例所有权/启动恢复已完成本地验收；D12b.2 独立常驻执行进程已完成本地验收；D12b.3 Agent/outbox worker 与 D12c.1 数据库初始化/权限分离已完成本地验收。D12 整期未完成。
+- 当前交接：**D12c.2 组件权限与实际容器部署已完成本地验收**。下一工作项为 D12c.3 运维/一致性备份恢复；完成后进入 D12d 完整 E2E 和实际 24 小时以上模拟。D13 尚未开始，不自动跨期。
+- 当前环境：Linux `/home/endsen/ALAP`，Python 3.14.7；工作目录 Git 元数据不可用，历史基线为 836ec53；重启后临时检出 `/tmp/alap-github-dliggqw9` 已丢失，后续提交/推送前需重新获取远程基线。依赖按锁文件同步，无新增依赖。D11 下方 macOS 验收为历史记录；本轮 Linux 同步检查见 `reports/local-sync-20261019.md`。
 - D05–D10 实现提交 0015fa6 与交接提交 93ab50f 的远程 CI 均已通过，已于 2026-10-19 核对：https://github.com/endsen/ALAP/actions/runs/39201132173 。此结果不替代 D11 的远程验收。
+
+## D12c.2 · 组件权限与实际容器部署（2026-10-20，本地验收完成）
+
+- 四组件独立登录、表/列白名单、旧 runtime 禁用、仅锁定授权复核与受限 MCP 发现已通过真实 PostgreSQL 验证。组件权限专项 23 项通过；早期统一 544 项见 `reports/d12c2-validation.txt`。
+- `deploy/simulation/` 已提供可重复的 prepare/build/initialize/up/token/verify/stop 流程；实际构建后端和 Web 生产镜像，并启动 PostgreSQL、JetStream、Gateway、Engine、Agent、outbox、API、Web 八服务。初始化单独执行，仅创建模拟登记与空实验，不创建审批、执行 Run 或模型凭据。
+- 实际验证 PostgreSQL TLS/SCRAM、错误密码及明文拒绝、Gateway mTLS/无客户端证书拒绝、组件 SQL 越权拒绝、只读数据卷、outbox 持久 ACK、Web 首页与认证 API 代理。Gateway/Engine 重启后恢复 ACTIVE；全部服务停止并恢复正常配置后再次验收，数据卷哨兵保留并已清理。
+- 最终统一后端门禁 **547 项测试通过（447.69 秒）**，使用实际容器 PostgreSQL/JetStream 的 TLS/认证连接；新增部署材料权限/证书/网络隔离检查，Ruff/格式、生成文档、契约/OpenAPI 和依赖检查通过。报告 `reports/d12c2-compose-backend-validation.txt`。本轮 Web 构建通过，HTTP 接线验证通过，未重跑浏览器交互，完整 UI E2E 留给 D12d。
+- 内核重启和显式代理已处理；官方 CloudFront CDN 仍失败时采用用户授权的 DaoCloud 镜像路径，四个固定摘要与官方 registry 一致。Docker 29.9.1 / Compose 5.6.0；容器 Python 3.14.8、Node 24.22.0、PostgreSQL 18.6、NATS 2.15.1。无新增应用依赖，锁文件未升级。
+- 本地模拟服务保留运行，只有 Web 发布 `127.0.0.1:3000`；QA 数据库/消息端口已移除，随机测试数据库已清理。私有凭据和运行时在 `.local-deploy/`，不提交；管理员 token 一小时有效，可用 `manage.py token` 续签。未注册开机服务，未调用付费模型或真机，未推送 GitHub。
+- 这是 rootless 单机模拟验收，非生产/现场批准；空闲运行数小时不等于实际 24 小时负载验收。下一项 D12c.3 一致性备份/恢复、指标与运维；D12d/D13 尚未完成。证据与操作限制见 `reports/d12c2-compose-acceptance.md`、`deploy/simulation/README.md`、ADR-051/052。
+
+## D12c.1 · 初始化与数据库权限分离（2026-10-20，D12 进行中）
+
+- 新增显式 `python -m alap.adapters.postgres.deployment init|migrate`；仅创建新数据库和独立迁移/runtime 角色，拒绝接管已有库/角色或覆盖已有凭据目录。迁移身份、数据库、schema 与 manifest 校验一致后升级并刷新运行授权；无服务启动隐式迁移。
+- 迁移角色拥有 schema；runtime 具备业务 DML/序列/函数权限，没有 DDL、TRUNCATE、TEMP、角色管理、复制模式更改或关闭触发器权限，不能 SET ROLE migrator，alembic_version 只读。应用授权与不可变审计仍生效。
+- 生成 0700 目录/0600 连接文件，随机独立密码保存为 SCRAM；拒绝继承管理员 service/options/passfile/客户端证书身份，CLI 不打印 DSN/异常 SQL。API/Agent/Engine/outbox/身份初始化脚本及 Alembic 支持互斥的 ALAP_DATABASE_URL_FILE/ALAP_DATABASE_URL。
+- 初始化部分失败不销毁未知资源或覆盖凭据，不完整标记禁止 migrate；管理员需检查恢复。当前 runtime 仍是共享应用数据库信任角色，尚未实现各组件最小表权限或行级隔离，不声称已经完成第 13 章部署权限目标。
+- 最终专项 24 项真实 PostgreSQL/配置测试通过，覆盖受限 runtime 下 API/Agent、三设备执行/HDF5/outbox 数据库路径、权限拒绝、管理员身份参数拒绝、迁移连接身份绑定和新函数授权；统一后端门禁 **521 项测试通过（208.54 秒）**，Ruff/格式、135 条状态转换、13 份 Schema/实例、OpenAPI、合订本及 pip check 全部通过。报告 `reports/d12c1-validation.txt`。
+- 无新增依赖、业务迁移或公共 HTTP 契约；Web 未改。未安装/启动容器、未调用付费模型或真机、未注册系统服务、未推送 GitHub。本机测试 socket 仍为 trust，只验证角色权限及 SCRAM 保存格式；网络密码认证/TLS 与容器 Secret 由 D12c.2 验证。
+- 已确认本轮随机创建的测试数据库与角色全部删除，临时 PostgreSQL/JetStream 已停止；没有部署持久应用数据库或注册生产角色。
+- 启动流程、失败处置、D12c 分项顺序和边界见 `docs/D12_INTEGRATION_DEPLOYMENT.md`。D12c.2/3 与 D12d 尚未完成，不跨入 D13。
+
+## D12b.3 · Agent/outbox 常驻 worker（2026-10-19–20，D12 进行中）
+
+- 新增独立 Agent/outbox CLI；Agent 明确实验白名单、专用服务身份、原提交者权限、固定版本与预算，每 Run 每轮一个逻辑步骤，分页绕过繁忙/不可访问记录。API 和后台共享 Agent 装配，worker 没有 Gateway 端口。
+- 手动 API、LangGraph、后台推进及取消统一每 Run 会话锁；checkpoint/轨迹/提案通过持锁连接提交，连接丢失不可重新连接提交。模型占位先于调用，遗留 inflight 只标记 MODEL_INTERRUPTED，不自动重发。SIGTERM/SIGINT 停止新受理并收尾当前步骤；模型取消不代表撤回供应商请求。
+- outbox 使用现有数据库 claim、稳定 event_id 与持久 ACK，连接故障退避；未确认 claim 过期重领，重复通知由 broker 去重窗口及 inbox 处理。逐次复核服务主体，数据库仍为权威，默认脱敏日志与心跳。
+- 专项 Agent/事件/API 回归 83 项通过；新增 11 项 worker 集成测试覆盖真实数据库、离线模型和 JetStream、两个独立 CLI 的恢复/发布/重启/退出。统一后端门禁 **497 项测试通过（204.94 秒）**；Ruff/格式、135 条状态转换、13 份 Schema/实例、OpenAPI、合订本生成一致性及 pip check 全部通过，报告 `reports/d12b3-validation.txt`。
+- 首次全量检查 495 通过、2 失败：Gateway 子进程在 10 秒启动等待内未监听；两个用例单独复验通过。测试就绪等待改为有界 30 秒并补充超时日志，设备操作的超时/重试策略未改；原失败报告保留于 `reports/d12b3-validation-initial.txt`，统一门禁重跑已全部通过。
+- 无新增依赖、迁移或公共 HTTP 契约；Web 未改，浏览器未重跑。未调用真实付费模型或仪器，未注册系统服务，未推送 GitHub。启动设置、授权/退出语义及限制见 `docs/D12_INTEGRATION_DEPLOYMENT.md`。
+- 2026-10-20 已关闭本轮临时 PostgreSQL/JetStream，确认没有遗留 Agent/outbox/引擎/Gateway 测试进程。
+- 本工作项不等于完整常驻平台验收；Compose/运维/备份恢复、全链路 E2E 和真实经过 24 小时以上长测尚未完成。下一项 D12c，不跨入 D13。
+
+## D12b.2 · 独立常驻执行进程（2026-10-19，D12 进行中）
+
+- 新增 `python -m alap.adapters.engine.server --config <engine.json>`：专用数据库 owner、网络 Gateway、恢复闸门、确定性串行调度及 HDF5/控制用例装配；仅允许显式 simulation 模式，不创建主体/设备/审批/Run，不调用 LLM。
+- 每 Run 每轮最多派发一个依赖满足的任务；复核原有授权/版本/读回与租约，按审批有效期续期，过期隔离；暂停等待用户显式 resume，结束后经 Gateway 核对释放资源。
+- 采集写入失败只补交数据，不重采；已有 stop 请求使用原有 ID 确认。SIGTERM/SIGINT 停止新任务并完成已受理操作记录；所有权丢失退出、不重连；强杀重启经过恢复，旧 Run 不自动继续。
+- 13 项专项测试通过：真实 PostgreSQL/HDF5、两个独立服务进程经 HTTP 闭环、资源争用、撤权/暂停、续期/过期、数据恢复、取消、正常/强杀退出与所有权丢失。统一后端门禁 **486 项测试通过（225.63 秒）**；Ruff/格式、135 条状态转换、13 份 Schema/实例、OpenAPI、合订本生成一致性及 pip check 全部通过。报告 `reports/d12b2-validation.txt`。
+- 没有新增依赖、迁移或公共 API；Web 未改，浏览器门禁未重跑。本轮 PostgreSQL/JetStream 已关闭，测试引擎/Gateway 子进程已清理；没有注册开机服务或推送 GitHub。串行执行暂无专用续租线程，长操作可能导致其它租约过期并拒绝派发；未宣称吞吐或长测通过。
+- 启动配置、行为边界及需求证据见 `docs/D12_INTEGRATION_DEPLOYMENT.md`。下一项 D12b.3；Compose/备份恢复/24 小时长测和真机仍未完成。
+
+## D12b.1 · 引擎所有权及恢复政策（2026-10-19，D12 进行中）
+
+- 新增 PostgreSQL 专用会话单实例锁，业务事务使用同一连接；失去连接或锁后永久停用，不自动重连。Gateway 八个操作均在发送前检查所有权；网络期间的竞态仍依赖 epoch/fencing 及恢复屏障。
+- 新增启动恢复编排：标记在途未知、查询持久回执、汇总阻塞原因，全部已核对后才绑定新 epoch/开闸；缺 journal、未提交数据、未确认停止不猜测成功，不自动派发、停止或 resume。
+- `startup_cancel_unsent_v1` 仅在 RECOVERING 且事务证据证明未发送、其它子项已静止时取消 Run 剩余任务，历史成功项保留，状态/证据/事件同事务；不自动生成新命令尝试。当前仍为服务组件，尚无常驻进程 CLI/调度循环。
+- 18 项真实 PostgreSQL 专项测试通过，包含第二进程争锁、连接终止后的八种出站调用拒绝、矛盾证据、并行 UNKNOWN 和数据待提交阻塞。统一后端门禁 **473 项测试通过（207.54 秒）**；Ruff/格式、135 条状态转换、13 份 Schema/实例、OpenAPI、合订本生成一致性与 pip check 全部通过。报告 `reports/d12b1-validation.txt`。
+- 无新依赖/迁移/公共 API；Web 未改，浏览器门禁未重跑。本轮 PostgreSQL/JetStream 测试进程已关闭，Gateway 子进程由测试清理；没有注册常驻服务。变更未推送 GitHub。下一步及边界见 `docs/D12_INTEGRATION_DEPLOYMENT.md` 的 D12b.1；不跨入 D13。
+
+## D12a · Gateway 进程边界（2026-10-19，D12 进行中）
+
+- 新增固定 RPC 网络 GatewayPort、独立模拟服务入口及 API 显式网络配置。命令/回执原有签名、审批/租约/epoch/fencing/幂等检查保留；网络层单次发送，不跟随重定向，不自动重试。
+- HTTP 限回环地址；非回环监听要求 mTLS。真实 TLS 测试覆盖无客户端证书拒绝和有效证书通过；配置统一采样/请求大小/入站读取时限与并发受理限制。
+- 两项真实 PostgreSQL + 独立 Gateway 子进程集成测试已通过：三设备采集与 HDF5 提交、重启后核对；丢响应进入 UNKNOWN，再重启对账到 PAUSED，动作不重复。
+- 后端统一门禁通过：**455 项测试（168.54 秒）**，比 D11 新增 16 项；Ruff/格式、135 条状态转换、13 份 Schema/实例、OpenAPI、合订本生成一致性及 pip check 全部通过，报告 `reports/d12a-validation.txt`。本轮未修改 Web、公共 API Schema、数据库迁移或依赖版本；未重跑浏览器门禁，D11 Linux 浏览器证据仍见同步报告。
+- 仍缺常驻执行/Agent/outbox 进程、Compose、完整平台可观测性、备份恢复、24 小时以上实际长测；未启动长测，不将短测当整期验收。当前无容器运行时；生产 PKI、Windows 与真机不在本工作项验收范围。
+- 当前变更未推送 GitHub。详细启动、需求映射、边界及下一工作项见 `docs/D12_INTEGRATION_DEPLOYMENT.md`；下一步是 D12b 引擎单实例所有权及恢复政策，保持本期进行中。
 
 ## D11 本地交付（2026-10-19）
 

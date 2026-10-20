@@ -4,6 +4,8 @@
 
 **当前已实现 D03–D09 后端分层能力；D10 Web 实验工作区与 D11 平台控制台已完成本地验收。完整部署与真机验收尚未完成。** 各层实际进度见 [实施状态](IMPLEMENTATION_STATUS.md)。
 
+D12 集成部署进行中：Gateway、确定性引擎、Agent 与 outbox worker 可独立运行，启动和边界见 [D12 交接](docs/D12_INTEGRATION_DEPLOYMENT.md)；已加入显式数据库初始化和迁移/运行身份分离；组件级权限、Compose、完整部署 E2E、备份恢复和 24 小时长测尚未完成。
+
 D11 控制台范围、权限和验收见 [D11 交接](docs/D11_PLATFORM_CONSOLE_DEVELOPMENT.md)。
 
 D10 Web 启动、验收入口与边界见 [D10 交接](docs/D10_WEB_WORKSPACE_DEVELOPMENT.md)。

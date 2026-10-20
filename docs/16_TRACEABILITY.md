@@ -164,3 +164,78 @@ tests/integration/test_resources.py、tests/test_mcp_policy.py；完整验收见
 | NFR-009/012 | TypeScript、表单边界单元测试、真实 API 浏览器回归、桌面/移动端截图 | Chromium 本机验证，非跨浏览器或压力测试 |
 
 入口：docs/D11_PLATFORM_CONSOLE_DEVELOPMENT.md。完成状态及实际测试数以 IMPLEMENTATION_STATUS.md 和 reports/d11-* 验收报告为准。
+
+## D12a 实现追踪（D12 进行中）
+
+| 需求范围 | 实现及验证入口 | 尚未覆盖 |
+|---|---|---|
+| FR-008/009/019、NFR-002/007 | Gateway HTTP 端口、独立模拟子进程；`test_gateway_process.py` 三设备/HDF5、重启和丢响应一次动作对账 | 常驻 Scheduler、服务端强杀矩阵、跨站点现场 |
+| FR-011、NFR-008 | 跨进程采集/提交/确认，重启后回执与动作次数核对 | 集群备份恢复、24 小时数据完整性验收 |
+| NFR-012 | `test_gateway_transport.py` HTTPS/mTLS、签名/请求绑定、拒绝重定向及非法入口 | 生产证书注册/轮换/撤销、完整平台 TLS |
+
+本工作项没有修改共享公共 API 或设备命令 Schema。实际状态、报告与后续 D12b–d 门禁见 `D12_INTEGRATION_DEPLOYMENT.md` 及实施状态，不把局部测试作为整期验收。
+
+## D12b.1 实现追踪（常驻服务前置项）
+
+| 需求范围 | 实现及验证入口 | 范围限制 |
+|---|---|---|
+| FR-008、NFR-002/007 | `adapters/postgres/engine_owner.py` 专用连接/单实例锁；`test_engine_recovery.py` 双进程争用、连接终止、旧实例不重连 | 尚未装配常驻 Scheduler；不等同于跨网络零时延停机 |
+| FR-009/013、NFR-004/007 | `application/engine_recovery.py` 恢复屏障；`ExecutionService.cancel_prepared_on_recovery` 事务证据取消和同事务审计 | UNKNOWN/矛盾证据/未确认停止继续阻塞，不自动安全停止或恢复 Run |
+| FR-011、NFR-008 | 已采集但未提交的数据保持 VERIFYING，启动闸门不打开 | 数据恢复用例已有，常驻恢复编排仍需接入 |
+
+报告 `reports/d12b1-validation.txt`，数量与最终结果以实施状态为准。D12a 的远端 Gateway 与 D12b.1 的中央所有权是不同边界，两者均不能独自替代完整部署验收。
+
+## D12b.2 实现追踪（独立常驻执行进程）
+
+| 需求范围 | 实现及验证入口 | 仍待验证 |
+|---|---|---|
+| FR-004/008/009/014 | `engine_worker.py` 审批/依赖/租约守卫、每轮受控推进；`test_engine_worker.py` 多 Run 争用、撤销审批、续期和过期隔离 | 多实例部署策略、吞吐/压力和真实设备 |
+| FR-011/013、NFR-008 | 数据提交失败不重采；已有取消请求确认；暂停需显式 resume；启动时补交采集结果 | 跨机器备份恢复、完整故障矩阵 |
+| NFR-002/007/012 | `adapters/engine/server.py` 专用 owner 和网络 Gateway 装配；`test_engine_process.py` 两独立进程闭环、竞争启动、SIGTERM、动作完成后强杀/重启、断开所有权连接退出 | 长时间运行、网络黑洞、多站点证书/身份、运维监控 |
+
+本轮完整后端报告 `reports/d12b2-validation.txt`。未接 Agent/outbox 常驻 worker，不把独立执行引擎称为完整平台常驻部署。
+
+## D12b.3 实现追踪（Agent/outbox 常驻 worker）
+
+| 需求/边界 | 实现 | 验证证据 |
+|---|---|---|
+| FR-023/026，Agent 上下文/预算/版本与轨迹 | 复用 AgentRuntime，实验白名单轮询，原提交者权限；API/后台/图统一每步锁 | `test_background_workers.py` 多步推进/范围/撤权/公平分页 |
+| 未知模型结果不重试、状态提交原子性 | 预算占位；持锁连接提交 checkpoint/轨迹/提案；连接失去后不重连提交 | 锁连接终止、后台/手动争用、独立进程 inflight 恢复 |
+| PostgreSQL/outbox 权威，通知至少一次 | 独立 JetStream 发布循环，ACK 后提交，claim 过期重领，稳定事件 ID | 发布进程重启/正常退出、丢 ACK 重连与持久消息去重；既有 inbox 原子性测试 |
+| 可恢复进程与最小权限 | 专用 service 主体，逐 Run 复核；Agent 无 Gateway，脱敏日志，SIGTERM/SIGINT | 撤权停止下一次受理、当前模型取消、两个独立 CLI 退出 |
+
+统一报告 `reports/d12b3-validation.txt`；完整部署 E2E、Compose、备份恢复与 24 小时实际长测仍待 D12c/d，不能用上述短测代替。
+
+## D12c.1 实现追踪（初始化与数据库权限分离）
+
+| 需求/部署边界 | 实现 | 验证 |
+|---|---|---|
+| 第 11/13 章权限与 Secret 管理 | 新库/迁移角色/runtime 分离、私有文件、来源互斥、无管理员凭据继承 | 角色属性/归属、目录与文件权限、不可提权及 CLI 脱敏 |
+| 审计/不可变记录与迁移权威 | runtime 拒绝 DDL/TRUNCATE/禁用触发器/版本修改，显式 Alembic 升级 | 9 类 SQL 拒绝、SET ROLE 拒绝、agent_trace 修改拒绝、迁移重复执行 |
+| 既有功能在受限权限下兼容 | 业务服务与 worker 使用同一受限 runtime，继续应用层授权 | API 访问与越权拒绝、离线 Agent、三设备/HDF5、outbox 数据库提交 |
+| 初始化失败与运维交接 | 拒绝已有资源/覆盖，不完整标记禁止 migrate，连接身份与 manifest 绑定 | 重复初始化/已有目录/错误 manifest/CLI 失败测试 |
+
+报告 `reports/d12c1-validation.txt`。组件级 SQL 权限、网络认证/TLS、Compose 与备份恢复尚未交付，不能据此声明完整生产部署。
+
+## D12c.2 组件权限实现追踪
+
+| 需求/边界 | 实现 | 验证 |
+|---|---|---|
+| Agent 提案与确定性执行分离 | 独立角色、显式表/列授权、禁用共享 runtime | Agent 写命令/审批、Engine 读模型凭据、outbox 改事件被拒绝 |
+| 授权复核与 MCP 发现不授予权限 | 仅锁定函数、受限发现函数、撤销后不能自行恢复 | 并发撤权锁、真实 HTTP MCP、签名漂移及旧签名恢复 |
+| 迁移后权限收敛 | 每次 migrate 清除表/列旧 ACL 并重授白名单 | 残留 payload 列授权被移除，published_at 保留 |
+| 受限组件业务兼容 | 各组件独立连接文件 | API、离线 Agent、Engine/HDF5、outbox 路径 |
+
+证据：`tests/integration/test_component_roles.py`，统一门禁 `reports/d12c2-validation.txt`；容器部署、网络认证和完整系统 E2E 不在上述测试证明范围。
+
+## D12c.2 容器部署实现追踪
+
+| 需求/部署边界 | 实现 | 验证 |
+|---|---|---|
+| 独立运行与显式初始化 | 八服务 Compose、维护 profile、私有 prepare、显式 initialize/up | 实际构建启动、初始化空模拟实验、Engine ACTIVE、后台心跳 |
+| 网络与数据库权限 | PostgreSQL verify-full/SCRAM，Gateway mTLS，组件 DSN 分离 | 明文/错误密码/无客户端证书拒绝，Agent/Engine/outbox SQL 越权拒绝 |
+| 数据与事件权威 | 持久数据库/JetStream/Gateway/artifacts 卷；API/Agent 数据只读 | 实际 outbox ACK、JetStream 留存、数据挂载拒写、重启复验 |
+| 前端实际接线 | Next.js 生产镜像、同源 API 代理、仅回环发布 | 首页 200、匿名 API 401、短期 token 认证 200 |
+| 可重复验收 | 镜像摘要、代理环境、独立 QA 覆盖和随机测试库 | 官方摘要核对、547 项统一回归、部署材料安全测试 |
+
+实现与操作命令见 `deploy/simulation/README.md`；证据见 `reports/d12c2-compose-acceptance.md` 和 `reports/d12c2-compose-backend-validation.txt`。不将空闲运行时间、卷保留或短测视为 24 小时负载验收、一致性备份恢复或完整平台 E2E。

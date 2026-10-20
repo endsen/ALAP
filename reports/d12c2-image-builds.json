@@ -1,0 +1,10 @@
+{
+  "backend": {
+    "id": "sha256:30e613d8d7d22a4f4d3b2b240a76e43e99e0da31b99561a392e30cf7ebe8ef13",
+    "created": "2026-10-20T20:02:21.680978074+08:00"
+  },
+  "web": {
+    "id": "sha256:0b7f591f4a636caffb2853a28b8bd774ccc059bbb3a4c66b2c9d8a073b8c2ad1",
+    "created": "2026-10-20T15:37:45.591712922+08:00"
+  }
+}

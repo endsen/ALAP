@@ -5,6 +5,7 @@ from uuid import uuid4
 from psycopg.types.json import Jsonb
 
 from alap.adapters.postgres.agents import PostgresAgentStore
+from alap.adapters.postgres.read_locks import lock_read
 from alap.application.experiments import digest, require
 
 
@@ -13,10 +14,11 @@ def check_references(db, run, checkpoint):
     for ref in checkpoint.get("external_refs", []):
         kind = ref["kind"]
         if kind == "knowledge":
+            lock_read(db, "knowledge", ref["id"], run["actor_id"])
             row = db.execute(
                 """SELECT k.* FROM knowledge_versions k JOIN knowledge_grants g
               ON g.source_version_id=k.id WHERE k.id=%s AND g.actor_id=%s
-              AND NOT g.revoked AND k.enabled FOR SHARE OF k,g""",
+              AND NOT g.revoked AND k.enabled""",
                 (ref["id"], run["actor_id"]),
             ).fetchone()
             require(
@@ -29,10 +31,11 @@ def check_references(db, run, checkpoint):
                 "Knowledge version no longer accessible",
             )
         elif kind == "analysis":
+            lock_read(db, "analysis", ref["id"])
             row = db.execute(
                 """SELECT a.*,d.state,d.manifest_json,d.checksum AS current_checksum
               FROM dataset_analyses a JOIN datasets d ON a.dataset_id=d.id
-              WHERE a.id=%s FOR SHARE OF a,d""",
+              WHERE a.id=%s""",
                 (ref["id"],),
             ).fetchone()
             require(
@@ -46,10 +49,11 @@ def check_references(db, run, checkpoint):
                 "Analysis source unavailable or outside scope",
             )
         elif kind == "mcp":
+            lock_read(db, "mcp", ref["id"], run["actor_id"], run["experiment_id"])
             row = db.execute(
                 """SELECT t.*,c.enabled,g.resources,g.revoked FROM mcp_tools t
               JOIN mcp_connections c ON c.ref=t.connection_ref JOIN mcp_grants g ON g.tool_id=t.id
-              WHERE t.id=%s AND g.actor_id=%s AND g.experiment_id=%s FOR SHARE OF t,c,g""",
+              WHERE t.id=%s AND g.actor_id=%s AND g.experiment_id=%s""",
                 (ref["id"], run["actor_id"], run["experiment_id"]),
             ).fetchone()
             require(
@@ -175,25 +179,14 @@ class PostgresResourceStore(PostgresAgentStore):
             return row["config"]
 
     def discovered(self, ref, tools):
-        ids = []
         with self.connect() as db:
-            db.execute("SELECT ref FROM mcp_connections WHERE ref=%s FOR UPDATE", (ref,))
-            db.execute("UPDATE mcp_tools SET current=FALSE WHERE connection_ref=%s", (ref,))
-            for tool in tools:
-                identity = str(uuid4())
-                row = db.execute(
-                    """INSERT INTO mcp_tools(id,connection_ref,name,spec,spec_hash)
-                  VALUES (%s,%s,%s,%s,%s) ON CONFLICT(connection_ref,name,spec_hash)
-                  DO UPDATE SET current=TRUE RETURNING id""",
-                    (identity, ref, tool["name"], Jsonb(tool), digest(tool)),
-                ).fetchone()
-                ids.append(row["id"])
-            db.execute(
-                """UPDATE mcp_grants SET revoked=TRUE WHERE tool_id IN
-              (SELECT id FROM mcp_tools WHERE connection_ref=%s AND NOT current)""",
-                (ref,),
-            )
-        return ids
+            entries = [{"id": str(uuid4()), "spec": tool, "hash": digest(tool)} for tool in tools]
+            return [
+                row["id"]
+                for row in db.execute(
+                    "SELECT refresh_mcp_discovery(%s,%s) AS id", (ref, Jsonb(entries))
+                ).fetchall()
+            ]
 
     def tool(self, identity):
         with self.connect() as db:
@@ -277,7 +270,8 @@ class PostgresResourceStore(PostgresAgentStore):
     def dataset(self, actor, experiment_id, identity, resources):
         with self.connect() as db:
             self._access(db, actor, experiment_id, resources)
-            row = db.execute("SELECT * FROM datasets WHERE id=%s FOR SHARE", (identity,)).fetchone()
+            lock_read(db, "dataset", identity)
+            row = db.execute("SELECT * FROM datasets WHERE id=%s", (identity,)).fetchone()
             require(
                 row is not None
                 and row["experiment_id"] == experiment_id
@@ -295,9 +289,8 @@ class PostgresResourceStore(PostgresAgentStore):
     def save_analysis(self, actor, experiment_id, dataset, resources, result):
         with self.connect() as db:
             self._access(db, actor, experiment_id, resources)
-            row = db.execute(
-                "SELECT * FROM datasets WHERE id=%s FOR SHARE", (dataset["id"],)
-            ).fetchone()
+            lock_read(db, "dataset", dataset["id"])
+            row = db.execute("SELECT * FROM datasets WHERE id=%s", (dataset["id"],)).fetchone()
             require(
                 row["state"] == "COMMITTED" and row["checksum"] == dataset["checksum"],
                 "EVIDENCE_REVOKED",

@@ -8,6 +8,7 @@ from psycopg import sql
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
+from alap.adapters.postgres.read_locks import lock_read
 from alap.domain.rules import DomainError
 
 TABLES = frozenset(
@@ -71,7 +72,8 @@ class PostgresRepository:
     def get(self, table, identity, *, lock=False):
         suffix = sql.SQL(" FOR UPDATE") if lock else sql.SQL("")
         if table == "principals" and not self.readonly:
-            suffix = sql.SQL(" FOR SHARE")
+            lock_read(self.connection, "principal", identity)
+            suffix = sql.SQL("")
         row = self.connection.execute(
             sql.SQL("SELECT * FROM {} WHERE id = %s").format(table_name(table)) + suffix,
             (identity,),
@@ -108,9 +110,10 @@ class PostgresRepository:
         )
 
     def membership(self, experiment, actor):
+        if not self.readonly:
+            lock_read(self.connection, "membership", experiment, actor)
         return self.connection.execute(
-            "SELECT * FROM experiment_memberships WHERE experiment_id=%s AND actor_id=%s"
-            + ("" if self.readonly else " FOR SHARE"),
+            "SELECT * FROM experiment_memberships WHERE experiment_id=%s AND actor_id=%s",
             (experiment, actor),
         ).fetchone()
 

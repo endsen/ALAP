@@ -126,6 +126,10 @@ class AgentRuntime:
             return self.store.commit(run, cp, {"type": "cancelled"})
 
     def step(self, actor, identity, cancel=None):
+        with self.store.exclusive(identity):
+            return self._step(actor, identity, cancel)
+
+    def _step(self, actor, identity, cancel=None):
         run = self.store.load(actor, identity)
         cp = deepcopy(run["checkpoint"])
         if cp["status"] in TERMINAL:
@@ -143,6 +147,8 @@ class AgentRuntime:
                 return self._tools(run, cp)
             return self._model(run, cp, cancel or Event())
         except (DomainError, ValidationError) as exc:
+            if isinstance(exc, DomainError) and exc.code == "STATE_CONFLICT":
+                raise
             # Reload revision: model reservation may already have committed.
             run = self.store.load(actor, identity)
             cp = deepcopy(run["checkpoint"])

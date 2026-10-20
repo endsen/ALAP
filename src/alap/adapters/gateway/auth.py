@@ -1,4 +1,4 @@
-"""HMAC authentication for the offline transport; deployed mTLS remains a later boundary."""
+"""Payload authentication, independent of the HTTP/TLS transport security boundary."""
 
 import hashlib
 import hmac

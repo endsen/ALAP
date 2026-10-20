@@ -1,0 +1,327 @@
+
+> python -m ruff check .
+All checks passed!
+
+> python -m ruff format --check .
+155 files already formatted
+
+> python scripts/build_lifecycle_reference.py --check
+PASS: lifecycle reference covers 135 transitions
+
+> python scripts/build_design.py --check
+PASS: combined v3.1 design is current
+
+> python scripts/build_openapi.py --check
+PASS: generated OpenAPI is current
+
+> python contracts/validate_contracts.py
+PASS: 13 schemas/examples and full OpenAPI specification
+
+> python -m pytest -q
+........................................................................ [ 14%]
+........................................................................ [ 28%]
+......................................FF................................ [ 43%]
+........................................................................ [ 57%]
+........................................................................ [ 72%]
+........................................................................ [ 86%]
+.................................................................        [100%]
+=================================== FAILURES ===================================
+_________________ test_remote_three_devices_commit_and_restart _________________
+
+self = <alap.adapters.gateway.transport.HTTPGateway object at 0x7fca49f75350>
+operation = 'challenge', body = None
+
+    def _call(self, operation, body=None):
+        binding = {"gateway_id": self.identity, "request_id": str(uuid4()), "operation": operation}
+        data = json.dumps(self.auth.seal({**binding, "body": body}), allow_nan=False).encode()
+        if len(data) > REQUEST_LIMIT:
+            raise DomainError("GATEWAY_REQUEST_LIMIT", "RPC request exceeds configured limit")
+        origin = self.origin
+        if origin.scheme == "https":
+            connection = http.client.HTTPSConnection(
+                origin.hostname, origin.port, timeout=self.timeout, context=self.tls_context
+            )
+        else:
+            connection = http.client.HTTPConnection(
+                origin.hostname, origin.port, timeout=self.timeout
+            )
+        try:
+>           connection.request("POST", "/rpc", data, {"Content-Type": "application/json"})
+
+src/alap/adapters/gateway/transport.py:95: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.14/http/client.py:1386: in request
+    self._send_request(method, url, body, headers, encode_chunked)
+/usr/lib/python3.14/http/client.py:1432: in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+/usr/lib/python3.14/http/client.py:1381: in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+/usr/lib/python3.14/http/client.py:1141: in _send_output
+    self.send(msg)
+/usr/lib/python3.14/http/client.py:1085: in send
+    self.connect()
+/usr/lib/python3.14/http/client.py:1051: in connect
+    self.sock = self._create_connection(
+/usr/lib/python3.14/socket.py:874: in create_connection
+    raise exceptions[0]
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+address = ('127.0.0.1', 44929), timeout = 5, source_address = None
+all_errors = False
+
+    def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT,
+                          source_address=None, *, all_errors=False):
+        """Connect to *address* and return the socket object.
+    
+        Convenience function.  Connect to *address* (a 2-tuple ``(host,
+        port)``) and return the socket object.  Passing the optional
+        *timeout* parameter will set the timeout on the socket instance
+        before attempting to connect.  If no *timeout* is supplied, the
+        global default timeout setting returned by :func:`getdefaulttimeout`
+        is used.  If *source_address* is set it must be a tuple of (host, port)
+        for the socket to bind as a source address before making the connection.
+        A host of '' or port 0 tells the OS to use the default. When a connection
+        cannot be created, raises the last error if *all_errors* is False,
+        and an ExceptionGroup of all errors if *all_errors* is True.
+        """
+    
+        host, port = address
+        exceptions = []
+        for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+            af, socktype, proto, canonname, sa = res
+            sock = None
+            try:
+                sock = socket(af, socktype, proto)
+                if timeout is not _GLOBAL_DEFAULT_TIMEOUT:
+                    sock.settimeout(timeout)
+                if source_address:
+                    sock.bind(source_address)
+>               sock.connect(sa)
+E               ConnectionRefusedError: [Errno 111] Connection refused
+
+/usr/lib/python3.14/socket.py:859: ConnectionRefusedError
+
+The above exception was the direct cause of the following exception:
+
+remote = <function remote.<locals>.running at 0x7fca4834fed0>
+execution = (<alap.application.execution.ExecutionService object at 0x7fca4287aa50>, <alap.adapters.gateway.journal.Gateway object...dsen dbname=alap_test_d05 host=/tmp/alap-pg18 port=55432 options=-csearch_path=test_91b43c1dc10843cbb58b04335175fd2e'))
+tmp_path = PosixPath('/tmp/pytest-of-endsen/pytest-50/test_remote_three_devices_comm0')
+
+    def test_remote_three_devices_commit_and_restart(remote, execution, tmp_path):  # noqa: F811
+        engine, _, simulator, run, scenario = execution
+>       with remote() as client:
+             ^^^^^^^^
+
+tests/integration/test_gateway_process.py:97: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.14/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/integration/test_gateway_process.py:76: in running
+    client.challenge()
+src/alap/adapters/gateway/transport.py:140: in challenge
+    return self._call("challenge")
+           ^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <alap.adapters.gateway.transport.HTTPGateway object at 0x7fca49f75350>
+operation = 'challenge', body = None
+
+    def _call(self, operation, body=None):
+        binding = {"gateway_id": self.identity, "request_id": str(uuid4()), "operation": operation}
+        data = json.dumps(self.auth.seal({**binding, "body": body}), allow_nan=False).encode()
+        if len(data) > REQUEST_LIMIT:
+            raise DomainError("GATEWAY_REQUEST_LIMIT", "RPC request exceeds configured limit")
+        origin = self.origin
+        if origin.scheme == "https":
+            connection = http.client.HTTPSConnection(
+                origin.hostname, origin.port, timeout=self.timeout, context=self.tls_context
+            )
+        else:
+            connection = http.client.HTTPConnection(
+                origin.hostname, origin.port, timeout=self.timeout
+            )
+        try:
+            connection.request("POST", "/rpc", data, {"Content-Type": "application/json"})
+            response = connection.getresponse()
+            if response.status != 200:
+                raise ConnectionError("Gateway transport rejected request")
+            raw = response.read(RESPONSE_LIMIT + 1)
+            if len(raw) > RESPONSE_LIMIT:
+                raise ConnectionError("Gateway response exceeds limit")
+            result = self.auth.open(_decode(raw))
+            if any(result.get(key) != value for key, value in binding.items()):
+                raise ConnectionError("Gateway response binding mismatch")
+            if result.get("error") is not None:
+                code = result["error"]
+                if not isinstance(code, str) or len(code) > 100:
+                    raise ConnectionError("Malformed Gateway error")
+                raise DomainError(code, "Gateway rejected operation")
+            if not isinstance(result.get("result"), dict):
+                raise ConnectionError("Malformed Gateway result")
+            return result["result"]
+        except DomainError:
+            raise
+        except (OSError, http.client.HTTPException, ValueError, KeyError, TypeError) as exc:
+            # ExecutionService marks a lost/untrusted response UNKNOWN and reconciles.
+>           raise ConnectionError("Gateway response unavailable or invalid") from exc
+E           ConnectionError: Gateway response unavailable or invalid
+
+src/alap/adapters/gateway/transport.py:117: ConnectionError
+____________ test_lost_network_ack_reconcile_after_process_restart _____________
+
+self = <alap.adapters.gateway.transport.HTTPGateway object at 0x7fca41117530>
+operation = 'challenge', body = None
+
+    def _call(self, operation, body=None):
+        binding = {"gateway_id": self.identity, "request_id": str(uuid4()), "operation": operation}
+        data = json.dumps(self.auth.seal({**binding, "body": body}), allow_nan=False).encode()
+        if len(data) > REQUEST_LIMIT:
+            raise DomainError("GATEWAY_REQUEST_LIMIT", "RPC request exceeds configured limit")
+        origin = self.origin
+        if origin.scheme == "https":
+            connection = http.client.HTTPSConnection(
+                origin.hostname, origin.port, timeout=self.timeout, context=self.tls_context
+            )
+        else:
+            connection = http.client.HTTPConnection(
+                origin.hostname, origin.port, timeout=self.timeout
+            )
+        try:
+>           connection.request("POST", "/rpc", data, {"Content-Type": "application/json"})
+
+src/alap/adapters/gateway/transport.py:95: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.14/http/client.py:1386: in request
+    self._send_request(method, url, body, headers, encode_chunked)
+/usr/lib/python3.14/http/client.py:1432: in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+/usr/lib/python3.14/http/client.py:1381: in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+/usr/lib/python3.14/http/client.py:1141: in _send_output
+    self.send(msg)
+/usr/lib/python3.14/http/client.py:1085: in send
+    self.connect()
+/usr/lib/python3.14/http/client.py:1051: in connect
+    self.sock = self._create_connection(
+/usr/lib/python3.14/socket.py:874: in create_connection
+    raise exceptions[0]
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+address = ('127.0.0.1', 59755), timeout = 5, source_address = None
+all_errors = False
+
+    def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT,
+                          source_address=None, *, all_errors=False):
+        """Connect to *address* and return the socket object.
+    
+        Convenience function.  Connect to *address* (a 2-tuple ``(host,
+        port)``) and return the socket object.  Passing the optional
+        *timeout* parameter will set the timeout on the socket instance
+        before attempting to connect.  If no *timeout* is supplied, the
+        global default timeout setting returned by :func:`getdefaulttimeout`
+        is used.  If *source_address* is set it must be a tuple of (host, port)
+        for the socket to bind as a source address before making the connection.
+        A host of '' or port 0 tells the OS to use the default. When a connection
+        cannot be created, raises the last error if *all_errors* is False,
+        and an ExceptionGroup of all errors if *all_errors* is True.
+        """
+    
+        host, port = address
+        exceptions = []
+        for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+            af, socktype, proto, canonname, sa = res
+            sock = None
+            try:
+                sock = socket(af, socktype, proto)
+                if timeout is not _GLOBAL_DEFAULT_TIMEOUT:
+                    sock.settimeout(timeout)
+                if source_address:
+                    sock.bind(source_address)
+>               sock.connect(sa)
+E               ConnectionRefusedError: [Errno 111] Connection refused
+
+/usr/lib/python3.14/socket.py:859: ConnectionRefusedError
+
+The above exception was the direct cause of the following exception:
+
+remote = <function remote.<locals>.running at 0x7fca492ec510>
+execution = (<alap.application.execution.ExecutionService object at 0x7fca49472f20>, <alap.adapters.gateway.journal.Gateway object...dsen dbname=alap_test_d05 host=/tmp/alap-pg18 port=55432 options=-csearch_path=test_4acca0241b864885954d83fb67ae5cd7'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fca4a110750>
+
+    def test_lost_network_ack_reconcile_after_process_restart(remote, execution, monkeypatch):  # noqa: F811
+        engine, _, simulator, _, scenario = execution
+>       with remote() as client:
+             ^^^^^^^^
+
+tests/integration/test_gateway_process.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.14/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/integration/test_gateway_process.py:76: in running
+    client.challenge()
+src/alap/adapters/gateway/transport.py:140: in challenge
+    return self._call("challenge")
+           ^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <alap.adapters.gateway.transport.HTTPGateway object at 0x7fca41117530>
+operation = 'challenge', body = None
+
+    def _call(self, operation, body=None):
+        binding = {"gateway_id": self.identity, "request_id": str(uuid4()), "operation": operation}
+        data = json.dumps(self.auth.seal({**binding, "body": body}), allow_nan=False).encode()
+        if len(data) > REQUEST_LIMIT:
+            raise DomainError("GATEWAY_REQUEST_LIMIT", "RPC request exceeds configured limit")
+        origin = self.origin
+        if origin.scheme == "https":
+            connection = http.client.HTTPSConnection(
+                origin.hostname, origin.port, timeout=self.timeout, context=self.tls_context
+            )
+        else:
+            connection = http.client.HTTPConnection(
+                origin.hostname, origin.port, timeout=self.timeout
+            )
+        try:
+            connection.request("POST", "/rpc", data, {"Content-Type": "application/json"})
+            response = connection.getresponse()
+            if response.status != 200:
+                raise ConnectionError("Gateway transport rejected request")
+            raw = response.read(RESPONSE_LIMIT + 1)
+            if len(raw) > RESPONSE_LIMIT:
+                raise ConnectionError("Gateway response exceeds limit")
+            result = self.auth.open(_decode(raw))
+            if any(result.get(key) != value for key, value in binding.items()):
+                raise ConnectionError("Gateway response binding mismatch")
+            if result.get("error") is not None:
+                code = result["error"]
+                if not isinstance(code, str) or len(code) > 100:
+                    raise ConnectionError("Malformed Gateway error")
+                raise DomainError(code, "Gateway rejected operation")
+            if not isinstance(result.get("result"), dict):
+                raise ConnectionError("Malformed Gateway result")
+            return result["result"]
+        except DomainError:
+            raise
+        except (OSError, http.client.HTTPException, ValueError, KeyError, TypeError) as exc:
+            # ExecutionService marks a lost/untrusted response UNKNOWN and reconciles.
+>           raise ConnectionError("Gateway response unavailable or invalid") from exc
+E           ConnectionError: Gateway response unavailable or invalid
+
+src/alap/adapters/gateway/transport.py:117: ConnectionError
+=========================== short test summary info ============================
+FAILED tests/integration/test_gateway_process.py::test_remote_three_devices_commit_and_restart
+FAILED tests/integration/test_gateway_process.py::test_lost_network_ack_reconcile_after_process_restart
+2 failed, 495 passed in 398.21s (0:06:38)
+Traceback (most recent call last):
+  File "/home/endsen/ALAP/scripts/check.py", line 27, in <module>
+    main()
+    ~~~~^^
+  File "/home/endsen/ALAP/scripts/check.py", line 23, in main
+    subprocess.run([sys.executable, *command], cwd=ROOT, check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/home/endsen/ALAP/.venv/bin/python', '-m', 'pytest', '-q']' returned non-zero exit status 1.

@@ -1,0 +1,16 @@
+.git
+.venv
+.local-deploy
+.agents
+.codex
+.aws
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/node_modules
+**/.next
+**/*.egg-info
+**/*.dsn
+**/.env*
+reports
+*.zip

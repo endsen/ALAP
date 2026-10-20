@@ -1,0 +1,10 @@
+# Temporary localhost access for host integration tests; absent from normal deployment.
+services:
+  postgres:
+    ports: ["127.0.0.1:55432:5432"]
+    networks: [database, validation]
+  nats:
+    ports: ["127.0.0.1:54222:4222"]
+    networks: [events, validation]
+networks:
+  validation: {}

@@ -173,3 +173,43 @@ SSE 通知到达后重新读取权威快照，游标缺口触发重同步；失�
 ## ADR-045 · D11 可核对统计及保守管理范围
 
 用量分组关联原始 Agent Run，按当前用户/实验授权下钻；未知用量与费用不补零，不将管理连接测试计入实验统计。平台角色变更使用原角色比较、身份锁和同事务审计，不隐含实验授权。设置只显示实际生效的保留策略，不提供没有执行机制的配置按钮。身份变化清除控制台，暂时断网与无权限分别处理。
+
+## ADR-046 · D12a Gateway 进程边界与单次网络发送
+
+Accepted for development。在既有 GatewayPort 外增加签名请求/响应绑定，保留内层命令与回执；网络失败不自动重试，物理结果不明仍进入 UNKNOWN 后对账。固定 RPC 方法列表，不提供任意 Python 调用。模拟网关单独持有 journal 和物理状态，服务启动不派发命令。HTTP 限回环；跨主机必须校验双向 TLS。当前共享签名密钥只用于单模拟信任域，多站点证书身份映射和生产部署另行验收；本项不替代常驻调度、24 小时长测或真机验收。
+
+## ADR-047 · D12b 引擎所有权与未发送命令恢复政策
+
+Accepted for development。引擎在 PostgreSQL 专用会话持有按数据库/schema 隔离的 advisory lock，业务事务使用同一连接；禁止事务池复用此连接。失去连接或锁后该实例永久停用，不自动重连夺锁；新实例必须重新经过恢复屏障。Gateway 调用前检查所有权，但检查与网络发送之间的竞态仍由 Gateway epoch/fencing 与恢复对账共同约束，不能把本地检查宣称为分布式原子操作。
+
+恢复政策 `startup_cancel_unsent_v1` 只在 RECOVERING 使用：命令为 NOT_DISPATCHED 且 delivery 仍 PENDING、没有 attempt ID，所有其它命令已终结、停止已确认、任务没有待完成的物理/数据工作时，取消该 Run 的剩余任务并记录审计。历史成功任务保留；不生成新尝试、不沿用旧 envelope 自动补发。矛盾证据或 UNKNOWN 保持阻塞；禁止从 Gateway journal 缺失推断未执行。恢复查询到持久结果可以对账，但不自动恢复 PAUSED Run。该政策是明确的恢复取舍，尚不构成常驻调度进程交付。
+
+## ADR-048 · D12b.2 常驻模拟引擎采用串行、可恢复推进
+
+Accepted for development。独立引擎进程仅接入已配置模拟 Gateway；不创建主体、设备、审批或 Run，也不调用模型。通过专用 owner 会话完成恢复后，逐轮按依赖选择任务，每 Run 每轮最多派发一个命令。派发仍使用原有完整授权/租约/参数/版本守卫；运行中续期受原审批到期限制，过期后隔离而不是偷偷恢复。
+
+查询、已授权 stop 的固定 ID 确认、数据提交/确认允许通过既有幂等用例恢复；accept 从不对已尝试命令重发。暂停需要执行器确认静止，worker 不自动 resume；暂停 Run 可在授权仍有效时持有/重新申请租约，方便用户显式恢复。SIGTERM/SIGINT 停止领取新任务，完成已受理操作及记录后释放中央所有权，不声称物理设备已停止。强杀后的下一实例必须重新经过恢复；所有权丢失直接退出且不重连。本阶段单进程串行执行，不承诺多设备并发吞吐、网络黑洞下即时退出或生产长测结果。
+
+## ADR-049 · D12b.3 Agent 每步所有权与 outbox 常驻发布
+
+- 状态：Accepted（本地模拟部署范围）。
+- 决策：HTTP、LangGraph 和后台 Agent 统一以每步 session advisory lock 排他推进；占位与后续结果通过持锁连接提交，模型 I/O 不跨数据库事务。失去连接不换连接写入；inflight 恢复为 MODEL_INTERRUPTED，不自动重发。Agent worker 仅推进显式实验白名单中的已有 Run，保留原提交者权限/预算并要求专用服务身份，每步复核。
+- 决策：outbox 使用现有数据库 claim/过期与稳定 event_id，经 JetStream 持久化 ACK 后更新发布状态；连接故障有界退避，强杀/丢 ACK 允许重复投递，由 inbox 去重，不承诺 exactly-once。消息通知不授权设备操作。
+- 影响：同一 Agent Run 手动推进/取消可能返回 RUN_BUSY；退出取消正在运行的模型步骤，但无法撤回已发出的供应商调用。多个 worker 可分担 Run，不保证单进程吞吐/大规模公平性 SLA。LangGraph 从全图持锁变为节点持锁；数据库仍为状态权威。
+- 证据：`tests/integration/test_background_workers.py`、既有 Agent/API/事件测试；实际验收结果及剩余部署门禁见实施状态与 D12 交接。
+
+## ADR-050 · D12c.1 显式初始化与迁移/运行数据库身份分离
+
+- 状态：Accepted（开发/模拟部署的第一步，不代表组件权限验收完成）。
+- 决策：只初始化新数据库及新角色；迁移账号拥有 schema，常驻 runtime 无 DDL、TRUNCATE、角色管理或绕过审计触发器权限。服务不执行隐式迁移，不接收集群管理员凭据。
+- 决策：生成 0700 私有目录与 0600 随机密码连接文件；环境连接串与连接文件互斥。初始化失败保留可检查资源和凭据，不自动销毁；不完整初始化禁止迁移。明确迁移 CLI 验证数据库/账号/schema 后升级并刷新运行授权。
+- 边界：runtime 暂为共享应用信任角色，可直接读写业务表；应用 RBAC/ABAC 不能被描述为数据库行级隔离。第 13 章的组件独立最小权限、网络认证/TLS、容器 Secret 与恢复门禁仍待 D12c.2/3。
+- 证据：`test_deployment.py` 新数据库/真实受限角色、权限拒绝、审计保护、API/Agent/Engine/HDF5/outbox 数据库路径，以及配置转换测试；实际统一门禁见实施状态。
+
+## ADR-051 · D12c.2 组件角色与受限发现/授权读锁
+
+Accepted for development。显式创建 API/Engine/Agent/outbox 四个独立登录，以表/列白名单替代共享 runtime；迁移同时撤销遗留列 ACL，旧 runtime 禁止登录并撤销对象权限。Agent 读取模型凭据用于 API 调用，Engine/outbox 不读取凭据；Agent 不创建执行命令或审批。授权行并发保护采用固定语句、固定 search_path 的仅锁定函数，避免为了 FOR SHARE 授予修改授权表的能力。MCP 发现是独立受限函数，只刷新清单和撤销失效授权，不能授予或恢复权限；新工具仍须审核。API 是受信任管理控制后端，不把组件数据库权限等同于终端用户隔离。容器/网络与长测必须另行实测。
+
+## ADR-052 · D12c.2 显式模拟部署与容器验收
+
+Accepted for development。单机 rootless Compose 将 API、Engine、Agent、outbox、模拟 Gateway、PostgreSQL、JetStream 和 Web 分为独立进程/网络；数据库、消息和设备网络默认不发布端口。数据库强制 TLS/SCRAM，Gateway 使用 mTLS，组件只挂载各自凭据，API/Agent 的数据卷只读。维护任务单独创建数据库、迁移、组件角色与模拟登记，不在服务启动时隐式迁移，不预置模型密钥/审批/执行 Run。基础镜像固定摘要并核对官方 registry，代理仅作为运行时/构建配置。当前 rootless profile 不替代生产非 root UID/企业 Secret 管理、PKI 轮换和一致性备份。真实镜像构建、八服务启动及跨容器拒绝/正常路径通过后才记本地部署验收；长测、完整 E2E 和现场分别执行后续门禁。

@@ -6,7 +6,7 @@
 - 用户明确要求：专用实验 Agent 平台；经 API 接入 LLM，支持主流供应商，首批 OpenAI/DeepSeek；Web 包含独立 Skills、MCP、模型、仪表板、用量、轨迹与知识管理。
 - 按专业工程顺序分层实现，不追求快速演示。实施顺序以 `docs/20_DELIVERY_PLAN.md` 为准，实际完成项见 `IMPLEMENTATION_STATUS.md`。
 - 额度限制下按 D01–D13 分期交付，区别于技术层 P0–P7。每期可跨会话；每期结束保存完成项、验证、遗留问题和下一动作。先读状态再续做，默认不在当期交接后自行跨期。不要假定能读取用户账户剩余额度。
-- 已有 D03–D09 数据库/执行/数据、模型/Agent/Skills/MCP/知识及可启动 HTTP API；本期验收见状态文件，D10 实验工作区与 D11 平台控制台已完成本地验收，尚无完整常驻执行/Gateway 部署。不能把计划、fixture 或接口定义称为已实现产品能力。
+- 已有 D03–D09 数据库/执行/数据、模型/Agent/Skills/MCP/知识及可启动 HTTP API；本期验收见状态文件，D10 实验工作区与 D11 平台控制台已完成本地验收，D12c.2 已完成 rootless 单机模拟部署本地验收；一致性备份恢复、完整 E2E/长测与现场尚待后续门禁。不能把计划、fixture 或接口定义称为已实现产品能力。
 - 用户已授权安装工作所需依赖；优先使用项目 `.venv`，锁定新增依赖。不为普通可逆开发操作重复询问。
 
 ## 分层与实现边界
@@ -50,5 +50,5 @@ python3 -m venv .venv
 
 - 默认中文；明确区分已设计、已编码、已本地验证、已集成验证和已现场验收。
 - 变更关联 FR/NFR、契约、测试和文档；阶段进度及时写入 IMPLEMENTATION_STATUS.md。
-- 当前会话为 macOS `/Users/endsen/codex/ALAP`，有效 Git 工作树，origin 为 endsen/ALAP；已同步远程 D05–D10 基线 93ab50f。Linux `/home/endsen/ALAP` 及临时检出路径为另一环境的历史记录，不适用于本会话。续接检查实际环境与 git status。
+- 当前会话为 Linux `/home/endsen/ALAP`，已同步远程 D11 基线 836ec53；此目录 Git 元数据不可用，历史基线检出 `/tmp/alap-github-dliggqw9` 已随重启丢失，origin 为 endsen/ALAP；后续推送前重新取得远程基线。当前 D12 进行中，续接先读 D12 交接；实际环境及路径每次重新核对，勿沿用历史 macOS 路径。
 - 使用多 Agent、外部服务或真机不是本文件隐含授权；普通测试使用离线模型替身与模拟仪器。

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 from alap.adapters.postgres.api import PostgresAPIStore
+from alap.adapters.postgres.settings import database_url
 
 
 def main():
@@ -13,7 +14,7 @@ def main():
     parser.add_argument("--role", choices=["admin", "researcher", "observer"], required=True)
     parser.add_argument("--token-file", type=Path, required=True)
     args = parser.parse_args()
-    store = PostgresAPIStore(os.environ["ALAP_DATABASE_URL"])
+    store = PostgresAPIStore(database_url())
     # Exclusive creation first; never overwrite a user's existing credential file.
     fd = os.open(args.token_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     try:
