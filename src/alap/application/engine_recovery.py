@@ -9,8 +9,8 @@ class EngineRecovery:
         self.execution, self.actor = execution, actor
         self.started = False
 
-    def begin(self):
-        epoch = self.execution.begin_recovery(self.actor)
+    def begin(self, *, force_new_epoch=False):
+        epoch = self.execution.begin_recovery(self.actor, force_new_epoch=force_new_epoch)
         self.execution.recover_inflight(self.actor)
         self.started = True
         return epoch

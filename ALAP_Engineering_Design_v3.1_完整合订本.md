@@ -1199,6 +1199,8 @@ Browser  -- HTTPS -->  Reverse Proxy / API
 
 PostgreSQL 连续归档/WAL（按组织策略）+ 定期快照；Dataset Store 分层校验与备份；Gateway 本地 journal 定期回传；备份应定期做恢复演练。RPO/RTO 由实验室数据价值、设备运行要求决定，**现阶段待评审**，不可自行假定 0 数据丢失。
 
+D12c.3 的单机模拟实现先提供一致性冷快照：停止全部写入者后一起备份 PostgreSQL、JetStream、Gateway journal/模拟物理状态、HDF5 与私有配置，加密后恢复到无外部出口的新项目。副本强制新 epoch、关闭执行入口，完成数据完整性和设备状态对账后仍不自动启动调度器。入口、密钥保管和失败处置见 `deploy/simulation/README.md`；验收证据见实施状态。这不替代本节生产 WAL、异地备份、PKI/凭据轮换或实验室 RPO/RTO 评审。
+
 恢复必须先恢复状态，再与 Gateway/设备读回对账，才能开放命令写入口。数据库回滚会造成 fencing token 回退风险，需有单调令牌保护策略及网关可见的代际版本。
 
 ## 7. CI/CD 发布策略
@@ -1450,6 +1452,10 @@ Accepted for development。显式创建 API/Engine/Agent/outbox 四个独立登�
 ## ADR-052 · D12c.2 显式模拟部署与容器验收
 
 Accepted for development。单机 rootless Compose 将 API、Engine、Agent、outbox、模拟 Gateway、PostgreSQL、JetStream 和 Web 分为独立进程/网络；数据库、消息和设备网络默认不发布端口。数据库强制 TLS/SCRAM，Gateway 使用 mTLS，组件只挂载各自凭据，API/Agent 的数据卷只读。维护任务单独创建数据库、迁移、组件角色与模拟登记，不在服务启动时隐式迁移，不预置模型密钥/审批/执行 Run。基础镜像固定摘要并核对官方 registry，代理仅作为运行时/构建配置。当前 rootless profile 不替代生产非 root UID/企业 Secret 管理、PKI 轮换和一致性备份。真实镜像构建、八服务启动及跨容器拒绝/正常路径通过后才记本地部署验收；长测、完整 E2E 和现场分别执行后续门禁。
+
+## ADR-053 · D12c.3 一致性冷快照与隔离恢复闸门
+
+Accepted for local simulation。先停止接入和执行，再停止 Gateway/JetStream/PostgreSQL；只从确认停稳且无外部卷使用者的状态导出四个持久卷与私有配置。分卷 AES-256-GCM 加密，HMAC 认证清单作为最后完成标记，独立保存密钥。还原须先认证全部载荷，再导入全新项目/卷并固定原镜像；不覆盖源部署。只启动数据库并强制新 epoch、冻结旧 Run、撤销复制 token；校验 HDF5 校验和/来源和 Gateway SQLite 后才能执行恢复对账。对账不启动调度循环，不自动恢复任务或重发未知命令。隔离副本没有发布端口、外部网络或常驻 Agent/Engine；真实接管不在本期授权范围。提供按需真实 JSON 指标，未知状态不当作健康。生产 WAL/PITR、异地托管、自动告警和现场恢复仍须单独设计/验收。
 
 ---
 
@@ -1915,6 +1921,8 @@ P3 的 Agent 测试可调用 P2 应用端口，无需提前做 Web。P4 不另�
 | D13 · 单设备现场试点 | 设备/桥接适配、现场范围与只读检查、有限写及恢复演练 | P7 | G1/G2 现场资料与负责人签署齐备；试点不代表无人值守 |
 
 开发依序推进，默认一次启动当前期内的下一工作项，不默认承诺一个会话完成整期，也不在当期交接后自动开启后一开发期。用户明确要求跨期连续实施时按该指令执行。未验收的前置依赖必须先补齐；与现场或真实模型凭据相关的待办独立记录，不阻止不依赖它的离线工作。
+
+D12d 的常驻浏览器、Agent/API 模型链路、故障矩阵与实际长测按 `D12D_ACCEPTANCE.md` 分项验收；完成一个短测验收点不等于 D12 整期通过。
 
 ### 每期交接要求
 

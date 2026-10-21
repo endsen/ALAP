@@ -1,14 +1,37 @@
 # ALAP 实施状态
 
-更新：2026-10-20。本文件区分“已设计”“已实现”“本地验证”“集成/现场验证”。整体平台尚未完成。
+更新：2026-10-21。本文件区分“已设计”“已实现”“本地验证”“集成/现场验证”。整体平台尚未完成。
 
 ## 分期交接入口
 
 - 分期计划：`docs/20_DELIVERY_PLAN.md` 的 D01–D13；P0–P7 为技术层次，D 编号为分批交付单位。
-- 当前：**D12 · 集成、部署与验收，进行中**。D01–D11 基础交付完成；本地已同步 GitHub `836ec53`。D12a Gateway 进程边界已完成本地验收；D12b.1 单实例所有权/启动恢复已完成本地验收；D12b.2 独立常驻执行进程已完成本地验收；D12b.3 Agent/outbox worker 与 D12c.1 数据库初始化/权限分离已完成本地验收。D12 整期未完成。
-- 当前交接：**D12c.2 组件权限与实际容器部署已完成本地验收**。下一工作项为 D12c.3 运维/一致性备份恢复；完成后进入 D12d 完整 E2E 和实际 24 小时以上模拟。D13 尚未开始，不自动跨期。
-- 当前环境：Linux `/home/endsen/ALAP`，Python 3.14.7；工作目录 Git 元数据不可用，历史基线为 836ec53；重启后临时检出 `/tmp/alap-github-dliggqw9` 已丢失，后续提交/推送前需重新获取远程基线。依赖按锁文件同步，无新增依赖。D11 下方 macOS 验收为历史记录；本轮 Linux 同步检查见 `reports/local-sync-20261019.md`。
+- 当前：**D12 · 集成、部署与验收，进行中**。D01–D11 基础交付完成；本地已同步 GitHub `e59baf5`。D12a Gateway 进程边界已完成本地验收；D12b.1 单实例所有权/启动恢复已完成本地验收；D12b.2 独立常驻执行进程已完成本地验收；D12b.3 Agent/outbox worker 与 D12c.1 数据库初始化/权限分离已完成本地验收。D12 整期未完成。
+- 当前交接：**D12d.1 常驻部署浏览器与确定性执行已完成本地验收**。下一工作项 D12d.2 常驻 Agent/API 模型链路，之后为 D12d.3 故障矩阵和 D12d.4 实际 24 小时以上模拟。D13 尚未开始，不自动跨期。
+- 当前环境：Linux `/home/endsen/ALAP`，Python 3.14.7；工作目录 Git 元数据不可用，当前 GitHub 基线为 e59baf54e461d894e4937e3d13b02af454e242ce，上传检出为 `/tmp/alap-upload-20261020`，提交前须重新核对远程。依赖按锁文件同步，无新增依赖。D11 下方 macOS 验收为历史记录；本轮 Linux 同步检查见 `reports/local-sync-20261019.md`。
 - D05–D10 实现提交 0015fa6 与交接提交 93ab50f 的远程 CI 均已通过，已于 2026-10-19 核对：https://github.com/endsen/ALAP/actions/runs/39201132173 。此结果不替代 D11 的远程验收。
+
+## D12d.1 · 常驻部署浏览器验收（2026-10-21，本地验收完成）
+
+- 已增加独立 Compose 浏览器入口与未审批测试计划种子，实际使用部署 Web/API/Engine/Gateway/数据卷；不复用 D10 的进程内执行 fixture。
+- 首先恢复已退出的本地 rootless Docker；PostgreSQL 旧容器运行状态残留，通过保留数据卷重建容器恢复。未删除业务数据，未注册系统服务。
+- 实际 Chromium 经部署 Web/API 完成请求审批、批准、启动 Run、曲线查看和 HDF5 下载，签名与 SHA-256 匹配；常驻 Engine/Gateway 执行三个模拟设备任务。观察者 UI 禁止写入且直接合法审批请求返回 403；刷新清除令牌；SSE 中断禁写、重连恢复。**3 项浏览器测试通过（26.5 秒）**，报告 `reports/d12d1-compose-browser.txt`。
+- 最终唯一实验核对 1 SUCCEEDED Run、3 SUCCEEDED Task、3 SUCCEEDED Command、1 COMMITTED Dataset，outbox 未发布数 0，实际镜像与记录见 `reports/d12d1-compose-evidence.json`。四次浏览器调试/验收的执行均完成，未遗留运行中的测试 Run；全部测试观察者 token 已撤销，业务审计与数据保留。
+- 首轮观察者种子缺少平台角色及计划资源读取范围，产品正确拒绝快照；另修复重复种子复用创建幂等键。只修测试配置，未放宽产品权限规则；失败记录保留。最终浏览器与后端 403 断言复验通过，详见 `reports/d12d1-acceptance.md`。
+- 最终统一后端门禁 **565 项通过（409.28 秒）**，真实 PostgreSQL/NATS 集成不跳过，Ruff/格式、契约/OpenAPI、生成文档及依赖检查通过，报告 `reports/d12d1-backend-validation.txt`。Web 类型/格式检查及 **10 项单元测试**通过；未改 Web 产品代码，复用生产镜像，未重跑 D10/D11 全套 fixture 浏览器测试。
+- 本轮安装锁定 Playwright 对应 Chromium 至 `.local-deploy/browsers`，未新增应用依赖或升级锁文件。八个模拟服务恢复运行，仅 Web 发布 127.0.0.1:3000；首页 200、匿名 API 401，QA 端口移除，临时测试数据库/角色为 0，见 `reports/d12d1-final-runtime.json`。未注册系统服务，未推送 GitHub。
+- 按 `docs/D12D_ACCEPTANCE.md` 后续进入 D12d.2 常驻 Agent 经本地 HTTP 模型替身形成提案的部署验收，再做 D12d.3 故障矩阵与 D12d.4 实际 24 小时负载。本轮没有调用模型或真机，不把预置计划称为 Agent 生成，不把短测当作长测；D12d/D12 整体未完成。
+
+## D12c.3 · 运维与一致性恢复（2026-10-21，本地验收完成）
+
+- 已实现分卷 AES-256-GCM 加密冷快照、HMAC 完成清单、隔离目标恢复与强制新 epoch；提供真实状态计数、outbox 年龄与恢复/数据异常提示。
+- 加密/归档专项 15 项通过。已通过现有应用用例在 `EXP-BACKUP-001` 创建模拟专用审批/Run，三个任务完成、生成一份 COMMITTED HDF5，供非空恢复演练；未调用付费模型或真机。这是显式测试数据，不改变 initialize 不预置审批/Run 的行为。
+- 最终统一门禁 **565 项通过（428.72 秒）**，实际 PostgreSQL/JetStream TLS/认证连接；Ruff/格式、状态机、契约/OpenAPI、合订本及依赖检查通过，见 `reports/d12c3-backend-validation.txt`。首轮 565 项通过（439.46 秒）保留为 initial 报告；之后修复实际容器审计问题并完整重跑。
+- 非空加密冷快照约 373 MiB，最终备份 21.4 秒，隔离导入/冻结 13.918 秒，对账检查 6.099 秒；单次本机计时不作为 SLA。副本强制新 epoch、冻结全部旧 Run、撤销复制的 3 条 token，所有网络 internal、无发布端口、不运行常驻 Engine/Agent/API/Web/outbox。
+- 副本 HDF5 缺失返回 ARTIFACT_INVALID，保持 RECOVERING，Gateway 未启动；复原后校验 1 份 COMMITTED 文件及两个 SQLite，恢复为 ACTIVE。命令/模拟动作均保持 3，数据集保持 1，没有重放或自动 resume。错误密钥在创建目标前拒绝，普通 manage up 拒绝恢复目录。
+- 第一轮发现只读卷上 SQLite WAL 审计需要共享内存文件，已修复为停稳 Gateway 后检查私有数据库/WAL 副本，再启动只读对账；重新构建、新备份、新隔离目标重复故障与成功路径均通过。新目录维护锁创建也已修复。证据见 `reports/d12c3-recovery-acceptance.md`、`reports/d12c3-restore-evidence.json`。
+- 收尾原模拟八服务运行，仅 Web 发布 127.0.0.1:3000；首页 200、匿名 API 401，QA 端口关闭，临时测试库/角色均 0。两个演练副本已停止，卷/备份/密钥仅留在忽略目录 `.local-deploy/`。环境证据见 `reports/d12c3-final-runtime.json`；未注册开机服务。
+- 提供按需 JSON 状态/告警代码，不等于自动告警平台；未实现生产 WAL/PITR、异地托管、实验室 RPO/RTO、PKI 轮换或现场接管。无新增依赖/迁移/公共 API，Web 代码未改，浏览器未重跑。操作边界见 `deploy/simulation/README.md`、ADR-053；D12d/D13 未启动。
+- GitHub 上 D12a–D12c.2 提交 `e59baf54e461d894e4937e3d13b02af454e242ce` 已确认存在，远程 CI 成功：https://github.com/endsen/ALAP/actions/runs/39421094109 。本轮 D12c.3 尚未提交/推送。
 
 ## D12c.2 · 组件权限与实际容器部署（2026-10-20，本地验收完成）
 

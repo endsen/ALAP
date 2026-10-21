@@ -1,0 +1,10 @@
+{
+  "test_databases": 0,
+  "test_roles": 0,
+  "mode": "ACTIVE",
+  "observer_tokens_active": 0,
+  "web_http": 200,
+  "anonymous_api_http": 401,
+  "services_running": 8,
+  "qa_ports_removed": true
+}

@@ -1,0 +1,198 @@
+{
+  "before": {
+    "commands": 3,
+    "containers": {
+      "agent": {
+        "image": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+        "ports": {},
+        "running": true
+      },
+      "api": {
+        "image": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+        "ports": {},
+        "running": true
+      },
+      "engine": {
+        "image": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+        "ports": {},
+        "running": true
+      },
+      "gateway": {
+        "image": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+        "ports": {},
+        "running": true
+      },
+      "nats": {
+        "image": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+        "ports": {},
+        "running": true
+      },
+      "outbox": {
+        "image": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+        "ports": {},
+        "running": true
+      },
+      "postgres": {
+        "image": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+        "ports": {},
+        "running": true
+      },
+      "web": {
+        "image": "sha256:0b7f591f4a636caffb2853a28b8bd774ccc059bbb3a4c66b2c9d8a073b8c2ad1",
+        "ports": {
+          "3000/tcp": [
+            {
+              "HostIp": "127.0.0.1",
+              "HostPort": "3000"
+            }
+          ]
+        },
+        "running": true
+      }
+    },
+    "datasets": 1,
+    "epoch": "f18061b8-bc63-47af-af6a-dc475661229d",
+    "mode": "ACTIVE",
+    "physical_actions": 3,
+    "unblocked_runs": 0,
+    "unrevoked_tokens": 3
+  },
+  "blocked": {
+    "commands": 3,
+    "containers": {
+      "agent": {
+        "image": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+        "ports": {},
+        "running": false
+      },
+      "api": {
+        "image": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+        "ports": {},
+        "running": false
+      },
+      "engine": {
+        "image": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+        "ports": {},
+        "running": false
+      },
+      "gateway": {
+        "image": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+        "ports": {},
+        "running": false
+      },
+      "nats": {
+        "image": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+        "ports": {},
+        "running": false
+      },
+      "outbox": {
+        "image": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+        "ports": {},
+        "running": false
+      },
+      "postgres": {
+        "image": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+        "ports": {},
+        "running": true
+      },
+      "web": {
+        "image": "sha256:0b7f591f4a636caffb2853a28b8bd774ccc059bbb3a4c66b2c9d8a073b8c2ad1",
+        "ports": {},
+        "running": false
+      }
+    },
+    "datasets": 1,
+    "epoch": "db11c505-6375-451b-b057-6cf478ce4fdf",
+    "mode": "RECOVERING",
+    "physical_actions": null,
+    "unblocked_runs": 0,
+    "unrevoked_tokens": 0
+  },
+  "after": {
+    "commands": 3,
+    "containers": {
+      "agent": {
+        "image": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+        "ports": {},
+        "running": false
+      },
+      "api": {
+        "image": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+        "ports": {},
+        "running": false
+      },
+      "engine": {
+        "image": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+        "ports": {},
+        "running": false
+      },
+      "gateway": {
+        "image": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+        "ports": {},
+        "running": true
+      },
+      "nats": {
+        "image": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+        "ports": {},
+        "running": true
+      },
+      "outbox": {
+        "image": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+        "ports": {},
+        "running": false
+      },
+      "postgres": {
+        "image": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+        "ports": {},
+        "running": true
+      },
+      "web": {
+        "image": "sha256:0b7f591f4a636caffb2853a28b8bd774ccc059bbb3a4c66b2c9d8a073b8c2ad1",
+        "ports": {},
+        "running": false
+      }
+    },
+    "datasets": 1,
+    "epoch": "db11c505-6375-451b-b057-6cf478ce4fdf",
+    "mode": "ACTIVE",
+    "physical_actions": 3,
+    "unblocked_runs": 0,
+    "unrevoked_tokens": 0
+  },
+  "networks": {
+    "alap-restore-d12c3drill002_database": true,
+    "alap-restore-d12c3drill002_devices": true,
+    "alap-restore-d12c3drill002_egress": true,
+    "alap-restore-d12c3drill002_events": true,
+    "alap-restore-d12c3drill002_web": true
+  },
+  "wrong_key": {
+    "exit": 1,
+    "target_created": false,
+    "output": "{\"event\": \"maintenance_failed\", \"code\": \"ValueError\"}"
+  },
+  "normal_start_refused": true,
+  "timings": [
+    {
+      "action": "backup",
+      "seconds": 21.4,
+      "exit": 0
+    },
+    {
+      "action": "restore",
+      "seconds": 13.918,
+      "exit": 0
+    },
+    {
+      "action": "recover",
+      "seconds": 2.815,
+      "exit": 1
+    },
+    {
+      "action": "recover",
+      "seconds": 6.099,
+      "exit": 0
+    }
+  ],
+  "encrypted_bytes": 390975192
+}

@@ -292,3 +292,9 @@ ALAP_DATABASE_URL_FILE=/secure/admin.dsn \
 历史内核模块不匹配问题在重启后解除。Docker 官方 CloudFront CDN 即使经代理仍失败，本轮使用用户授权的 DaoCloud 路径，四个锁定摘要均已与 Docker 官方 registry 核对一致；不关闭 TLS 校验。新环境需复核 rootless 网络和代理地址，不照搬本机地址。普通服务仅 Web 绑定宿主机回环端口；后端集成测试的 PostgreSQL/NATS 回环映射仅由 QA 覆盖文件临时开启，完成后恢复正常配置。
 
 本轮 547 项统一后端回归在真实容器 PostgreSQL/JetStream 上通过，报告 `reports/d12c2-compose-backend-validation.txt`。容器内 Python 3.14.8、Node 24.22.0、PostgreSQL 18.6、NATS 2.15.1；宿主测试 Python 3.14.7。该回归与跨容器验收范围不同，两者记录在 `reports/d12c2-compose-acceptance.md`。下一工作项为 D12c.3 运维与一致性备份恢复；完整 E2E、故障矩阵、实际 24 小时以上模拟仍属于 D12d。
+
+## D12c.3 运维恢复实现边界
+
+运维入口与操作顺序见 `deploy/simulation/README.md` 的 D12c.3 章节，决策见 ADR-053。代码分为独立加密归档适配器、只读状态/完整性审计和 Compose 维护编排；不向领域层引入 Docker、数据库或加密依赖。恢复强制 epoch 是现有引擎恢复用例的显式选项，普通重启维持原行为。
+
+验收分别检查加密/路径拒绝、真实数据库恢复闸门/COMMITTED 文件损坏、实际 Compose 的加密冷备份和隔离恢复。对应 `tests/test_backup_archives.py`、`tests/integration/test_operations.py`；实际执行结果以实施状态和恢复演练报告为准，不把设计或单元测试等同于系统验收。关联 FR-009 命令对账、FR-011 数据完整性以及第 13 章部署恢复要求。D12d 的完整 UI/业务 E2E、故障矩阵与 24 小时以上负载仍须另行实施。

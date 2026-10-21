@@ -1,0 +1,43 @@
+npm notice run alap-web@0.1.0 npx
+npm notice run 'playwright' test --config playwright.deployment.config.ts --output /home/endsen/ALAP/.local-deploy/browser-k8msbyjh/results
+
+Running 3 tests using 1 worker
+
+(node:836627) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/deployment/compose.spec.ts:34:5 › deployed approval → Engine/Gateway → committed HDF5 (21.3s)
+  ✘  2 tests/deployment/compose.spec.ts:69:5 › deployed observer has no approval/write UI and reload loses token (20.3s)
+(node:837978) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  3 tests/deployment/compose.spec.ts:84:5 › deployed SSE disconnect disables writes; reconnect restores authority (2.7s)
+
+
+  1) tests/deployment/compose.spec.ts:69:5 › deployed observer has no approval/write UI and reload loses token
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('status').filter({ hasText: '实时同步' })
+    Expected: visible
+    Timeout: 20000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('status').filter({ hasText: '实时同步' }) with timeout 20000ms
+      - waiting for getByRole('status').filter({ hasText: '实时同步' })
+
+
+      18 |   await expect(
+      19 |     page.getByRole("status").filter({ hasText: "实时同步" }),
+    > 20 |   ).toBeVisible();
+         |     ^
+      21 | }
+      22 | async function confirm(page: Page, name: string) {
+      23 |   const dialog = page.getByRole("dialog");
+        at live (/home/endsen/ALAP/apps/web/tests/deployment/compose.spec.ts:20:5)
+        at /home/endsen/ALAP/apps/web/tests/deployment/compose.spec.ts:73:9
+
+    Error Context: ../../.local-deploy/browser-k8msbyjh/results/compose-deployed-observer--dcfa7-e-UI-and-reload-loses-token/error-context.md
+
+  1 failed
+    tests/deployment/compose.spec.ts:69:5 › deployed observer has no approval/write UI and reload loses token
+  2 passed (46.0s)

@@ -6,6 +6,8 @@ import os
 import subprocess
 from pathlib import Path
 
+from alap.adapters.ops.locking import maintenance_lock
+
 ROOT = Path(__file__).resolve().parents[2]
 DEPLOY = ROOT / "deploy/simulation"
 
@@ -33,6 +35,8 @@ def main():
     parser.add_argument("--directory", type=Path, default=ROOT / ".local-deploy/simulation")
     args = parser.parse_args()
     directory = args.directory.resolve()
+    if (directory / "restored.json").exists():
+        raise ValueError("Restored deployments require the isolated operations commands")
     if args.action == "prepare":
         from prepare import prepare
 
@@ -112,4 +116,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    with maintenance_lock(ROOT / ".local-deploy/operations.lock"):
+        main()

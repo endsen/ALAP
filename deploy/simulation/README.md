@@ -35,7 +35,7 @@ BUILD_HTTP_PROXY=http://10.20.205.15:7897 .venv/bin/python deploy/simulation/man
 - API/Engine/Agent/outbox 的数据库连接均 `sslmode=verify-full`；数据库拒绝非 TLS 网络连接并使用 SCRAM。Gateway 仅接受 mTLS，API 与 Engine 有独立客户端证书，Agent/outbox 不在设备网络且没有签名密钥。
 - API/Agent 的 artifacts 卷只读，Engine 可写；Gateway journal 与模拟物理状态、数据库、JetStream、artifacts 各自持久化。内部数据库、消息、设备网络不发布端口；正常 profile 仅 Web 发布宿主机回环端口。API/Agent 的 egress 用于后续显式配置的模型/MCP，当前无外部模型调用。
 
-`initialize` 中断后不能盲目重试；检查 `/private/deployment` 完成标记与角色/数据库归属，按 D12c.1/2 故障说明人工处理。`up` 不执行迁移。已有部署更新须先停止业务服务，备份并用维护身份显式 migrate，再构建/启动；完整一致性备份与恢复演练留给 D12c.3。
+`initialize` 中断后不能盲目重试；检查 `/private/deployment` 完成标记与角色/数据库归属，按 D12c.1/2 故障说明人工处理。`up` 不执行迁移。已有部署更新须先停止业务服务，备份并用维护身份显式 migrate，再构建/启动；一致性冷备份与隔离恢复步骤见下方 D12c.3。
 
 ## 验证与停止
 
@@ -54,4 +54,45 @@ docker-compose --env-file deploy/simulation/images.env -f deploy/simulation/comp
 
 测试脚本只删除自己新建的随机 `alap_test_compose_*` 数据库；报告移除已知部署密码。不要在测试期间重建/重启 PostgreSQL/NATS。停止不删卷，不撤销已创建角色；运行时终端可在服务停止后退出。`docker compose down -v` 会丢失数据，不属于日常停止步骤。
 
-当前验收范围和准确结果以 `IMPLEMENTATION_STATUS.md`、`reports/d12c2-compose-acceptance.md` 为准。D12c.3 运维恢复、D12d 完整平台 E2E/故障矩阵/实际长测，以及 D13 现场门禁仍须分别实施。
+当前验收范围和准确结果以 `IMPLEMENTATION_STATUS.md`、`reports/d12c2-compose-acceptance.md` 及 `reports/d12c3-recovery-acceptance.md` 为准。D12c.3 冷备份恢复已通过本地验收；D12d 完整平台 E2E/故障矩阵/实际长测，以及 D13 现场门禁仍须分别实施。
+
+## D12c.3 一致性冷备份与隔离恢复
+
+`operations.py` 仅适用于本地 simulation。备份按 Web/API/Agent → Engine/outbox → Gateway/NATS → PostgreSQL 顺序停止，确认没有运行中的卷使用者、没有强杀退出，且 PostgreSQL 控制文件为 clean shutdown 后，导出数据库、JetStream、Gateway 两个 SQLite 文件、HDF5 与私有配置。此时禁止绕过维护锁手动启动 Docker 服务。备份成功或失败均保持源服务停止，由操作员检查后显式 `manage.py up`。
+
+以下路径均应是新路径；密钥不能位于备份目录或源凭据目录内。备份含加密后的全部凭据，独立随机 256 位密钥须另行妥善保存，丢失不可恢复。当前只生成本机文件；异地保管/密钥托管由操作员执行。
+
+```bash
+.venv/bin/python deploy/simulation/operations.py status
+.venv/bin/python deploy/simulation/operations.py backup \
+  --output /absolute/private/snapshot-001 \
+  --key-file /absolute/private/keys/snapshot-001.key
+.venv/bin/python deploy/simulation/manage.py up
+.venv/bin/python deploy/simulation/operations.py restore \
+  --bundle /absolute/private/snapshot-001 \
+  --key-file /absolute/private/keys/snapshot-001.key \
+  --directory /absolute/private/restore-001 \
+  --project alap-restore-drill001
+.venv/bin/python deploy/simulation/operations.py status --directory /absolute/private/restore-001
+.venv/bin/python deploy/simulation/operations.py recover --directory /absolute/private/restore-001
+.venv/bin/python deploy/simulation/operations.py stop-restore --directory /absolute/private/restore-001
+```
+
+AES-256-GCM 分卷流式加密，HMAC 认证清单最后写入作为完成标记；缺卷/损坏/错误密钥拒绝恢复。所有卷认证解密完成后才创建目标资源；归档仅接受普通文件/目录，拒绝路径逃逸、重复成员及链接。还原要求新目录、新 Compose 项目和本机仍保留的原始精确镜像 ID；没有镜像则先恢复可信镜像，不能静默换版本。未实现跨 PostgreSQL 大版本迁移。
+
+还原只启动数据库，撤销复制的浏览器 token，并强制创建新 epoch、冻结旧 Run。隔离副本无宿主端口、无外部网络；不启动常驻 Engine/Agent/API/Web/outbox。`recover` 先停稳副本 Gateway，校验 COMMITTED 文件的校验和/来源，并在私有临时副本中检查 SQLite 数据库/WAL 完整性；随后只启动模拟 Gateway/NATS，再执行一次恢复对账；不会运行调度循环或自动 resume。Gateway 尚未就绪可在检查错误后再次执行 `recover`；UNKNOWN、未确认停止或文件损坏会保持恢复闸门关闭，不能通过重发设备动作来消除未知状态。检查成功后再次执行 `recover` 会拒绝重复开闸；副本仍无调度器。
+
+`status` 输出真实服务运行/健康信息和 PostgreSQL 的 Run、Task、命令、数据集、Agent 状态计数、待确认停止、outbox 积压及最老事件年龄。数据库未运行返回 null，读取失败返回不可达；这些都不能视为健康。恢复关闭、未知命令、损坏数据和超过 60 秒的 outbox 会产生告警代码；年龄阈值是本地运维提示，不是已验证 SLA。它是按需 JSON 观测入口，未部署 Prometheus、告警推送或全天候监控。
+
+失败时保留副本和卷供检查；不要对原部署执行 `down -v`。不完整恢复不能使用普通 `manage.py up`，须检查后换全新目标重新恢复。原始备份、失败副本与密钥由操作员按保留策略清理，程序不自动删证据。副本只验证模拟环境恢复；真实设备还须隔离旧控制端、重新 fencing、现场读回及授权后才能接管。本功能不是生产热备/WAL/PITR，也不能承诺零 RPO；可恢复点是最后一份成功冷快照，RTO 取决于数据规模与手工检查。
+
+## D12d.1 实际部署浏览器验收
+
+`check_browser.py` 对已启动的八服务运行真实 Chromium 验收，与 D10/D11 的独立 fixture 浏览器套件分开。它创建唯一未审批模拟计划，页面完成请求审批、批准、创建 Run、曲线查看和下载校验；额外验证观察者限制及 SSE 断开/重连。不会调用 LLM，也不预置执行 Run。测试令牌使用私有临时文件并在结束时撤销，业务审计和数据保留。
+
+```bash
+.venv/bin/python deploy/simulation/manage.py up
+.venv/bin/python deploy/simulation/check_browser.py
+```
+
+Node/Playwright 浏览器安装、验收范围及后续 Agent/故障/24 小时长测顺序见 `docs/D12D_ACCEPTANCE.md`。成功报告为 `reports/d12d1-compose-browser.txt` 和 `reports/d12d1-compose-evidence.json`；失败退出非零，不自动重试设备任务。此入口只用于本地模拟开发部署，不是生产平台上创建审批和测量任务的运维入口。

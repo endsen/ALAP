@@ -1072,11 +1072,11 @@ class ExecutionService:
                     },
                 )
 
-    def begin_recovery(self, actor):
+    def begin_recovery(self, actor, *, force_new_epoch=False):
         with self.transaction() as repo:
             self._engine(repo, actor)
             generation = repo.generation(exclusive=True)
-            if generation["mode"] == "RECOVERING":
+            if generation["mode"] == "RECOVERING" and not force_new_epoch:
                 return str(generation["epoch"])
             # Exclusive generation barrier serializes with every application writer.
             experiments = repo.find("experiments", {}, lock=True)

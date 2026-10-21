@@ -1,0 +1,80 @@
+{
+  "cleanup": {
+    "test_databases": 0,
+    "test_roles": 0
+  },
+  "source_status": {
+    "database": {
+      "agent_runs": {},
+      "alerts": [],
+      "command_ledger": {
+        "SUCCEEDED": 3
+      },
+      "control": {
+        "mode": "ACTIVE"
+      },
+      "database_reachable": true,
+      "datasets": {
+        "COMMITTED": 1
+      },
+      "outbox": {
+        "oldest_age_s": null,
+        "pending": 0
+      },
+      "runs": {
+        "SUCCEEDED": 1
+      },
+      "stop_requests_pending": 0,
+      "tasks": {
+        "SUCCEEDED": 3
+      }
+    },
+    "observed_at": "2026-10-20T17:32:36.852986+00:00",
+    "services": {
+      "agent": {
+        "exit_code": 0,
+        "health": null,
+        "running": true
+      },
+      "api": {
+        "exit_code": 0,
+        "health": null,
+        "running": true
+      },
+      "engine": {
+        "exit_code": 0,
+        "health": null,
+        "running": true
+      },
+      "gateway": {
+        "exit_code": 0,
+        "health": null,
+        "running": true
+      },
+      "nats": {
+        "exit_code": 0,
+        "health": null,
+        "running": true
+      },
+      "outbox": {
+        "exit_code": 0,
+        "health": null,
+        "running": true
+      },
+      "postgres": {
+        "exit_code": 0,
+        "health": "healthy",
+        "running": true
+      },
+      "web": {
+        "exit_code": 0,
+        "health": null,
+        "running": true
+      }
+    }
+  },
+  "web_http": 200,
+  "anonymous_me_http": 401,
+  "qa_ports_removed": true,
+  "restore_projects_stopped": true
+}

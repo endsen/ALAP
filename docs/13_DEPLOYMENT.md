@@ -62,6 +62,8 @@ Browser  -- HTTPS -->  Reverse Proxy / API
 
 PostgreSQL 连续归档/WAL（按组织策略）+ 定期快照；Dataset Store 分层校验与备份；Gateway 本地 journal 定期回传；备份应定期做恢复演练。RPO/RTO 由实验室数据价值、设备运行要求决定，**现阶段待评审**，不可自行假定 0 数据丢失。
 
+D12c.3 的单机模拟实现先提供一致性冷快照：停止全部写入者后一起备份 PostgreSQL、JetStream、Gateway journal/模拟物理状态、HDF5 与私有配置，加密后恢复到无外部出口的新项目。副本强制新 epoch、关闭执行入口，完成数据完整性和设备状态对账后仍不自动启动调度器。入口、密钥保管和失败处置见 `deploy/simulation/README.md`；验收证据见实施状态。这不替代本节生产 WAL、异地备份、PKI/凭据轮换或实验室 RPO/RTO 评审。
+
 恢复必须先恢复状态，再与 Gateway/设备读回对账，才能开放命令写入口。数据库回滚会造成 fencing token 回退风险，需有单调令牌保护策略及网关可见的代际版本。
 
 ## 7. CI/CD 发布策略

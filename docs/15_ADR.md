@@ -213,3 +213,7 @@ Accepted for development。显式创建 API/Engine/Agent/outbox 四个独立登�
 ## ADR-052 · D12c.2 显式模拟部署与容器验收
 
 Accepted for development。单机 rootless Compose 将 API、Engine、Agent、outbox、模拟 Gateway、PostgreSQL、JetStream 和 Web 分为独立进程/网络；数据库、消息和设备网络默认不发布端口。数据库强制 TLS/SCRAM，Gateway 使用 mTLS，组件只挂载各自凭据，API/Agent 的数据卷只读。维护任务单独创建数据库、迁移、组件角色与模拟登记，不在服务启动时隐式迁移，不预置模型密钥/审批/执行 Run。基础镜像固定摘要并核对官方 registry，代理仅作为运行时/构建配置。当前 rootless profile 不替代生产非 root UID/企业 Secret 管理、PKI 轮换和一致性备份。真实镜像构建、八服务启动及跨容器拒绝/正常路径通过后才记本地部署验收；长测、完整 E2E 和现场分别执行后续门禁。
+
+## ADR-053 · D12c.3 一致性冷快照与隔离恢复闸门
+
+Accepted for local simulation。先停止接入和执行，再停止 Gateway/JetStream/PostgreSQL；只从确认停稳且无外部卷使用者的状态导出四个持久卷与私有配置。分卷 AES-256-GCM 加密，HMAC 认证清单作为最后完成标记，独立保存密钥。还原须先认证全部载荷，再导入全新项目/卷并固定原镜像；不覆盖源部署。只启动数据库并强制新 epoch、冻结旧 Run、撤销复制 token；校验 HDF5 校验和/来源和 Gateway SQLite 后才能执行恢复对账。对账不启动调度循环，不自动恢复任务或重发未知命令。隔离副本没有发布端口、外部网络或常驻 Agent/Engine；真实接管不在本期授权范围。提供按需真实 JSON 指标，未知状态不当作健康。生产 WAL/PITR、异地托管、自动告警和现场恢复仍须单独设计/验收。

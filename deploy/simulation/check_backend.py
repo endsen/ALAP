@@ -1,5 +1,6 @@
 """Run the backend gate against disposable test DBs in the local TLS simulation stack."""
 
+import argparse
 import json
 import os
 import secrets
@@ -15,6 +16,9 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--report", default="reports/d12c2-compose-backend-validation.txt")
+    args = parser.parse_args()
     directory = Path(os.environ.get("SIM_ROOT", ROOT / ".local-deploy/simulation"))
     password = (directory / "postgres.password").read_text().strip()
     ca = str(directory / "ca.crt")
@@ -28,7 +32,7 @@ def main():
         "ALAP_TEST_NATS_URL": broker_url,
         "SSL_CERT_FILE": ca,
     }
-    report = ROOT / "reports/d12c2-compose-backend-validation.txt"
+    report = ROOT / args.report
     raw = ROOT / ".local-deploy/backend-gate.raw"
     with psycopg.connect(base + "postgres?" + query, autocommit=True) as admin:
         admin.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database)))

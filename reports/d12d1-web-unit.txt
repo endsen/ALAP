@@ -1,0 +1,18 @@
+✔ ambiguous delivery retains idempotency key and blocks changed payload (45.0393ms)
+✔ 401 expires session and no input contents become error messages (0.848847ms)
+✔ version forms preserve nested identity, deduplicate scope and remove omitted optional secrets (1.469245ms)
+✔ invalid numeric budgets and malformed schemas cannot be silently coerced (0.605682ms)
+✔ version diff includes scope removal, changed budget and nested permission (0.454137ms)
+✔ SSE split boundaries, multiline content and heartbeat (0.771162ms)
+✔ dedup, gap and cursor mismatch never fabricate state (0.368571ms)
+✔ oversized or invalid cursors and incomplete frames are not applied (0.390979ms)
+✔ candidate binds exact snapshot, policy and capability versions (0.723351ms)
+✔ diff identifies resources, risks and changed task constraints (0.650883ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 204.560066
