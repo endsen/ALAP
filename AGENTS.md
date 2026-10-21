@@ -50,5 +50,5 @@ python3 -m venv .venv
 
 - 默认中文；明确区分已设计、已编码、已本地验证、已集成验证和已现场验收。
 - 变更关联 FR/NFR、契约、测试和文档；阶段进度及时写入 IMPLEMENTATION_STATUS.md。
-- 当前会话为 Linux `/home/endsen/ALAP`，已核对远程 D12a–D12c.2 基线 e59baf5；此目录 Git 元数据不可用，当前上传检出为 `/tmp/alap-upload-20261020`，origin 为 endsen/ALAP；后续推送前重新核对远程与检出路径。当前 D12 进行中，续接先读 D12 交接；实际环境及路径每次重新核对，勿沿用历史 macOS 路径。
+- 当前会话为 Linux `/home/endsen/ALAP`，已推送 D12c.3/D12d.1 实现基线 6702ce9；此目录 Git 元数据不可用，当前上传检出为 `/tmp/alap-upload-20261020`，origin 为 endsen/ALAP；后续推送前重新核对远程与检出路径。当前 D12 进行中，续接先读 D12 交接；实际环境及路径每次重新核对，勿沿用历史 macOS 路径。
 - 使用多 Agent、外部服务或真机不是本文件隐含授权；普通测试使用离线模型替身与模拟仪器。
