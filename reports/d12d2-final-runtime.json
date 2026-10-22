@@ -1,0 +1,15 @@
+{
+  "test_databases": 0,
+  "test_roles": 0,
+  "mode": "ACTIVE",
+  "active_drill_credentials": 0,
+  "active_drill_configs": 0,
+  "active_drill_agents": 0,
+  "live_tokens": 0,
+  "unfinished_agent_runs": 0,
+  "web_http": 200,
+  "anonymous_api_http": 401,
+  "services_running": 8,
+  "qa_ports_removed": true,
+  "offline_network_removed": true
+}

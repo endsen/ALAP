@@ -366,6 +366,30 @@ function Conversation({
       alive.current = false;
     };
   }, []);
+  // The resident worker advances runs independently of this browser. Poll only
+  // while a readable run is active; terminal results refresh proposal/trace data.
+  useEffect(() => {
+    if (!selected || run.loading || run.error || action.busy) return;
+    if (
+      run.value &&
+      ["COMPLETED", "FAILED", "CANCELLED"].includes(run.value.status)
+    ) {
+      proposals.refresh();
+      trace.refresh();
+      return;
+    }
+    const timer = setTimeout(run.refresh, 2000);
+    return () => clearTimeout(timer);
+  }, [
+    selected,
+    run.loading,
+    run.error,
+    run.value,
+    run.refresh,
+    action.busy,
+    proposals.refresh,
+    trace.refresh,
+  ]);
   async function advance() {
     if (!selected) return;
     await action.act(async () => {

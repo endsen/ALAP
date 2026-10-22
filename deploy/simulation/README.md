@@ -96,3 +96,94 @@ AES-256-GCM 分卷流式加密，HMAC 认证清单最后写入作为完成标记
 ```
 
 Node/Playwright 浏览器安装、验收范围及后续 Agent/故障/24 小时长测顺序见 `docs/D12D_ACCEPTANCE.md`。成功报告为 `reports/d12d1-compose-browser.txt` 和 `reports/d12d1-compose-evidence.json`；失败退出非零，不自动重试设备任务。此入口只用于本地模拟开发部署，不是生产平台上创建审批和测量任务的运维入口。
+
+### 常驻 Agent 的离线模型验收（D12d.2）
+
+正常八服务运行且 Chromium 已安装时：
+
+```bash
+.venv/bin/python deploy/simulation/check_agent.py
+```
+
+该入口在专用 internal 网络中启动本地 TLS/SSE 替身与限定实验的 worker，通过真实模型适配器验证 OpenAI/DeepSeek 请求格式和提案到人工审批执行的浏览器链。不会调用官方模型；不要提供真实 API key。私有测试 CA、令牌及临时 Compose 文件仅存 `.local-deploy/`，finally 回收容器和访问权限，保留业务记录。详见 `docs/D12D_ACCEPTANCE.md`。
+
+全套 Web 回归可在 `validation.yaml` 的隔离 QA 端口启用后运行：
+
+```bash
+PLAYWRIGHT_BROWSERS_PATH="$PWD/.local-deploy/browsers" \
+  .venv/bin/python deploy/simulation/check_backend.py --web --report reports/d12d2-web-validation.txt
+```
+
+该命令使用随机临时测试数据库，结束后删除；不使用部署业务库。完成后恢复正常 Compose 配置，关闭 QA 端口。
+
+### 消息服务中断演练（D12d.3）
+
+确认八服务运行、无活动 Run/outbox 积压后执行：
+
+```bash
+.venv/bin/python deploy/simulation/check_messaging_fault.py
+```
+
+这会短暂停止本地 NATS，在唯一测试实验保存未审批计划，核对数据库待发布事件与 API 快照，再恢复 NATS 并重启 outbox 核对无重复消息；不会创建执行 Run。finally 恢复服务、撤销令牌，业务审计保留。强制结束宿主进程不保证 finally，续接必须检查 NATS/outbox 状态。报告及剩余边界见 `docs/D12D_FAULT_MATRIX.md`。
+
+独立 Engine/Gateway 的 TCP 故障专项需要开启 `validation.yaml` QA 端口，可运行：
+
+```bash
+.venv/bin/python deploy/simulation/check_backend.py \
+  --pytest tests/integration/test_wire_faults.py --report reports/d12d3-wire-faults.txt
+```
+
+专项用随机隔离测试库、独立子进程及 loopback HTTP proxy，不对正常部署 Gateway 注入故障。完整验收后仍须运行统一门禁并恢复正常 Compose 配置。
+
+### 模型故障与运行期 Skill 撤销（D12d.3）
+
+八服务运行时执行：
+
+```bash
+.venv/bin/python deploy/simulation/check_model_faults.py
+```
+
+该入口持有维护锁，使用本地隔离 TLS 供应商和真实常驻 Agent，分别对 OpenAI/DeepSeek 格式注入越权工具、截断流、429、缺失 usage、禁用凭据及响应期间撤销 Skill，共 12 项。无需 Chromium，不调用官方 API，不需要真实 key；官方 HTTPS 白名单不变，测试 CA 只进入隔离 worker。该入口不请求审批、不创建执行 Run。
+
+成功证据保存至 `reports/d12d3-model-faults.json`。finally 停服务、经应用取消未终结的测试 AgentRun、禁用专属测试配置和 Skill、撤销令牌，保留审计；强制终止宿主进程仍须人工检查清理。具体边界和剩余故障项见 `docs/D12D_FAULT_MATRIX.md`，不等同完整 D12d.3/长测通过。
+
+### 批准后计划变更（D12d.3）
+
+八服务运行且无活动执行 Run/outbox 积压时：
+
+```bash
+.venv/bin/python deploy/simulation/check_plan_fault.py
+```
+
+该入口经真实 API 批准模拟计划，再修改温度目标与读回条件，验证旧审批失效、旧快照和旧审批启动请求分别被拒绝。常驻 Engine 保持运行；不创建执行 Run，检查设备命令增量为零。维护锁防止与其他演练并发，finally 撤销短期令牌，保留审计。报告为 `reports/d12d3-plan-evidence.json`。这是本地模拟验收，不代表运行中计划变更或现场审批验收。
+
+### 独立进程数据存储故障（D12d.3）
+
+开启隔离 QA 端口后运行：
+
+```bash
+.venv/bin/python deploy/simulation/check_backend.py \
+  --pytest tests/integration/test_data_process_faults.py --report reports/d12d3-data-process.txt
+```
+
+专项使用随机数据库和临时文件，在独立 Engine/Gateway 采集期间制造真实存储路径错误，验证恢复提交及重启无重复采集，并检查已提交文件缺失/损坏时的读取拒绝。不会修改部署业务文件；读取断言是服务集成层，非部署浏览器。完整门禁后恢复正常 Compose 配置、关闭 QA 端口；边界见 `docs/D12D_FAULT_MATRIX.md`。
+
+### 部署数据接口完整性（D12d.3）
+
+八服务运行、无活动执行 Run 时：
+
+```bash
+.venv/bin/python deploy/simulation/check_data_fault.py
+```
+
+入口会经真实 API 批准并执行一个新模拟实验（三条命令），仅对其新生成文件注入缺失/损坏，核对清单、下载和曲线接口拒绝，再恢复精确字节并复验。持有维护锁，finally 恢复文件和撤销测试令牌，业务审计保留；不需要 LLM 或真实设备。报告 `reports/d12d3-data-api-evidence.json`。强制终止可能留下对应 HDF5 的 `.fault-backup`，须先按本次 dataset 的 checksum 校验恢复，不能重跑采集代替恢复。范围与未覆盖项见故障矩阵。
+
+### 部署数据浏览器错误及恢复（D12d.3）
+
+安装已有锁定 Chromium，八服务运行且无活动执行 Run 时运行：
+
+```bash
+.venv/bin/python deploy/simulation/check_data_browser.py
+```
+
+它复用数据 API 演练生成新模拟数据，在缺失/损坏文件期间运行真实 Chromium，验证错误提示、下载禁用、无曲线；通过私有文件屏障协调文件恢复，再在同页重试并下载核对 SHA-256。无需真实 LLM/设备。报告使用独立 `d12d3-data-browser-*` 文件，不覆盖 API 历史报告。强制中断后的文件恢复要求与数据 API 演练相同，正常 finally 回收文件备份、浏览器状态和令牌。

@@ -68,6 +68,7 @@ def main():
                     "test",
                     "--config",
                     "playwright.deployment.config.ts",
+                    "compose.spec.ts",
                     "--output",
                     str(Path(temp) / "results"),
                 ],

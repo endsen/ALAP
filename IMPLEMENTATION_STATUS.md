@@ -1,12 +1,12 @@
 # ALAP 实施状态
 
-更新：2026-10-21。本文件区分“已设计”“已实现”“本地验证”“集成/现场验证”。整体平台尚未完成。
+更新：2026-10-22。本文件区分“已设计”“已实现”“本地验证”“集成/现场验证”。整体平台尚未完成。
 
 ## 分期交接入口
 
 - 分期计划：`docs/20_DELIVERY_PLAN.md` 的 D01–D13；P0–P7 为技术层次，D 编号为分批交付单位。
-- 当前：**D12 · 集成、部署与验收，进行中**。D01–D11 基础交付完成；本地实现已推送 GitHub `6702ce9`。D12a Gateway 进程边界已完成本地验收；D12b.1 单实例所有权/启动恢复已完成本地验收；D12b.2 独立常驻执行进程已完成本地验收；D12b.3 Agent/outbox worker 与 D12c.1 数据库初始化/权限分离已完成本地验收。D12 整期未完成。
-- 当前交接：**D12d.1 常驻部署浏览器与确定性执行已完成本地验收**。下一工作项 D12d.2 常驻 Agent/API 模型链路，之后为 D12d.3 故障矩阵和 D12d.4 实际 24 小时以上模拟。D13 尚未开始，不自动跨期。
+- 当前：**D12 · 集成、部署与验收，进行中**。D01–D11 基础交付完成；已推送实现基线为 GitHub `6702ce9`，本轮 D12d.2/3 尚未推送。D12a Gateway 进程边界已完成本地验收；D12b.1 单实例所有权/启动恢复已完成本地验收；D12b.2 独立常驻执行进程已完成本地验收；D12b.3 Agent/outbox worker 与 D12c.1 数据库初始化/权限分离已完成本地验收。D12 整期未完成。
+- 当前交接：**D12d.3 故障矩阵进行中**；D12d.2 已完成本地验收。已完成 TCP/NATS、模型 HTTPS 故障、批准后计划变更、独立进程数据故障及部署数据 API/浏览器验证；D12d.4 实际 24 小时以上模拟未开始。D13 尚未开始，不自动跨期。
 - 当前环境：Linux `/home/endsen/ALAP`，Python 3.14.7；工作目录 Git 元数据不可用，最新实现基线为 6702ce92073b20a2382435a7d5fd228469eff110，上传检出为 `/tmp/alap-upload-20261020`，提交前须重新核对远程。依赖按锁文件同步，无新增依赖。D11 下方 macOS 验收为历史记录；本轮 Linux 同步检查见 `reports/local-sync-20261019.md`。
 - D05–D10 实现提交 0015fa6 与交接提交 93ab50f 的远程 CI 均已通过，已于 2026-10-19 核对：https://github.com/endsen/ALAP/actions/runs/39201132173 。此结果不替代 D11 的远程验收。
 
@@ -16,6 +16,38 @@
 - 推送前核对远程仍为 e59baf5，使用普通 fast-forward push，未覆盖远程变更；已扫描提交内容与本机私有凭据，运行时、备份、密钥、令牌和依赖目录未上传。
 - 本地验收结果沿用下方对应报告；本条记录保存时尚未确认本次远程 CI 通过，不以本地测试替代远程结果。下方“未推送”描述是各阶段验收时的历史状态，由本条更新。
 - 下一工作项仍为 D12d.2 常驻 Agent/API 模型链路，D12d/D12 整体未完成。本条作为实现提交之后的文档交接另行提交。
+
+## D12d.3 · 故障矩阵（2026-10-22，进行中）
+
+- 已建立 `docs/D12D_FAULT_MATRIX.md`，逐项映射 EVAL-01–24 的 U/I/P/C/F 证据层级、已有测试、未覆盖场景与恢复边界；引用路径/函数及 24 项完整性已核对。没有把 fixture 提升为部署/现场证据。
+- 新增独立 Engine/Gateway + loopback HTTP proxy 的真实 TCP 故障专项：转发前切断时动作 0、UNKNOWN 冻结，重启保持 RECOVERING；执行后丢弃响应时动作 1、UNKNOWN 冻结，同 payload 重送无重复动作，重启对账后 PAUSED，无自动 resume。**2 项通过（18.70 秒）**，见 `reports/d12d3-wire-faults.txt`。这是 P 级证据，不是 Compose mTLS/真机 ACK 故障。
+- 实际 Compose NATS 停服/恢复演练通过：停服后两条 outbox 事件保持待发布，API snapshot 游标 2、无审批/Run；恢复后待发布 0，JetStream 564→566；重启 outbox 后无重复消息，设备命令保持 30，增量 0。测试令牌已撤销，业务记录保留，见 `reports/d12d3-messaging-evidence.json`。
+- 统一后端门禁 **574 项通过（437.62 秒）**，真实 PostgreSQL/NATS 集成未跳过，Ruff/格式、契约/OpenAPI、合订本及依赖检查通过，报告 `reports/d12d3-backend-validation.txt`。本轮无产品业务代码、Web、依赖/迁移/公共 API 变更，不重复 Web 浏览器门禁，沿用 D12d.2 的 18 项 fixture 与部署结果。
+- 收尾八服务恢复运行、控制模式 ACTIVE；仅 Web 发布 127.0.0.1:3000，首页 200、匿名 API 401。测试数据库/角色、有效 token、活动 Run、outbox 待发布均为 0，部署命令总数保持 30，QA 端口已移除；见 `reports/d12d3-final-runtime.json`。未注册系统服务，完整首批报告见 `reports/d12d3-acceptance.md`。
+- 实现审查确认 EVAL-09 边缘失联监护尚无独立实现；EVAL-14 尚缺同 CA 错误身份与资源映射验证，现有签名 gateway_id 及 mTLS 链验证不能冒充该项完成。其余运行期负路径缺口见矩阵。**D12d.3 尚未完成，不进入 D12d.4 或 D13。**
+- 第二批实际 HTTPS 模型故障已通过：OpenAI/DeepSeek 各六种模式，共 **12 项**，包括越权工具、截断 SSE、429、缺失 usage、禁用凭据、第二次模型响应期间禁用 Skill。除缺失 usage 外均 FAILED；未知 usage 保留 null/API 未知次数 2，只产生未审批提案；撤权轨迹 SKILL_DISABLED。12 个实验的计划、审批、执行 Run、Task、Command、Dataset 写入均为 0。证据 `reports/d12d3-model-faults.json`。目标指令/模型越权响应不等同检索文献注入，官方线上 API 未调用。
+- 共享入口正常浏览器回归 **2 项通过（54.2 秒）**，人工审批后三任务执行及 HDF5 校验成功；见 `reports/d12d3-model-normal-agent.txt` 与 `reports/d12d3-model-normal-evidence.json`。新增故障入口及清理逻辑；首次测试给无 body 的禁用接口传 `{}` 导致 422，修正测试后全部重跑通过，未放宽业务契约。
+- 第二批统一后端门禁 **574 项通过（429.64 秒）**，真实 PostgreSQL/NATS 集成未跳过，其余格式/契约/生成/依赖检查通过；见 `reports/d12d3-model-backend-validation.txt`。最终八服务 ACTIVE、首页 200/匿名 API 401，仅 Web 发布端口，测试库/角色、有效 token、启用测试配置、活动 AgentRun/Run、待发布事件均为 0；命令总数 36（正常回归新增 6），QA 端口/隔离模型网络已移除。收尾报告 `reports/d12d3-model-final-runtime.json`；完整过程与启动瞬态记录见 `reports/d12d3-model-acceptance.md`。
+- 第三批“批准后、启动前改计划”的部署 API 验证已通过：温度目标/读回条件 295→296 K，新 hash 与旧版不同，旧审批 SUPERSEDED；旧快照启动为 409 STATE_CONFLICT，最新快照复用旧审批为 409 PLAN_STALE。常驻 Engine 保持运行，Run/Task/Command/Dataset 新增均为 0，全局命令保持 36；证据 `reports/d12d3-plan-evidence.json`，入口 `deploy/simulation/check_plan_fault.py`。已有 Run 冻结与策略变化仍只有 I 级证据，不能提升为部署验收。
+- 第三批统一门禁 **574 项通过（435.08 秒）**，真实 PostgreSQL/NATS 集成与格式/契约/生成/依赖检查通过，报告 `reports/d12d3-plan-backend-validation.txt`。最终八服务 ACTIVE、首页 200/匿名 API 401；测试库/角色、有效 token、活动运行及待发布事件为 0，命令仍为 36，QA 端口已关闭；见 `reports/d12d3-plan-final-runtime.json`、`reports/d12d3-plan-acceptance.md`。
+- 第四批独立进程数据故障专项 **2 项通过（29.28 秒）**，真实存储路径错误导致 STAGING/VERIFYING、无 manifest/provenance，读取拒绝；恢复后常驻 Engine 提交唯一 HDF5/来源/事件，每条命令模拟动作一次。已提交文件缺失/损坏时读取拒绝，恢复原始字节并重启 Engine 后无重复采集。见 `tests/integration/test_data_process_faults.py`、`reports/d12d3-data-process.txt`。P 级执行/存储与 I 级读取证据分开，不称为 Compose 页面禁用验收；原始字节恢复仅用于测试清理。
+- 第四批完整后端门禁 **576 项通过（448.39 秒）**，真实 PostgreSQL/NATS 集成未跳过，格式/契约/生成/依赖检查通过，见 `reports/d12d3-data-backend-validation.txt`。最终八服务 ACTIVE，首页 200/匿名 API 401；测试库/角色、有效 token、活动运行及待发布事件为 0，设备命令仍为 36，QA 端口关闭；见 `reports/d12d3-data-final-runtime.json` 与 `reports/d12d3-data-acceptance.md`。
+- 第五批部署数据 API 验证通过：新实验经正式 API 审批、三任务采集后，对其唯一文件注入缺失/损坏；清单、下载、曲线三个接口均返回 422 ARTIFACT_INVALID，共六次拒绝断言。恢复后的 SHA-256/清单/曲线与正常结果一致，数据库 manifest 不改；故障命令增量 0，全局命令 36→39 仅来自正常采集。见 `reports/d12d3-data-api-evidence.json`、`deploy/simulation/check_data_fault.py`。读取时拒绝已取得 C 级证据，后台自动检测、CORRUPT 转换和浏览器异常状态仍待验证。
+- 第五批完整门禁 **576 项通过（445.92 秒）**，真实 PostgreSQL/NATS 集成及格式/契约/生成/依赖检查通过，见 `reports/d12d3-data-api-backend-validation.txt`。最终八服务 ACTIVE、首页 200/匿名 API 401；测试库/角色、有效 token、活动运行及待发布事件为 0，命令总数 39，文件校验和恢复且临时备份已删除，QA 端口关闭。见 `reports/d12d3-data-api-final-runtime.json`、`reports/d12d3-data-api-acceptance.md`。
+- 第六批实际 Chromium 数据故障/恢复 **2 项通过（4.0 秒 / 3.8 秒）**：缺失/损坏文件时首次加载页面，明确完整性错误、下载禁用、无曲线；恢复文件后在同页重试，曲线/下载恢复且 SHA-256 一致。修正 ARTIFACT_INVALID 误导性的通用输入校验提示；已构建更新 Web 镜像。入口 `check_data_browser.py`，证据 `reports/d12d3-data-browser-evidence.json` 及两份浏览器报告。首轮测试定位误匹配 Next.js 隐藏 alert，修正定位后通过；两次正常采集合计六条命令（39→45），故障增量 0。未覆盖已打开页面后台损坏后的即时缓存失效。
+- 第六批完整后端 **576 项通过（465.37 秒）**，Web 类型/格式/契约类型/生产构建、**10 项单元和 18 项 fixture 浏览器测试（1.1 分钟）**通过；见 `reports/d12d3-data-browser-backend-validation.txt`、`reports/d12d3-data-browser-web-validation.txt`。收尾八服务 ACTIVE、首页 200/匿名 API 401、测试库/角色/token/活动运行/待发布事件均为 0，命令 45；全部 15 份 COMMITTED 文件校验通过、无临时备份、QA 端口关闭。QA 切换曾出现 PostgreSQL 端口映射为空，保留卷重建后恢复；完整过程见 `reports/d12d3-data-browser-acceptance.md` 与 final-runtime 报告。
+- 续接优先补过期/不稳 telemetry 与活动上传失败的 P/C 证据；继续补检索文献注入、模型异常组合及运行期权限矩阵，并处理上述两项实现缺口。D12d.2/3 新增本地内容均未推送 GitHub。
+
+## D12d.2 · 常驻 Agent/API 模型链路（2026-10-21，本地验收完成）
+
+- 已实现隔离 TLS/SSE 本地供应商替身和独立 Agent worker 验收入口；使用真实 ChatModelClient/HTTPSChatTransport，保留官方 HTTPS 白名单与正常 worker 的实验范围。测试 worker 无 egress，只有两个 internal 网络，使用固定无效测试凭据，无付费模型/真机调用。
+- 两种供应商格式均通过实际部署浏览器链：页面提交目标、后台 worker 两轮模型/工具往返生成提案、人工审批、常驻 Engine/Gateway 三任务执行、HDF5 下载校验。最终 **2 项通过（55.3 秒）**；无 `/advance` 调用，越出 Agent 实验范围请求返回 403。两个实验各 1 提案/1 成功 Run/3 成功 Command/1 COMMITTED Dataset，outbox 待发布 0；审批/执行审计在提案完成前为 0。见 `reports/d12d2-compose-evidence.json`。
+- Web 新增运行中 Agent 状态轮询、终态读取提案/轨迹，解决常驻 worker 已完成而当前页面不更新的问题；手动推进期间暂停轮询，错误停轮询、卸载清定时器。原确定性部署/观察者/SSE 回归 **3 项通过（24.6 秒）**，见 `reports/d12d2-compose-browser-regression.txt`。
+- 协议替身专项 **7 项通过**；统一后端门禁 **572 项通过（430.63 秒）**，真实 PostgreSQL/NATS 集成不跳过，Ruff/格式、生成文档、契约/OpenAPI、依赖检查通过。完整 Web 门禁通过类型/格式/契约类型/生产构建、**10 项单元测试、18 项浏览器测试（1.2 分钟）**。报告 `reports/d12d2-backend-validation.txt`、`reports/d12d2-web-validation.txt`；后者使用隔离数据库和进程内模拟 fixture，与前述真实 Compose 验收分开记录。
+- 已重建 Web 镜像；无新增依赖、迁移、公共 API 或后端业务代码变更。最终恢复八服务运行、控制模式 ACTIVE，仅 Web 发布 127.0.0.1:3000，首页 200、匿名 API 401；QA 端口已关闭，测试数据库/角色、有效测试凭据/配置/Agent、有效 token、未完成测试 AgentRun 均为 0，测试网络已删除。见 `reports/d12d2-final-runtime.json`。未注册系统服务。
+- 下一动作：按 `docs/D12D_ACCEPTANCE.md` 开始 D12d.3，先逐项建立 EVAL-02–24 证据层级与缺口，再补实际跨进程故障注入；不将当前短测计作 D12d.4 的 24 小时负载。续接先重新检查本机 Docker/Compose 运行状态。
+- 本地新增实现尚未推送。上个实现 `6702ce9` 与交接 `6f7f5d0` 的 GitHub CI 已确认成功：[实现 CI](https://github.com/endsen/ALAP/actions/runs/39552320479) / [交接 CI](https://github.com/endsen/ALAP/actions/runs/39552387294)；不能替代本轮新代码 CI。
+- 后续仍为 D12d.3 故障矩阵、D12d.4 实际 24 小时以上模拟；D12d/D12 整体与 D13 现场未完成。具体范围、调试记录及模型替身局限见 `reports/d12d2-acceptance.md`、`docs/D12D_ACCEPTANCE.md`。
 
 ## D12d.1 · 常驻部署浏览器验收（2026-10-21，本地验收完成）
 

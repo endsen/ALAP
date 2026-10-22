@@ -15,6 +15,8 @@ export const explain = (e: unknown): string => {
   if (e.status === 403) return "你没有此资源或操作的权限。";
   if (e.code === "EXECUTION_UNKNOWN")
     return "请求结果尚不明确。请刷新核对，勿重复提交。";
+  if (e.code === "ARTIFACT_INVALID")
+    return "数据文件缺失、损坏或校验不一致，暂时无法查看或下载。请联系管理员核查数据完整性，处理后重新获取状态。";
   if (e.status === 409) return "版本或状态已变化。请刷新，查看差异后重新确认。";
   if (e.status === 429) return "请求较频繁，请稍后再试。";
   if (e.status === 422)

@@ -1,0 +1,32 @@
+{
+  "started_at": "2026-10-21T11:30:54.651413+00:00",
+  "completed_at": "2026-10-21T11:31:37.851191+00:00",
+  "experiment": "EXP-BROWSER-e02f61575134",
+  "outage": {
+    "total": 2,
+    "pending": 2,
+    "commands": 30,
+    "active_runs": 0
+  },
+  "recovered": {
+    "total": 2,
+    "pending": 0,
+    "commands": 30,
+    "active_runs": 0
+  },
+  "jetstream_messages_before": 564,
+  "jetstream_messages_after": 566,
+  "duplicate_messages_after_worker_restart": 0,
+  "snapshot_cursor_during_outage": 2,
+  "device_command_delta": 0,
+  "images": {
+    "postgres": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+    "nats": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+    "web": "sha256:4a27796a4b3abee0dd4502e68e23d10121c583fb047572fd855fed7821e7579d",
+    "api": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+    "engine": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+    "gateway": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+    "agent": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+    "outbox": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c"
+  }
+}

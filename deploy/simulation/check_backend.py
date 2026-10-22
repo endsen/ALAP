@@ -18,6 +18,11 @@ ROOT = Path(__file__).resolve().parents[2]
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--report", default="reports/d12c2-compose-backend-validation.txt")
+    gate = parser.add_mutually_exclusive_group()
+    gate.add_argument("--web", action="store_true", help="Run the Web gate on a disposable DB")
+    gate.add_argument(
+        "--pytest", nargs="+", metavar="NODE_ID", help="Run selected integration tests"
+    )
     args = parser.parse_args()
     directory = Path(os.environ.get("SIM_ROOT", ROOT / ".local-deploy/simulation"))
     password = (directory / "postgres.password").read_text().strip()
@@ -32,15 +37,18 @@ def main():
         "ALAP_TEST_NATS_URL": broker_url,
         "SSL_CERT_FILE": ca,
     }
+    command = [sys.executable, "scripts/check_web.py" if args.web else "scripts/check.py"]
+    if args.pytest:
+        command = [sys.executable, "-m", "pytest", "-q", *args.pytest]
     report = ROOT / args.report
-    raw = ROOT / ".local-deploy/backend-gate.raw"
+    raw = ROOT / ".local-deploy" / (database + ".raw")
     with psycopg.connect(base + "postgres?" + query, autocommit=True) as admin:
         admin.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database)))
         try:
             with raw.open("w") as output:
                 raw.chmod(0o600)
                 result = subprocess.run(
-                    [sys.executable, "scripts/check.py"],
+                    command,
                     cwd=ROOT,
                     env=env,
                     stdout=output,
@@ -53,7 +61,7 @@ def main():
         text = text.replace(broker.password, "[REDACTED]")
     report.write_text(text)
     raw.unlink()
-    print(f"Backend gate exit {result.returncode}; report: {report.relative_to(ROOT)}")
+    print(f"Gate exit {result.returncode}; report: {report.relative_to(ROOT)}")
     return result.returncode
 
 

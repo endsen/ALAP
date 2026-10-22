@@ -1,0 +1,40 @@
+npm notice run alap-web@0.1.0 npx
+npm notice run 'playwright' test --config playwright.deployment.config.ts data-fault.spec.ts --output /home/endsen/ALAP/.local-deploy/data-browser-w7fsim_l/results
+
+Running 1 test using 1 worker
+
+(node:2780633) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/deployment/data-fault.spec.ts:7:5 › deployed missing artifact disables data and recovers on retry (1.2s)
+
+
+  1) tests/deployment/data-fault.spec.ts:7:5 › deployed missing artifact disables data and recovers on retry 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('alert')
+    Expected substring: "数据文件缺失、损坏或校验不一致"
+    Error: strict mode violation: getByRole('alert') resolved to 2 elements:
+        1) <div role="alert" class="problem">…</div> aka getByText('数据文件缺失、损坏或校验不一致，暂时无法查看或下载。请联系管理员核查数据完整性，处理后重新获取状态。请求编号 47ac578f-cf69-4be4-97ec-')
+        2) <div role="alert" aria-live="assertive" id="__next-route-announcer__"></div> aka locator('[id="__next-route-announcer__"]')
+
+    Call log:
+      - Expect "toContainText" getByRole('alert') with timeout 20000ms
+      - waiting for getByRole('alert')
+        3 × locator resolved to <div role="alert" aria-live="assertive" id="__next-route-announcer__"></div>
+          - unexpected value ""
+
+
+      11 |   await page.getByLabel("平台访问令牌").fill(state.owner);
+      12 |   await page.getByRole("button", { name: "进入工作区" }).click();
+    > 13 |   await expect(page.getByRole("alert")).toContainText(
+         |                                         ^
+      14 |     "数据文件缺失、损坏或校验不一致",
+      15 |   );
+      16 |   const download = page.getByRole("button", { name: "下载原始 HDF5" });
+        at /home/endsen/ALAP/apps/web/tests/deployment/data-fault.spec.ts:13:41
+
+    Error Context: ../../.local-deploy/data-browser-w7fsim_l/results/data-fault-deployed-missin-59207--data-and-recovers-on-retry/error-context.md
+
+  1 failed
+    tests/deployment/data-fault.spec.ts:7:5 › deployed missing artifact disables data and recovers on retry 

@@ -1,0 +1,29 @@
+{
+  "completed_at": "2026-10-21T13:40:38.885295+00:00",
+  "experiment": "EXP-BROWSER-404e2f119b04",
+  "old_plan_hash": "e0828595c3858ba2fa0b3361c0b4b644b9fa66c73a97a9bfdff20d29a0839923",
+  "new_plan_hash": "f26a8d14a641896ed499b9181cec3399095c4dfd73dcc3662db0b8ebc94a1074",
+  "old_approval_state": "SUPERSEDED",
+  "stale_snapshot_error": "STATE_CONFLICT",
+  "current_snapshot_old_approval_error": "PLAN_STALE",
+  "evidence": {
+    "runs": 0,
+    "tasks": 0,
+    "command_ledger": 0,
+    "datasets": 0,
+    "global_commands": 36,
+    "active_runs": 0,
+    "pending": 0
+  },
+  "device_command_delta": 0,
+  "images": {
+    "postgres": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+    "nats": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+    "web": "sha256:4a27796a4b3abee0dd4502e68e23d10121c583fb047572fd855fed7821e7579d",
+    "api": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+    "engine": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+    "gateway": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+    "agent": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+    "outbox": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c"
+  }
+}

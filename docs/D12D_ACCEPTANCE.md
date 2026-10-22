@@ -38,3 +38,19 @@ cd ../..
 - D12d.2 应使用独立本地 HTTP 供应商替身，通过真实模型适配器处理请求/响应/用量；不得直接在 Agent 中替换内存对象后称为 API 部署联调。当前常驻 Agent 的实验白名单需显式配置相应测试实验，不能扩大到所有实验。替身和测试配置不得混入正常供应商凭据。
 - D12d.3 先整理第 12 章案例的证据层级，尤其区分浏览器 SSE 中断、NATS 中断、Gateway 网络断连和设备 ACK 丢失；这几类故障不能互相替代。
 - D12d.4 需要独立可续查的负载驱动、持久日志、停止机制和运行时生命周期管理。当前前台 rootless daemon 的存在不能证明重启续跑或 24 小时负载能力；须先验证驱动器的小规模试跑，再启动真实长测，并在状态文件保存实际进程、起止与进度位置。
+
+## D12d.2 常驻 Agent 与离线供应商链路
+
+入口：启动正常八服务后运行 `.venv/bin/python deploy/simulation/check_agent.py`。关联 FR-003/004/005/006/014、FR-011 和模型 API 接入要求，以及 NFR-004/005/008/009/012 的审计、状态、完整性、轨迹与保密性局部门禁。入口独占维护锁，创建两个唯一实验、版本化模型/Agent 与短期管理员令牌；不预置提案、计划、审批或执行 Run。模型能力标为 `declared`，不冒充官方供应商实测。
+
+测试增加两个临时容器：无数据库权限的 TLS/SSE 供应商替身，以及仅允许本次实验的真实 Agent worker。专属 internal 网络将官方主机名解析到替身；一天有效的私有证书只挂载并信任于测试 worker，生产 `official-https-only` 校验不改，通常 Agent 的实验白名单不变。测试 worker 只有 database 与 offline-model 两个 internal 网络，无外部模型出口；替身无发布端口、无真实凭据，凭据仅固定的无效测试字符串。临时 CA/key 不进入正常容器或仓库。
+
+Chromium 提交目标，禁止调用 `/advance`，等待后台 worker 完成。真实 `ChatModelClient/HTTPSChatTransport` 发送请求，替身验证 OpenAI `max_completion_tokens` 与 DeepSeek `max_tokens`、路径、工具范围及 snapshot，先返回分片 `read_snapshot` 调用，再从完整工具往返生成分片 `propose_plan` 响应。它是确定性的协议替身，使用示例任务生成模型响应，不代表模型推理质量；数据库提案确由 Agent 的工具校验与提交路径产生。
+
+页面自动读取后台 Agent 状态，终态刷新提案及轨迹；网络/权限错误停止轮询，卸载取消定时器，人工推进期间不轮询。验收检查两次模型调用、两次工具调用、模型版本/实验范围、保守预留预算与独立的供应商用量；越出 Agent 实验范围的合法请求返回 403。提案完成前的审批/执行审计为零，再由浏览器人工身份提交计划、批准和启动 Run，最终核对三个成功命令、一份 COMMITTED HDF5、下载 SHA-256 和 outbox 清空。
+
+正常结束或异常 finally 停止并移除两个临时容器，禁用本次 Agent/模型连接/凭据、撤销令牌，删除空测试网络与私有临时目录；审计和业务数据保留。强制终止宿主进程时 finally 无保证，续接须检查残留 `agent-drill`/`offline-provider`，停止后清理，不能绕过八服务前置检查。报告为 `reports/d12d2-compose-agent.txt` 和 `reports/d12d2-compose-evidence.json`。此验证不覆盖官方在线供应商、实际计费、并行模型吞吐、完整故障矩阵或 24 小时长测。
+
+## D12d.3 故障矩阵续接
+
+逐项状态与证据层级见 [D12D_FAULT_MATRIX.md](D12D_FAULT_MATRIX.md)。本轮先补真实 TCP 响应切断和实际 Compose NATS 停服/恢复，后者入口为 `deploy/simulation/check_messaging_fault.py`。两种故障不可互相替代；完整故障矩阵仍进行中，不能据此开始 24 小时长测或现场操作。

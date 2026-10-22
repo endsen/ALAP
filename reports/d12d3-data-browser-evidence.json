@@ -1,0 +1,43 @@
+{
+  "completed_at": "2026-10-22T05:18:37.327877+00:00",
+  "experiment": "EXP-BROWSER-8c687933f95c",
+  "run_id": "272afa59-b87c-4e90-b447-724db8ebfdbf",
+  "dataset_id": "69b49e7a-6a4d-4cee-a494-c277c015019e",
+  "sha256": "d1bb15a26d29f02977006208278cdbeaa66323baac192d0c85d8785242394d36",
+  "cases": [
+    {
+      "fault": "missing",
+      "errors": {
+        "/manifest": "ARTIFACT_INVALID",
+        "/download": "ARTIFACT_INVALID",
+        "/series": "ARTIFACT_INVALID"
+      }
+    },
+    {
+      "fault": "corrupt",
+      "errors": {
+        "/manifest": "ARTIFACT_INVALID",
+        "/download": "ARTIFACT_INVALID",
+        "/series": "ARTIFACT_INVALID"
+      }
+    }
+  ],
+  "normal_acquisition_commands": 3,
+  "fault_command_delta": 0,
+  "restored_manifest_and_series": true,
+  "counts": {
+    "commands": 45,
+    "active": 0
+  },
+  "images": {
+    "web": "sha256:1db742b1b2d4682457caa52c11ec78804e6d01d762781c67ed98e658cadb4332",
+    "postgres": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+    "nats": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+    "api": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+    "engine": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+    "gateway": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+    "agent": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c",
+    "outbox": "sha256:458c3f52ec013a084c5a26e25f8363983d742b6d164bd785e094827c4975159c"
+  },
+  "browser_recovery_verified": true
+}

@@ -1,0 +1,14 @@
+{
+  "test_databases": 0,
+  "test_roles": 0,
+  "mode": "ACTIVE",
+  "live_tokens": 0,
+  "pending_outbox": 0,
+  "active_runs": 0,
+  "commands": 30,
+  "web_http": 200,
+  "anonymous_api_http": 401,
+  "checked_at": "2026-10-21T11:42:53.464043+00:00",
+  "services_running": 8,
+  "qa_ports_removed": true
+}

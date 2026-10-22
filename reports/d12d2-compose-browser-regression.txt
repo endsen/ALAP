@@ -1,0 +1,12 @@
+npm notice run alap-web@0.1.0 npx
+npm notice run 'playwright' test --config playwright.deployment.config.ts compose.spec.ts --output /home/endsen/ALAP/.local-deploy/browser-rw7npks9/results
+
+Running 3 tests using 1 worker
+
+(node:1245186) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/deployment/compose.spec.ts:34:5 › deployed approval → Engine/Gateway → committed HDF5 (19.9s)
+  ✓  2 tests/deployment/compose.spec.ts:69:5 › deployed observer has no approval/write UI and reload loses token (1.5s)
+  ✓  3 tests/deployment/compose.spec.ts:113:5 › deployed SSE disconnect disables writes; reconnect restores authority (2.3s)
+
+  3 passed (24.6s)
