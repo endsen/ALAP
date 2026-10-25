@@ -141,6 +141,10 @@ class AgentRuntime:
                     # Write only a terminal checkpoint/audit on the same ownership session.
                     # Do not return the revoked history, even after successful closure.
                     self.store.fail_revoked_source(actor, identity)
+                elif exc.code == "FORBIDDEN":
+                    # Only confirmed loss of the original submitter scope can close a run.
+                    # Wrong actors and ordinary tool permission denials cannot use this path.
+                    self.store.fail_revoked_access(actor, identity)
                 raise
 
     def _step(self, actor, identity, cancel=None):

@@ -120,6 +120,7 @@ def main(
     versions=False,
     tool_recovery=False,
     permissions=False,
+    access_revocation=False,
 ):
     runtime = Runtime(ROOT / ".local-deploy/simulation")
     services = runtime.containers()
@@ -137,7 +138,12 @@ def main(
             for v in ("openai", "deepseek")
         ],
     }
-    if permissions:
+    if access_revocation:
+        from access_revocation_faults import cases
+
+        state["cases"] = cases(suffix)
+        state["permission_actors"] = {"operator": "drill-acl-operator-" + suffix}
+    elif permissions:
         from permission_faults import cases
 
         state["cases"] = cases(suffix)
@@ -287,6 +293,10 @@ def main(
                 runtime.project + "_database",
                 runtime.project + "_offline-model",
             }
+            if access_revocation:
+                from access_revocation_faults import run_access_revocation
+
+                return run_access_revocation(runtime, state, directory, deployed)
             if permissions:
                 from permission_faults import run_permissions
 
@@ -402,9 +412,12 @@ for row in pending:
     try:
         runtime.cancel(row['actor_id'],row['id'])
     except DomainError as exc:
-        if exc.code!='SOURCE_REVOKED': raise
+        if exc.code not in {'SOURCE_REVOKED','FORBIDDEN'}: raise
         with store.exclusive(row['id']):
-            store.fail_revoked_source(row['actor_id'],row['id'])
+            if exc.code=='SOURCE_REVOKED':
+                store.fail_revoked_source(row['actor_id'],row['id'])
+            else:
+                store.fail_revoked_access(row['actor_id'],row['id'])
 """.replace("EXPS", repr([c["experiment"] for c in state["cases"]])),
             )
             # Disable even partial seed configurations. Preserve immutable audit/business history.

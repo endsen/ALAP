@@ -19,6 +19,10 @@
 
 ## D12d.3 · 故障矩阵（2026-10-22，进行中）
 
+- 第二十四批（2026-10-25，本地部署验收完成）：加密冷备份后部署后端 a7a87199（Web fd41b31a 保持），d12_002 无迁移、原有命令 45/数据 15 保持。非管理员 operator 的两供应商调用前成员撤权/真实 HTTPS 响应期间成员撤权或范围缩减共 **6 项部署案例通过**；FAILED/ACCESS_REVOKED、请求数 0/1/1，未提交工具/提案/执行写入 0，重授权并重启无重放。完整后端 **638 项通过（652.42 秒）**，真实 PostgreSQL/NATS 及格式/契约/生成/依赖检查通过。收尾八服务 ACTIVE、新镜像一致、测试库/角色/token/启用测试配置及身份/成员权限/活动运行/待确认取消/待发布事件均为 0，命令保持 45、15 份文件校验通过，QA 端口和隔离模型网络移除。见 `reports/d12d3-access-deploy-backend-validation.txt`、`reports/d12d3-access-deploy-final-runtime.json` 和 `reports/d12d3-access-deploy-acceptance.md`。
+
+- 第二十三批（2026-10-25，本地源码/集成验收完成）：修复提交人主体禁用/成员撤权/设备范围缩减后的 READY/RUNNING 滞留；持原执行所有权、当前权限复核后受限 FAILED/ACCESS_REVOKED 收尾，保留历史/预算，拒绝访问且不发布未提交结果。首轮 10 失败/2 通过复现缺口；修复后关联专项 **68 项通过（95.89 秒）**。追加提案提交竞态、审计回滚、连接丢失及撤权后恢复测试后，完整后端 **638 项通过（609.75 秒）**，含新增 19 项；真实 PostgreSQL/NATS、格式/契约/生成/依赖检查通过。收尾八服务 ACTIVE、测试库/角色/token/活动运行/待确认取消/待发布事件及测试身份权限均为 0，命令保持 45、15 份文件校验通过，QA 端口和隔离模型网络移除；见 `reports/d12d3-access-revocation-backend-validation.txt`、`reports/d12d3-access-revocation-final-runtime.json`。见 `reports/d12d3-access-revocation-acceptance.md`。尚未更新部署镜像。
+
 - 第二十二批（2026-10-25，本地部署验收完成）：两供应商各 49 项，共 **98 项部署 HTTP 权限断言通过**。同实验非提交人的运行详情/轨迹/提案及取消/推进拒绝；列表和用量只含自身运行；实验外/匿名拒绝；通过 API 撤销成员权限后列表/用量/仪表板立即拒绝。提交人状态/轨迹/提案保持，执行写入 0；完整后端 **619 项通过（568.63 秒）**，真实 PostgreSQL/NATS 集成及格式/契约/生成/依赖检查通过。收尾八服务 ACTIVE、测试库/角色/token/活动运行/待发布事件/启用测试身份和成员权限均为 0，命令保持 45、15 份文件校验通过，QA 端口与隔离模型网络移除；见 `reports/d12d3-permissions-backend-validation.txt`、`reports/d12d3-permissions-final-runtime.json` 和 `reports/d12d3-permissions-acceptance.md`。不含运行中提交人撤权、MCP 或完整角色/字段矩阵。
 
 - 第二十一批（2026-10-25，本地部署验收完成）：两供应商模型工具请求已提交/只读工具结果已提交两个位置 SIGKILL 后恢复共 **4 项部署案例通过**。每项仅两次 HTTPS、一次 read_snapshot/一次未审批提案，第二次重启状态/轨迹/ledger/提案不变，计划/审批/设备执行写入 0。完整后端 **619 项通过（568.43 秒）**，真实 PostgreSQL/NATS 集成及格式/契约/生成/依赖检查通过。收尾八服务 ACTIVE、d12_002/镜像一致；测试库/角色/token/启用测试配置/活动运行/待确认取消/待发布事件均为 0，命令保持 45、15 份文件校验通过，QA 端口及隔离模型网络移除。见 `reports/d12d3-tool-recovery-backend-validation.txt`、`reports/d12d3-tool-recovery-final-runtime.json` 与 `reports/d12d3-tool-recovery-acceptance.md`；不包含 MCP 外部调用恢复。

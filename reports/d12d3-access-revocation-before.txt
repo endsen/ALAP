@@ -1,0 +1,424 @@
+FFFFFFFFF.F.                                                             [100%]
+=================================== FAILURES ===================================
+___ test_revoked_submitter_closes_without_output_or_replay[before-principal] ___
+
+agents = (<alap.application.agent_runtime.AgentRuntime object at 0x7fda1e70a3c0>, <alap.application.agent_config.AgentRegistry ...ootcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt options=-csearch_path=test_2bcff58186144815b9e239f939a5d9dd')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fda1e9ab100>
+kind = 'principal', phase = 'before'
+
+    @pytest.mark.parametrize("kind", ["principal", "membership", "scope"])
+    @pytest.mark.parametrize("phase", ["before", "inflight", "tools"])
+    def test_revoked_submitter_closes_without_output_or_replay(agents, monkeypatch, kind, phase):  # noqa: F811
+        runtime, _, model, _, example, dsn = agents
+        run = start(agents)
+        scope = rows(dsn, "SELECT scope FROM experiment_memberships WHERE actor_id='owner'")[0]["scope"]
+        model.outputs = [
+            [
+                call(
+                    "propose_plan",
+                    plan_args(example, run["checkpoint"]["snapshot"]["snapshot_version"]),
+                )
+            ]
+        ]
+        if phase == "tools":
+            runtime.step("owner", run["id"])
+        before = checkpoint(dsn, run["id"])
+        if phase == "inflight":
+            stream = model.stream
+    
+            def revoked_stream(request, cancel):
+                revoke(dsn, kind)
+                yield from stream(request, cancel)
+    
+            monkeypatch.setattr(model, "stream", revoked_stream)
+        else:
+            revoke(dsn, kind)
+        with pytest.raises(DomainError, match="FORBIDDEN"):
+            runtime.step("owner", run["id"])
+        closed = checkpoint(dsn, run["id"])
+        cp = closed["checkpoint"]
+>       assert cp["status"] == "FAILED" and cp["stage"] == "done"
+E       AssertionError: assert ('READY' == 'FAILED'
+E         
+E         - FAILED
+E         + READY)
+
+tests/integration/test_agent_access_revocation.py:75: AssertionError
+__ test_revoked_submitter_closes_without_output_or_replay[before-membership] ___
+
+agents = (<alap.application.agent_runtime.AgentRuntime object at 0x7fda1e757ed0>, <alap.application.agent_config.AgentRegistry ...ootcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt options=-csearch_path=test_7e8f8c99a91a47dc8fbbc34b715409b9')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fda1e7110f0>
+kind = 'membership', phase = 'before'
+
+    @pytest.mark.parametrize("kind", ["principal", "membership", "scope"])
+    @pytest.mark.parametrize("phase", ["before", "inflight", "tools"])
+    def test_revoked_submitter_closes_without_output_or_replay(agents, monkeypatch, kind, phase):  # noqa: F811
+        runtime, _, model, _, example, dsn = agents
+        run = start(agents)
+        scope = rows(dsn, "SELECT scope FROM experiment_memberships WHERE actor_id='owner'")[0]["scope"]
+        model.outputs = [
+            [
+                call(
+                    "propose_plan",
+                    plan_args(example, run["checkpoint"]["snapshot"]["snapshot_version"]),
+                )
+            ]
+        ]
+        if phase == "tools":
+            runtime.step("owner", run["id"])
+        before = checkpoint(dsn, run["id"])
+        if phase == "inflight":
+            stream = model.stream
+    
+            def revoked_stream(request, cancel):
+                revoke(dsn, kind)
+                yield from stream(request, cancel)
+    
+            monkeypatch.setattr(model, "stream", revoked_stream)
+        else:
+            revoke(dsn, kind)
+        with pytest.raises(DomainError, match="FORBIDDEN"):
+            runtime.step("owner", run["id"])
+        closed = checkpoint(dsn, run["id"])
+        cp = closed["checkpoint"]
+>       assert cp["status"] == "FAILED" and cp["stage"] == "done"
+E       AssertionError: assert ('READY' == 'FAILED'
+E         
+E         - FAILED
+E         + READY)
+
+tests/integration/test_agent_access_revocation.py:75: AssertionError
+_____ test_revoked_submitter_closes_without_output_or_replay[before-scope] _____
+
+agents = (<alap.application.agent_runtime.AgentRuntime object at 0x7fda1e756e90>, <alap.application.agent_config.AgentRegistry ...ootcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt options=-csearch_path=test_e27519dbf4894638b6093b0e6332f325')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fda1e8eb530>
+kind = 'scope', phase = 'before'
+
+    @pytest.mark.parametrize("kind", ["principal", "membership", "scope"])
+    @pytest.mark.parametrize("phase", ["before", "inflight", "tools"])
+    def test_revoked_submitter_closes_without_output_or_replay(agents, monkeypatch, kind, phase):  # noqa: F811
+        runtime, _, model, _, example, dsn = agents
+        run = start(agents)
+        scope = rows(dsn, "SELECT scope FROM experiment_memberships WHERE actor_id='owner'")[0]["scope"]
+        model.outputs = [
+            [
+                call(
+                    "propose_plan",
+                    plan_args(example, run["checkpoint"]["snapshot"]["snapshot_version"]),
+                )
+            ]
+        ]
+        if phase == "tools":
+            runtime.step("owner", run["id"])
+        before = checkpoint(dsn, run["id"])
+        if phase == "inflight":
+            stream = model.stream
+    
+            def revoked_stream(request, cancel):
+                revoke(dsn, kind)
+                yield from stream(request, cancel)
+    
+            monkeypatch.setattr(model, "stream", revoked_stream)
+        else:
+            revoke(dsn, kind)
+        with pytest.raises(DomainError, match="FORBIDDEN"):
+            runtime.step("owner", run["id"])
+        closed = checkpoint(dsn, run["id"])
+        cp = closed["checkpoint"]
+>       assert cp["status"] == "FAILED" and cp["stage"] == "done"
+E       AssertionError: assert ('READY' == 'FAILED'
+E         
+E         - FAILED
+E         + READY)
+
+tests/integration/test_agent_access_revocation.py:75: AssertionError
+__ test_revoked_submitter_closes_without_output_or_replay[inflight-principal] __
+
+agents = (<alap.application.agent_runtime.AgentRuntime object at 0x7fda1e713ce0>, <alap.application.agent_config.AgentRegistry ...ootcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt options=-csearch_path=test_79587491b8444428bd9e568051e52b99')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fda1e70e9c0>
+kind = 'principal', phase = 'inflight'
+
+    @pytest.mark.parametrize("kind", ["principal", "membership", "scope"])
+    @pytest.mark.parametrize("phase", ["before", "inflight", "tools"])
+    def test_revoked_submitter_closes_without_output_or_replay(agents, monkeypatch, kind, phase):  # noqa: F811
+        runtime, _, model, _, example, dsn = agents
+        run = start(agents)
+        scope = rows(dsn, "SELECT scope FROM experiment_memberships WHERE actor_id='owner'")[0]["scope"]
+        model.outputs = [
+            [
+                call(
+                    "propose_plan",
+                    plan_args(example, run["checkpoint"]["snapshot"]["snapshot_version"]),
+                )
+            ]
+        ]
+        if phase == "tools":
+            runtime.step("owner", run["id"])
+        before = checkpoint(dsn, run["id"])
+        if phase == "inflight":
+            stream = model.stream
+    
+            def revoked_stream(request, cancel):
+                revoke(dsn, kind)
+                yield from stream(request, cancel)
+    
+            monkeypatch.setattr(model, "stream", revoked_stream)
+        else:
+            revoke(dsn, kind)
+        with pytest.raises(DomainError, match="FORBIDDEN"):
+            runtime.step("owner", run["id"])
+        closed = checkpoint(dsn, run["id"])
+        cp = closed["checkpoint"]
+>       assert cp["status"] == "FAILED" and cp["stage"] == "done"
+E       AssertionError: assert ('RUNNING' == 'FAILED'
+E         
+E         - FAILED
+E         + RUNNING)
+
+tests/integration/test_agent_access_revocation.py:75: AssertionError
+_ test_revoked_submitter_closes_without_output_or_replay[inflight-membership] __
+
+agents = (<alap.application.agent_runtime.AgentRuntime object at 0x7fda1e7128b0>, <alap.application.agent_config.AgentRegistry ...ootcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt options=-csearch_path=test_d030a7330a50495eb41a64fb1202f978')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fda1e70f680>
+kind = 'membership', phase = 'inflight'
+
+    @pytest.mark.parametrize("kind", ["principal", "membership", "scope"])
+    @pytest.mark.parametrize("phase", ["before", "inflight", "tools"])
+    def test_revoked_submitter_closes_without_output_or_replay(agents, monkeypatch, kind, phase):  # noqa: F811
+        runtime, _, model, _, example, dsn = agents
+        run = start(agents)
+        scope = rows(dsn, "SELECT scope FROM experiment_memberships WHERE actor_id='owner'")[0]["scope"]
+        model.outputs = [
+            [
+                call(
+                    "propose_plan",
+                    plan_args(example, run["checkpoint"]["snapshot"]["snapshot_version"]),
+                )
+            ]
+        ]
+        if phase == "tools":
+            runtime.step("owner", run["id"])
+        before = checkpoint(dsn, run["id"])
+        if phase == "inflight":
+            stream = model.stream
+    
+            def revoked_stream(request, cancel):
+                revoke(dsn, kind)
+                yield from stream(request, cancel)
+    
+            monkeypatch.setattr(model, "stream", revoked_stream)
+        else:
+            revoke(dsn, kind)
+        with pytest.raises(DomainError, match="FORBIDDEN"):
+            runtime.step("owner", run["id"])
+        closed = checkpoint(dsn, run["id"])
+        cp = closed["checkpoint"]
+>       assert cp["status"] == "FAILED" and cp["stage"] == "done"
+E       AssertionError: assert ('RUNNING' == 'FAILED'
+E         
+E         - FAILED
+E         + RUNNING)
+
+tests/integration/test_agent_access_revocation.py:75: AssertionError
+____ test_revoked_submitter_closes_without_output_or_replay[inflight-scope] ____
+
+agents = (<alap.application.agent_runtime.AgentRuntime object at 0x7fda1e8e96d0>, <alap.application.agent_config.AgentRegistry ...ootcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt options=-csearch_path=test_fe5fba5cf1004911a2177399d5ad6cd3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fda1e86be50>
+kind = 'scope', phase = 'inflight'
+
+    @pytest.mark.parametrize("kind", ["principal", "membership", "scope"])
+    @pytest.mark.parametrize("phase", ["before", "inflight", "tools"])
+    def test_revoked_submitter_closes_without_output_or_replay(agents, monkeypatch, kind, phase):  # noqa: F811
+        runtime, _, model, _, example, dsn = agents
+        run = start(agents)
+        scope = rows(dsn, "SELECT scope FROM experiment_memberships WHERE actor_id='owner'")[0]["scope"]
+        model.outputs = [
+            [
+                call(
+                    "propose_plan",
+                    plan_args(example, run["checkpoint"]["snapshot"]["snapshot_version"]),
+                )
+            ]
+        ]
+        if phase == "tools":
+            runtime.step("owner", run["id"])
+        before = checkpoint(dsn, run["id"])
+        if phase == "inflight":
+            stream = model.stream
+    
+            def revoked_stream(request, cancel):
+                revoke(dsn, kind)
+                yield from stream(request, cancel)
+    
+            monkeypatch.setattr(model, "stream", revoked_stream)
+        else:
+            revoke(dsn, kind)
+        with pytest.raises(DomainError, match="FORBIDDEN"):
+            runtime.step("owner", run["id"])
+        closed = checkpoint(dsn, run["id"])
+        cp = closed["checkpoint"]
+>       assert cp["status"] == "FAILED" and cp["stage"] == "done"
+E       AssertionError: assert ('RUNNING' == 'FAILED'
+E         
+E         - FAILED
+E         + RUNNING)
+
+tests/integration/test_agent_access_revocation.py:75: AssertionError
+___ test_revoked_submitter_closes_without_output_or_replay[tools-principal] ____
+
+agents = (<alap.application.agent_runtime.AgentRuntime object at 0x7fda1e70fdf0>, <alap.application.agent_config.AgentRegistry ...ootcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt options=-csearch_path=test_94d43e94d0f2401ea71d862f8e3cc7ac')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fda1e73fc50>
+kind = 'principal', phase = 'tools'
+
+    @pytest.mark.parametrize("kind", ["principal", "membership", "scope"])
+    @pytest.mark.parametrize("phase", ["before", "inflight", "tools"])
+    def test_revoked_submitter_closes_without_output_or_replay(agents, monkeypatch, kind, phase):  # noqa: F811
+        runtime, _, model, _, example, dsn = agents
+        run = start(agents)
+        scope = rows(dsn, "SELECT scope FROM experiment_memberships WHERE actor_id='owner'")[0]["scope"]
+        model.outputs = [
+            [
+                call(
+                    "propose_plan",
+                    plan_args(example, run["checkpoint"]["snapshot"]["snapshot_version"]),
+                )
+            ]
+        ]
+        if phase == "tools":
+            runtime.step("owner", run["id"])
+        before = checkpoint(dsn, run["id"])
+        if phase == "inflight":
+            stream = model.stream
+    
+            def revoked_stream(request, cancel):
+                revoke(dsn, kind)
+                yield from stream(request, cancel)
+    
+            monkeypatch.setattr(model, "stream", revoked_stream)
+        else:
+            revoke(dsn, kind)
+        with pytest.raises(DomainError, match="FORBIDDEN"):
+            runtime.step("owner", run["id"])
+        closed = checkpoint(dsn, run["id"])
+        cp = closed["checkpoint"]
+>       assert cp["status"] == "FAILED" and cp["stage"] == "done"
+E       AssertionError: assert ('RUNNING' == 'FAILED'
+E         
+E         - FAILED
+E         + RUNNING)
+
+tests/integration/test_agent_access_revocation.py:75: AssertionError
+___ test_revoked_submitter_closes_without_output_or_replay[tools-membership] ___
+
+agents = (<alap.application.agent_runtime.AgentRuntime object at 0x7fda1e70f350>, <alap.application.agent_config.AgentRegistry ...ootcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt options=-csearch_path=test_fd91d689c10747eea1e945246b335bb2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fda1e7063f0>
+kind = 'membership', phase = 'tools'
+
+    @pytest.mark.parametrize("kind", ["principal", "membership", "scope"])
+    @pytest.mark.parametrize("phase", ["before", "inflight", "tools"])
+    def test_revoked_submitter_closes_without_output_or_replay(agents, monkeypatch, kind, phase):  # noqa: F811
+        runtime, _, model, _, example, dsn = agents
+        run = start(agents)
+        scope = rows(dsn, "SELECT scope FROM experiment_memberships WHERE actor_id='owner'")[0]["scope"]
+        model.outputs = [
+            [
+                call(
+                    "propose_plan",
+                    plan_args(example, run["checkpoint"]["snapshot"]["snapshot_version"]),
+                )
+            ]
+        ]
+        if phase == "tools":
+            runtime.step("owner", run["id"])
+        before = checkpoint(dsn, run["id"])
+        if phase == "inflight":
+            stream = model.stream
+    
+            def revoked_stream(request, cancel):
+                revoke(dsn, kind)
+                yield from stream(request, cancel)
+    
+            monkeypatch.setattr(model, "stream", revoked_stream)
+        else:
+            revoke(dsn, kind)
+        with pytest.raises(DomainError, match="FORBIDDEN"):
+            runtime.step("owner", run["id"])
+        closed = checkpoint(dsn, run["id"])
+        cp = closed["checkpoint"]
+>       assert cp["status"] == "FAILED" and cp["stage"] == "done"
+E       AssertionError: assert ('RUNNING' == 'FAILED'
+E         
+E         - FAILED
+E         + RUNNING)
+
+tests/integration/test_agent_access_revocation.py:75: AssertionError
+_____ test_revoked_submitter_closes_without_output_or_replay[tools-scope] ______
+
+agents = (<alap.application.agent_runtime.AgentRuntime object at 0x7fda1e73fe50>, <alap.application.agent_config.AgentRegistry ...ootcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt options=-csearch_path=test_e892fb1d738340cf86774aa75a07a57c')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fda1e705f40>
+kind = 'scope', phase = 'tools'
+
+    @pytest.mark.parametrize("kind", ["principal", "membership", "scope"])
+    @pytest.mark.parametrize("phase", ["before", "inflight", "tools"])
+    def test_revoked_submitter_closes_without_output_or_replay(agents, monkeypatch, kind, phase):  # noqa: F811
+        runtime, _, model, _, example, dsn = agents
+        run = start(agents)
+        scope = rows(dsn, "SELECT scope FROM experiment_memberships WHERE actor_id='owner'")[0]["scope"]
+        model.outputs = [
+            [
+                call(
+                    "propose_plan",
+                    plan_args(example, run["checkpoint"]["snapshot"]["snapshot_version"]),
+                )
+            ]
+        ]
+        if phase == "tools":
+            runtime.step("owner", run["id"])
+        before = checkpoint(dsn, run["id"])
+        if phase == "inflight":
+            stream = model.stream
+    
+            def revoked_stream(request, cancel):
+                revoke(dsn, kind)
+                yield from stream(request, cancel)
+    
+            monkeypatch.setattr(model, "stream", revoked_stream)
+        else:
+            revoke(dsn, kind)
+        with pytest.raises(DomainError, match="FORBIDDEN"):
+            runtime.step("owner", run["id"])
+        closed = checkpoint(dsn, run["id"])
+        cp = closed["checkpoint"]
+>       assert cp["status"] == "FAILED" and cp["stage"] == "done"
+E       AssertionError: assert ('RUNNING' == 'FAILED'
+E         
+E         - FAILED
+E         + RUNNING)
+
+tests/integration/test_agent_access_revocation.py:75: AssertionError
+_____ test_access_closure_needs_original_ownership_and_current_revocation ______
+
+agents = (<alap.application.agent_runtime.AgentRuntime object at 0x7fda1e7fb890>, <alap.application.agent_config.AgentRegistry ...ootcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt options=-csearch_path=test_b9b31adcb60a44a3869e8ac4e6a2c2ed')
+
+    def test_access_closure_needs_original_ownership_and_current_revocation(agents):  # noqa: F811
+        runtime, *_, dsn = agents
+        run = start(agents)
+        before = checkpoint(dsn, run["id"])
+        with pytest.raises(DomainError, match="RUN_BUSY"):
+>           runtime.store.fail_revoked_access("owner", run["id"])
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'PostgresAgentStore' object has no attribute 'fail_revoked_access'. Did you mean: 'fail_revoked_source'?
+
+tests/integration/test_agent_access_revocation.py:122: AttributeError
+=========================== short test summary info ============================
+FAILED tests/integration/test_agent_access_revocation.py::test_revoked_submitter_closes_without_output_or_replay[before-principal]
+FAILED tests/integration/test_agent_access_revocation.py::test_revoked_submitter_closes_without_output_or_replay[before-membership]
+FAILED tests/integration/test_agent_access_revocation.py::test_revoked_submitter_closes_without_output_or_replay[before-scope]
+FAILED tests/integration/test_agent_access_revocation.py::test_revoked_submitter_closes_without_output_or_replay[inflight-principal]
+FAILED tests/integration/test_agent_access_revocation.py::test_revoked_submitter_closes_without_output_or_replay[inflight-membership]
+FAILED tests/integration/test_agent_access_revocation.py::test_revoked_submitter_closes_without_output_or_replay[inflight-scope]
+FAILED tests/integration/test_agent_access_revocation.py::test_revoked_submitter_closes_without_output_or_replay[tools-principal]
+FAILED tests/integration/test_agent_access_revocation.py::test_revoked_submitter_closes_without_output_or_replay[tools-membership]
+FAILED tests/integration/test_agent_access_revocation.py::test_revoked_submitter_closes_without_output_or_replay[tools-scope]
+FAILED tests/integration/test_agent_access_revocation.py::test_access_closure_needs_original_ownership_and_current_revocation
+10 failed, 2 passed in 14.90s

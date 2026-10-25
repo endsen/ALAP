@@ -1,0 +1,72 @@
+ Container alap-simulation-gateway-1 Recreate 
+ Container alap-simulation-agent-1 Recreate 
+ Container alap-simulation-outbox-1 Recreate 
+ Container alap-simulation-outbox-1 Recreated 
+ Container alap-simulation-gateway-1 Recreated 
+ Container alap-simulation-engine-1 Recreate 
+ Container alap-simulation-api-1 Recreate 
+ Container alap-simulation-agent-1 Recreated 
+ Container alap-simulation-engine-1 Recreated 
+ Container alap-simulation-api-1 Recreated 
+ Container alap-simulation-nats-1 Starting 
+ Container alap-simulation-gateway-1 Starting 
+ Container alap-simulation-postgres-1 Starting 
+ Container alap-simulation-nats-1 Started 
+ Container alap-simulation-gateway-1 Started 
+ Container alap-simulation-postgres-1 Started 
+ Container alap-simulation-postgres-1 Waiting 
+ Container alap-simulation-postgres-1 Waiting 
+ Container alap-simulation-postgres-1 Waiting 
+ Container alap-simulation-postgres-1 Waiting 
+ Container alap-simulation-postgres-1 Healthy 
+ Container alap-simulation-postgres-1 Healthy 
+ Container alap-simulation-outbox-1 Starting 
+ Container alap-simulation-agent-1 Starting 
+ Container alap-simulation-postgres-1 Healthy 
+ Container alap-simulation-engine-1 Starting 
+ Container alap-simulation-postgres-1 Healthy 
+ Container alap-simulation-api-1 Starting 
+ Container alap-simulation-outbox-1 Started 
+ Container alap-simulation-agent-1 Started 
+ Container alap-simulation-engine-1 Started 
+ Container alap-simulation-api-1 Started 
+ Container alap-simulation-web-1 Starting 
+ Container alap-simulation-web-1 Started 
+ Container alap-simulation-web-1 Waiting 
+ Container alap-simulation-gateway-1 Waiting 
+ Container alap-simulation-engine-1 Waiting 
+ Container alap-simulation-outbox-1 Waiting 
+ Container alap-simulation-nats-1 Waiting 
+ Container alap-simulation-api-1 Waiting 
+ Container alap-simulation-agent-1 Waiting 
+ Container alap-simulation-postgres-1 Waiting 
+ Container alap-simulation-nats-1 Healthy 
+ Container alap-simulation-web-1 Healthy 
+ Container alap-simulation-postgres-1 Healthy 
+ Container alap-simulation-agent-1 Healthy 
+ Container alap-simulation-outbox-1 Healthy 
+ Container alap-simulation-engine-1 Healthy 
+ Container alap-simulation-api-1 Healthy 
+ Container alap-simulation-gateway-1 Healthy 
+{
+  "schema": "d12_002",
+  "commands": 45,
+  "datasets": 15,
+  "checked_at": "2026-10-25T07:04:49.730221+00:00",
+  "images": {
+    "backend": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "web": "sha256:fd41b31ad649646db2ea6c0ee8f72201839967c3f6cd22f796402b6316aaccd0"
+  },
+  "old_images": {
+    "postgres": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+    "nats": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+    "web": "sha256:fd41b31ad649646db2ea6c0ee8f72201839967c3f6cd22f796402b6316aaccd0",
+    "api": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "engine": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "gateway": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "agent": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "outbox": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72"
+  },
+  "cold_backup": "pre-access-deploy-20261025",
+  "migration_required": false
+}

@@ -1,0 +1,174 @@
+{
+  "completed_at": "2026-10-25T07:06:27.851274+00:00",
+  "cases": [
+    {
+      "vendor": "openai",
+      "phase": "before",
+      "experiment": "EXP-AGENT-openai-access-before-e4b172f7874a",
+      "status": "FAILED",
+      "error": "ACCESS_REVOKED",
+      "reserved_tokens": 0,
+      "https_requests": 0,
+      "execution_writes": {
+        "plan_revisions": 0,
+        "approvals": 0,
+        "runs": 0,
+        "tasks": 0,
+        "command_ledger": 0,
+        "datasets": 0,
+        "agent_tool_invocations": 0,
+        "agent_proposals": 0
+      },
+      "blocked_event": {
+        "code": "ACCESS_REVOKED",
+        "type": "blocked",
+        "prior_stage": "model",
+        "model_outcome_unknown": false
+      },
+      "regrant_restart_no_change": true
+    },
+    {
+      "vendor": "openai",
+      "phase": "membership",
+      "experiment": "EXP-AGENT-openai-access-membership-e4b172f7874a",
+      "status": "FAILED",
+      "error": "ACCESS_REVOKED",
+      "reserved_tokens": 64000,
+      "https_requests": 1,
+      "execution_writes": {
+        "plan_revisions": 0,
+        "approvals": 0,
+        "runs": 0,
+        "tasks": 0,
+        "command_ledger": 0,
+        "datasets": 0,
+        "agent_tool_invocations": 0,
+        "agent_proposals": 0
+      },
+      "blocked_event": {
+        "code": "ACCESS_REVOKED",
+        "type": "blocked",
+        "prior_stage": "inflight",
+        "model_outcome_unknown": true
+      },
+      "regrant_restart_no_change": true
+    },
+    {
+      "vendor": "openai",
+      "phase": "scope",
+      "experiment": "EXP-AGENT-openai-access-scope-e4b172f7874a",
+      "status": "FAILED",
+      "error": "ACCESS_REVOKED",
+      "reserved_tokens": 64000,
+      "https_requests": 1,
+      "execution_writes": {
+        "plan_revisions": 0,
+        "approvals": 0,
+        "runs": 0,
+        "tasks": 0,
+        "command_ledger": 0,
+        "datasets": 0,
+        "agent_tool_invocations": 0,
+        "agent_proposals": 0
+      },
+      "blocked_event": {
+        "code": "ACCESS_REVOKED",
+        "type": "blocked",
+        "prior_stage": "inflight",
+        "model_outcome_unknown": true
+      },
+      "regrant_restart_no_change": true
+    },
+    {
+      "vendor": "deepseek",
+      "phase": "before",
+      "experiment": "EXP-AGENT-deepseek-access-before-e4b172f7874a",
+      "status": "FAILED",
+      "error": "ACCESS_REVOKED",
+      "reserved_tokens": 0,
+      "https_requests": 0,
+      "execution_writes": {
+        "plan_revisions": 0,
+        "approvals": 0,
+        "runs": 0,
+        "tasks": 0,
+        "command_ledger": 0,
+        "datasets": 0,
+        "agent_tool_invocations": 0,
+        "agent_proposals": 0
+      },
+      "blocked_event": {
+        "code": "ACCESS_REVOKED",
+        "type": "blocked",
+        "prior_stage": "model",
+        "model_outcome_unknown": false
+      },
+      "regrant_restart_no_change": true
+    },
+    {
+      "vendor": "deepseek",
+      "phase": "membership",
+      "experiment": "EXP-AGENT-deepseek-access-membership-e4b172f7874a",
+      "status": "FAILED",
+      "error": "ACCESS_REVOKED",
+      "reserved_tokens": 64000,
+      "https_requests": 1,
+      "execution_writes": {
+        "plan_revisions": 0,
+        "approvals": 0,
+        "runs": 0,
+        "tasks": 0,
+        "command_ledger": 0,
+        "datasets": 0,
+        "agent_tool_invocations": 0,
+        "agent_proposals": 0
+      },
+      "blocked_event": {
+        "code": "ACCESS_REVOKED",
+        "type": "blocked",
+        "prior_stage": "inflight",
+        "model_outcome_unknown": true
+      },
+      "regrant_restart_no_change": true
+    },
+    {
+      "vendor": "deepseek",
+      "phase": "scope",
+      "experiment": "EXP-AGENT-deepseek-access-scope-e4b172f7874a",
+      "status": "FAILED",
+      "error": "ACCESS_REVOKED",
+      "reserved_tokens": 64000,
+      "https_requests": 1,
+      "execution_writes": {
+        "plan_revisions": 0,
+        "approvals": 0,
+        "runs": 0,
+        "tasks": 0,
+        "command_ledger": 0,
+        "datasets": 0,
+        "agent_tool_invocations": 0,
+        "agent_proposals": 0
+      },
+      "blocked_event": {
+        "code": "ACCESS_REVOKED",
+        "type": "blocked",
+        "prior_stage": "inflight",
+        "model_outcome_unknown": true
+      },
+      "regrant_restart_no_change": true
+    }
+  ],
+  "images": {
+    "agent-drill": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "offline-provider": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "api": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "engine": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "gateway": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "agent": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "outbox": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "postgres": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+    "nats": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+    "web": "sha256:fd41b31ad649646db2ea6c0ee8f72201839967c3f6cd22f796402b6316aaccd0"
+  },
+  "scope": "non-admin operator; API membership revoke/scope reduction; local HTTPS SSE"
+}

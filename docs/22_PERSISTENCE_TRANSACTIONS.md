@@ -181,3 +181,9 @@ API 请求以 actor/operation/path/key 区分，HMAC 绑定请求及 If-Match，
 请求使用短事务锁定 Agent 行，与 checkpoint 提交串行化；模型网络调用仍只持有 session 所有权锁，不持有行锁。持有运行所有权的调用者可立即确认，否则返回已持久化意图，由 worker 后续确认。worker 在推进前、后续工具调用前检查意图，最终提交事务再次锁行复查。若取消请求先取得提交顺序，则从上一个已提交 checkpoint 生成 CANCELLED/done，清空未提交 pending/result，保留历史与预算预留，丢弃本次工具 ledger/提案，并与 cancelled 轨迹同事务提交。轨迹保留 prior_stage 和 model_outcome_unknown。若原终态先提交，晚到的取消不覆盖该终态。模型预留提交被取消截断后不得继续发出模型请求；所有权连接失效仍不得重连提交。
 
 本实现是安全边界取消，不保证立即中断已经发出的模型或只读/MCP 请求；远端副作用及已消费 token 无法撤回，已完成历史提案不会删除。运行时仍受现有超时/预算约束。来源或提交人撤权不由取消请求绕过，失败状态也不能伪装为取消确认。相同 HTTP 幂等键可返回原先的待确认响应，最新状态以随后 GET 为准。当前本地源码/集成验证与实际 Compose 升级验收分开记录，见 IMPLEMENTATION_STATUS.md。
+
+### D12d.3 提交人撤权的受限终态收尾
+
+成员撤权、主体禁用或设备范围缩减时，Agent 加载/提交仍拒绝访问。常驻运行时在原 session advisory lock 下复核 run 所属 actor、bundle hash 与当前主体/成员/设备范围；仅当确认当前权限确实失效且 checkpoint 为 READY/RUNNING 时，将最后已提交 checkpoint 置为 FAILED/ACCESS_REVOKED，并在同事务追加 blocked trace（原 stage 与模型结果是否未知）。保留已提交历史、pending 和预算预留；不提交本次未落盘的模型结果、工具 ledger 或提案，不创建任何设备执行。
+
+该收尾路径不返回受保护内容，不授予任何新的读取或取消权限。错误 actor、失去所有权连接、正常工具自身权限拒绝、已完成运行均不能借此改写终态。权限在复核前恢复则不写 ACCESS_REVOKED；若模型结果尚未提交，后续仍按 inflight 未知结果规则失败，不重放模型。终态后重新授权也不恢复旧运行。checkpoint 与审计必须一起提交，审计失败则整体回滚。此为本地源码/数据库集成范围；部署镜像升级、独立进程 HTTPS 撤权和 MCP 特定授权撤销须分别取得证据。

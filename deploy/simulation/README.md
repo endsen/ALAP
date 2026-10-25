@@ -315,3 +315,7 @@ PLAYWRIGHT_BROWSERS_PATH="$PWD/.local-deploy/browsers" .venv/bin/python deploy/s
 ### Agent 部署权限矩阵
 
 运行 `.venv/bin/python deploy/simulation/check_permissions.py`：为两种供应商格式分别创建真实 HTTPS/常驻 worker 产生的完成运行和未审批提案，再使用独立 observer/operator/approver/outsider 身份及匿名请求检查 HTTP 权限。每供应商 49 项断言，包含非提交人的详情/轨迹/提案/取消/推进拒绝、列表与用量隔离、实验外/匿名拒绝，以及 API 成员撤权后即时拒绝。提交人状态/轨迹/提案保持不变，零设备执行写入。测试身份、令牌和成员权限在 finally 中禁用/撤销；仅操作随机命名的隔离实验。不代表运行中提交人撤权、MCP 撤权或浏览器权限矩阵已完成。
+
+### 提交人权限失效的部署收尾
+
+在包含 `fail_revoked_access` 的新后端镜像上运行 `.venv/bin/python deploy/simulation/check_access_revocation.py`。两供应商格式各三项：非管理员实验 operator 调用前成员撤权、真实 HTTPS 首片后成员撤权、首片后设备范围缩减。使用真实成员 API 提交变化，先确认读取/取消 403，再释放本地 TLS 模型流；只读数据库核对受限 FAILED/ACCESS_REVOKED 和无工具/提案/设备执行写入。重授权后读取终态、重启 worker 等待空 tick，确认状态/轨迹/请求数不变。调用前请求 0，流中各 1。维护锁及 finally 清理专用容器、网络、身份、令牌、成员权限和测试配置；异常遗留运行按受限收尾路径处理。不覆盖主体禁用、MCP 特定授权撤销、所有角色/字段/页面或真实在线模型。

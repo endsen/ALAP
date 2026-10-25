@@ -300,6 +300,58 @@ class PostgresAgentStore:
             )
             return True
 
+    def fail_revoked_access(self, actor, identity):
+        """Close a confirmed submitter access loss without granting access to run history."""
+        owner = self._owner.get()
+        require(owner is not None and owner[0] == identity, "RUN_BUSY", "Run ownership required")
+        # Never reconnect after ownership loss. Authorization and the final write share
+        # this transaction; principal and membership reads remain locked until commit.
+        with self._commit_connection(identity) as db:
+            row = db.execute("SELECT * FROM agent_runs WHERE id=%s", (identity,)).fetchone()
+            require(row is not None and row["actor_id"] == actor, "FORBIDDEN", "Run owner required")
+            require(
+                digest(row["bundle"]) == row["bundle_hash"], "REGISTRY_CORRUPT", "Bundle mismatch"
+            )
+            if row["checkpoint"]["status"] not in {"READY", "RUNNING"}:
+                return False
+            try:
+                self._access(
+                    db,
+                    actor,
+                    row["experiment_id"],
+                    row["bundle"]["config"]["manifest"]["scoped_instruments"],
+                )
+            except DomainError as exc:
+                if exc.code != "FORBIDDEN":
+                    raise
+            else:
+                return False  # Access restored, or the original denial was unrelated.
+            checkpoint = dict(row["checkpoint"])
+            prior_stage = checkpoint["stage"]
+            checkpoint.update(status="FAILED", stage="done", error="ACCESS_REVOKED", result=None)
+            changed = db.execute(
+                "UPDATE agent_runs SET checkpoint=%s,revision=revision+1 "
+                "WHERE id=%s AND revision=%s",
+                (Jsonb(checkpoint), identity, row["revision"]),
+            ).rowcount
+            require(changed == 1, "STATE_CONFLICT", "Stale Agent checkpoint")
+            db.execute(
+                "INSERT INTO agent_trace(run_id,seq,event) VALUES (%s,%s,%s)",
+                (
+                    identity,
+                    row["revision"] + 1,
+                    Jsonb(
+                        {
+                            "type": "blocked",
+                            "code": "ACCESS_REVOKED",
+                            "prior_stage": prior_stage,
+                            "model_outcome_unknown": prior_stage == "inflight",
+                        }
+                    ),
+                ),
+            )
+            return True
+
     @contextmanager
     def exclusive(self, identity):
         # Session advisory lock survives short transactions, but not a crashed process.
