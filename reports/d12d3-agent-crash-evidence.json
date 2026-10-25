@@ -1,0 +1,144 @@
+{
+  "completed_at": "2026-10-24T11:25:45.916288+00:00",
+  "cases": [
+    {
+      "vendor": "openai",
+      "phase": "cancel-crash",
+      "experiment": "EXP-AGENT-openai-cancel-crash-d8e28ce87d50",
+      "killed_exit_code": 137,
+      "oom_killed": false,
+      "before_status": "RUNNING",
+      "evidence": {
+        "status": "CANCELLED",
+        "stage": "done",
+        "iterations": 1,
+        "reserved_tokens": 64000,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        },
+        "cancel_requested": true
+      },
+      "terminal_event": {
+        "type": "cancelled",
+        "prior_stage": "inflight",
+        "model_outcome_unknown": true
+      },
+      "second_restart_no_change": true,
+      "https_requests": 1
+    },
+    {
+      "vendor": "openai",
+      "phase": "inflight-crash",
+      "experiment": "EXP-AGENT-openai-inflight-crash-d8e28ce87d50",
+      "killed_exit_code": 137,
+      "oom_killed": false,
+      "before_status": "RUNNING",
+      "evidence": {
+        "status": "FAILED",
+        "stage": "done",
+        "iterations": 1,
+        "reserved_tokens": 64000,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        },
+        "cancel_requested": false
+      },
+      "terminal_event": {
+        "code": "MODEL_INTERRUPTED",
+        "type": "blocked"
+      },
+      "second_restart_no_change": true,
+      "https_requests": 1
+    },
+    {
+      "vendor": "deepseek",
+      "phase": "cancel-crash",
+      "experiment": "EXP-AGENT-deepseek-cancel-crash-d8e28ce87d50",
+      "killed_exit_code": 137,
+      "oom_killed": false,
+      "before_status": "RUNNING",
+      "evidence": {
+        "status": "CANCELLED",
+        "stage": "done",
+        "iterations": 1,
+        "reserved_tokens": 64000,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        },
+        "cancel_requested": true
+      },
+      "terminal_event": {
+        "type": "cancelled",
+        "prior_stage": "inflight",
+        "model_outcome_unknown": true
+      },
+      "second_restart_no_change": true,
+      "https_requests": 1
+    },
+    {
+      "vendor": "deepseek",
+      "phase": "inflight-crash",
+      "experiment": "EXP-AGENT-deepseek-inflight-crash-d8e28ce87d50",
+      "killed_exit_code": 137,
+      "oom_killed": false,
+      "before_status": "RUNNING",
+      "evidence": {
+        "status": "FAILED",
+        "stage": "done",
+        "iterations": 1,
+        "reserved_tokens": 64000,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        },
+        "cancel_requested": false
+      },
+      "terminal_event": {
+        "code": "MODEL_INTERRUPTED",
+        "type": "blocked"
+      },
+      "second_restart_no_change": true,
+      "https_requests": 1
+    }
+  ],
+  "images": {
+    "offline-provider": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "agent-drill": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "postgres": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+    "nats": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+    "web": "sha256:fd41b31ad649646db2ea6c0ee8f72201839967c3f6cd22f796402b6316aaccd0",
+    "api": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "engine": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "gateway": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "agent": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "outbox": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72"
+  },
+  "scope": "isolated resident worker SIGKILL during HTTPS; no online models/devices"
+}

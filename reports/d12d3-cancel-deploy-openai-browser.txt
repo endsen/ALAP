@@ -1,0 +1,10 @@
+npm notice run alap-web@0.1.0 npx
+npm notice run 'playwright' test --config playwright.deployment.config.ts cancellation.spec.ts
+
+Running 1 test using 1 worker
+
+(node:1619102) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/deployment/cancellation.spec.ts:6:5 › deployed cancellation remains pending until resident worker confirms (4.8s)
+
+  1 passed (6.1s)

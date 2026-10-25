@@ -413,13 +413,18 @@ function AgentTrial({
       {run && (
         <>
           <Status value={String(run.status)} />
+          {!!run.cancel_requested && !finished && (
+            <p role="status">
+              已请求取消，等待后台确认；可在运行轨迹查看最新状态。
+            </p>
+          )}
           <JsonView value={run} />
           <div className="console-actions">
             <ActionButton
               client={client}
               path={`/agent-runs/${id(String(run.id))}/advance`}
               label="推进测试一步"
-              disabled={!!finished}
+              disabled={!!finished || !!run.cancel_requested}
               impact="本步骤可能调用配置的模型及已授权只读/提案工具，受到此版本预算限制。"
               onDone={setRun}
             />
@@ -427,7 +432,7 @@ function AgentTrial({
               client={client}
               path={`/agent-runs/${id(String(run.id))}/cancel`}
               label="取消 Agent 测试"
-              disabled={!!finished}
+              disabled={!!finished || !!run.cancel_requested}
               onDone={setRun}
             />
             <Link href={`/traces/${id(experiment)}/${id(String(run.id))}`}>

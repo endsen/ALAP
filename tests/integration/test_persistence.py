@@ -61,7 +61,7 @@ def start(service, approval, key="start"):
 
 def test_migration_up_down_up_and_constraints(database):
     dsn, config = database
-    assert rows(dsn, "SELECT version_num FROM alembic_version")[0]["version_num"] == "d12_001"
+    assert rows(dsn, "SELECT version_num FROM alembic_version")[0]["version_num"] == "d12_002"
     command.downgrade(config, "base")
     assert rows(dsn, "SELECT to_regclass('experiments') AS name")[0]["name"] is None
     command.upgrade(config, "d03_001")

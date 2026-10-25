@@ -117,17 +117,31 @@ class AgentRuntime:
         )
 
     def cancel(self, actor, identity):
-        with self.store.exclusive(identity):
-            run = self.store.load(actor, identity)
-            if run["checkpoint"]["status"] in TERMINAL:
-                return run
-            cp = deepcopy(run["checkpoint"])
-            cp.update(status="CANCELLED", stage="done")
-            return self.store.commit(run, cp, {"type": "cancelled"})
+        run = self.store.request_cancel(actor, identity)
+        if run["checkpoint"]["status"] in TERMINAL:
+            return run
+        try:
+            with self.store.exclusive(identity):
+                run = self.store.load(actor, identity)
+                if run["checkpoint"]["status"] in TERMINAL:
+                    return run
+                return self.store.commit(run, deepcopy(run["checkpoint"]), {"type": "cancelled"})
+        except DomainError as exc:
+            if exc.code != "RUN_BUSY":
+                raise
+            # The worker still owns execution. Return intent, never fabricate acknowledgement.
+            return self.store.load(actor, identity)
 
     def step(self, actor, identity, cancel=None):
         with self.store.exclusive(identity):
-            return self._step(actor, identity, cancel)
+            try:
+                return self._step(actor, identity, cancel)
+            except DomainError as exc:
+                if exc.code == "SOURCE_REVOKED":
+                    # Write only a terminal checkpoint/audit on the same ownership session.
+                    # Do not return the revoked history, even after successful closure.
+                    self.store.fail_revoked_source(actor, identity)
+                raise
 
     def _step(self, actor, identity, cancel=None):
         run = self.store.load(actor, identity)
@@ -135,6 +149,8 @@ class AgentRuntime:
         if cp["status"] in TERMINAL:
             return run
         try:
+            if run.get("cancel_requested_at") is not None:
+                return self.store.commit(run, cp, {"type": "cancelled"})
             if cancel is not None and cancel.is_set():
                 cp.update(status="CANCELLED", stage="done")
                 return self.store.commit(run, cp, {"type": "cancelled"})
@@ -184,6 +200,8 @@ class AgentRuntime:
                 "context": context_trace,
             },
         )
+        if run["checkpoint"]["status"] in TERMINAL:
+            return run
         client = self.model_factory(manifest["model_ref"])
         require(
             asdict(client.profile) == model_config, "MODEL_VERSION_CHANGED", "Pinned model mismatch"
@@ -264,6 +282,8 @@ class AgentRuntime:
         invocations, proposals, results = [], [], []
         seen = set(cp["seen_call_ids"])
         for call in calls:
+            if self.store.load(run["actor_id"], run["id"]).get("cancel_requested_at") is not None:
+                return self.store.commit(run, cp, {"type": "cancelled"})
             require(
                 isinstance(call.get("id"), str) and call["id"] and call["id"] not in seen,
                 "CALL_ID_REUSED",

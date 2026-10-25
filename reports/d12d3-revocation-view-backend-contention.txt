@@ -1,0 +1,128 @@
+
+> python -m ruff check .
+All checks passed!
+
+> python -m ruff format --check .
+215 files already formatted
+
+> python scripts/build_lifecycle_reference.py --check
+PASS: lifecycle reference covers 135 transitions
+
+> python scripts/build_design.py --check
+PASS: combined v3.1 design is current
+
+> python scripts/build_openapi.py --check
+PASS: generated OpenAPI is current
+
+> python contracts/validate_contracts.py
+PASS: 13 schemas/examples and full OpenAPI specification
+
+> python -m pytest -q
+........................................................................ [ 12%]
+........................................................................ [ 24%]
+.....................................................F.................. [ 36%]
+........................................................................ [ 48%]
+........................................................................ [ 60%]
+........................................................................ [ 72%]
+........................................................................ [ 84%]
+........................................................................ [ 96%]
+...................                                                      [100%]
+=================================== FAILURES ===================================
+________________ test_dag_three_simulators_leave_iv_uncommitted ________________
+
+execution = (<alap.application.execution.ExecutionService object at 0x7f2dbf2eac80>, <alap.adapters.gateway.journal.Gateway object...otcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt options=-csearch_path=test_20ca5a3627674a55beb91d18b91d267c'))
+
+    def test_dag_three_simulators_leave_iv_uncommitted(execution):
+        service, _, simulator, run, scenario = execution
+        dsn = scenario[3]
+>       command = prepare(execution)
+                  ^^^^^^^^^^^^^^^^^^
+
+tests/integration/test_execution.py:96: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/integration/test_execution.py:90: in prepare
+    return service.prepare("engine", run["id"], task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/alap/application/execution.py:345: in prepare
+    readbacks = self._readbacks(task)
+                ^^^^^^^^^^^^^^^^^^^^^
+src/alap/application/execution.py:307: in _readbacks
+    with self.transaction() as repo:
+         ^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/alap/adapters/postgres/repository.py:310: in __call__
+    with psycopg.connect(self.dsn, row_factory=dict_row, connect_timeout=5) as connection:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=postgres password=[REDACTED] dbname=alap_test_compose_6012175903d7 host=12...sslmode=verify-full sslrootcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt connect_timeout=5 hostaddr=127.0.0.1'
+autocommit = False, prepare_threshold = 5, context = None
+row_factory = <function dict_row at 0x7f2dda08d220>, cursor_factory = None
+kwargs = {'connect_timeout': 5}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.errors.ConnectionTimeout: connection timeout expired
+
+.venv/lib/python3.14/site-packages/psycopg/connection.py:126: ConnectionTimeout
+=========================== short test summary info ============================
+FAILED tests/integration/test_execution.py::test_dag_three_simulators_leave_iv_uncommitted
+1 failed, 594 passed in 885.39s (0:14:45)
+Traceback (most recent call last):
+  File "/home/endsen/ALAP/scripts/check.py", line 27, in <module>
+    main()
+    ~~~~^^
+  File "/home/endsen/ALAP/scripts/check.py", line 23, in main
+    subprocess.run([sys.executable, *command], cwd=ROOT, check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/home/endsen/ALAP/.venv/bin/python', '-m', 'pytest', '-q']' returned non-zero exit status 1.

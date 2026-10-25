@@ -1183,6 +1183,13 @@ export interface components {
             revision: number;
             status: string;
             goal: string;
+            /** @description Durable cancellation intent; only terminal status confirms completion. */
+            cancel_requested?: boolean;
+            /**
+             * @description Knowledge access revoked; goal is a fixed placeholder and result is null. Status remains authoritative; history and proposals stay protected.
+             * @enum {string}
+             */
+            access_error?: "SOURCE_REVOKED";
             result: string | null | {
                 proposal_ids: string[];
             };

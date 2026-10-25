@@ -3167,6 +3167,13 @@ components:
         revision: *id012
         status: *id010
         goal: *id010
+        cancel_requested:
+          type: boolean
+          description: Durable cancellation intent; only terminal status confirms completion.
+        access_error:
+          type: string
+          enum: [SOURCE_REVOKED]
+          description: Knowledge access revoked; goal is a fixed placeholder and result is null. Status remains authoritative; history and proposals stay protected.
         result:
           oneOf:
           - type: string

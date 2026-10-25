@@ -91,12 +91,22 @@ def main():
                 "model": "offline-" + vendor,
                 "context_tokens": 64000,
                 "output_tokens": 4096,
+                **(
+                    {
+                        "timeout_seconds": case["timeout_seconds"],
+                        "max_attempts": case.get("max_attempts", 1),
+                    }
+                    if "timeout_seconds" in case
+                    else {}
+                ),
                 "capabilities": {"streaming": "declared", "tools": "declared", "usage": "declared"},
             },
         )
         case_refs = refs
         if "guide" in case:
-            own_guide = dict(guide, skill_id=case["guide"])
+            own_guide = dict(
+                guide, skill_id=case["guide"], content=case.get("guide_content", guide["content"])
+            )
             registry.import_skill(own_guide)
             registry.publish_skill(case["guide"] + "@1", "admin")
             case_refs = [case["guide"] + "@1", *refs[1:]]
@@ -110,19 +120,33 @@ def main():
                     "model_ref": ident + "@1",
                     "max_iterations": 4,
                     "max_runtime_seconds": 120,
-                    "allowed_tools": ["read_snapshot@1", "propose_plan@1"],
+                    "allowed_tools": ["read_snapshot@1", "propose_plan@1"]
+                    + (["search_knowledge@1"] if case.get("knowledge") else []),
                     "scoped_instruments": resources,
                     "scoped_experiments": [exp],
                     "autonomy_level": "L1",
                     "skill_refs": case_refs,
-                    "context_policy": "experiment_snapshot_only",
+                    "context_policy": "scoped_knowledge"
+                    if case.get("knowledge")
+                    else "experiment_snapshot_only",
                 },
-                "token_budget": 128000,
+                "token_budget": case.get("token_budget", 128000),
                 "context_bytes": 48000,
                 "max_tool_calls": 2,
             }
         )
         registry.publish_agent(ident + "@1", "admin")
+    if state.get("permission_actors"):
+        with psycopg.connect((root / "deployment/migration.dsn").read_text()) as db:
+            for actor in state["permission_actors"].values():
+                db.execute(
+                    "INSERT INTO principals(id,issuer,external_subject,kind) "
+                    "VALUES (%s,'local-drill',%s,'user')",
+                    (actor, actor),
+                )
+        state["permission_tokens"] = {
+            role: store.issue_token(actor) for role, actor in state["permission_actors"].items()
+        }
     state["owner"] = store.issue_token("admin")
     print(json.dumps(state))
 

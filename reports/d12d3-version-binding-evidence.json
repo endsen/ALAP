@@ -1,0 +1,180 @@
+{
+  "completed_at": "2026-10-24T17:19:43.730638+00:00",
+  "cases": [
+    {
+      "vendor": "openai",
+      "phase": "model-new",
+      "experiment": "EXP-AGENT-openai-model-new-fc13e2c73007",
+      "status": "COMPLETED",
+      "binding_hash": "85411751a4f78124868af8094080b823c3f31ae3711963e3cfe0d0acc6fb4e61",
+      "model_version": 1,
+      "skill_refs": [
+        "set_field@1",
+        "iv_measurement@1",
+        "set_temperature@1",
+        "guide-openai-model-new-fc13e2c73007@1"
+      ],
+      "writes": {
+        "plan_revisions": 0,
+        "approvals": 0,
+        "runs": 0,
+        "tasks": 0,
+        "command_ledger": 0,
+        "datasets": 0,
+        "agent_proposals": 0,
+        "agent_tool_invocations": 0
+      },
+      "overwrite_rejected": true,
+      "binding_unchanged": true,
+      "https_requests": 1
+    },
+    {
+      "vendor": "openai",
+      "phase": "model-disabled",
+      "experiment": "EXP-AGENT-openai-model-disabled-fc13e2c73007",
+      "status": "FAILED",
+      "binding_hash": "3dc2db2cf0ed704815e141705b66531f6321b1ad8f47b1df20e49ed99639b8df",
+      "model_version": 1,
+      "skill_refs": [
+        "set_field@1",
+        "iv_measurement@1",
+        "set_temperature@1",
+        "guide-openai-model-disabled-fc13e2c73007@1"
+      ],
+      "writes": {
+        "plan_revisions": 0,
+        "approvals": 0,
+        "runs": 0,
+        "tasks": 0,
+        "command_ledger": 0,
+        "datasets": 0,
+        "agent_proposals": 0,
+        "agent_tool_invocations": 0
+      },
+      "overwrite_rejected": true,
+      "binding_unchanged": true,
+      "https_requests": 0
+    },
+    {
+      "vendor": "openai",
+      "phase": "skill-new",
+      "experiment": "EXP-AGENT-openai-skill-new-fc13e2c73007",
+      "status": "COMPLETED",
+      "binding_hash": "c1eef03f108112649997b2d00ad43361af11e4e583a3f2be181b8b133776944b",
+      "model_version": 1,
+      "skill_refs": [
+        "set_field@1",
+        "iv_measurement@1",
+        "set_temperature@1",
+        "guide-openai-skill-new-fc13e2c73007@1"
+      ],
+      "writes": {
+        "plan_revisions": 0,
+        "approvals": 0,
+        "runs": 0,
+        "tasks": 0,
+        "command_ledger": 0,
+        "datasets": 0,
+        "agent_proposals": 0,
+        "agent_tool_invocations": 0
+      },
+      "overwrite_rejected": true,
+      "binding_unchanged": true,
+      "https_requests": 1
+    },
+    {
+      "vendor": "deepseek",
+      "phase": "model-new",
+      "experiment": "EXP-AGENT-deepseek-model-new-fc13e2c73007",
+      "status": "COMPLETED",
+      "binding_hash": "9bbc0e30aa0a0d6fc02264f5e8a1cf0a3b617c212a8c619a7fd8ea70d8a85ca8",
+      "model_version": 1,
+      "skill_refs": [
+        "set_field@1",
+        "iv_measurement@1",
+        "set_temperature@1",
+        "guide-deepseek-model-new-fc13e2c73007@1"
+      ],
+      "writes": {
+        "plan_revisions": 0,
+        "approvals": 0,
+        "runs": 0,
+        "tasks": 0,
+        "command_ledger": 0,
+        "datasets": 0,
+        "agent_proposals": 0,
+        "agent_tool_invocations": 0
+      },
+      "overwrite_rejected": true,
+      "binding_unchanged": true,
+      "https_requests": 1
+    },
+    {
+      "vendor": "deepseek",
+      "phase": "model-disabled",
+      "experiment": "EXP-AGENT-deepseek-model-disabled-fc13e2c73007",
+      "status": "FAILED",
+      "binding_hash": "fd07268207c53c40827b9b8220d7f17b85d1afd6c0a768c8a803e5c73200669d",
+      "model_version": 1,
+      "skill_refs": [
+        "set_field@1",
+        "iv_measurement@1",
+        "set_temperature@1",
+        "guide-deepseek-model-disabled-fc13e2c73007@1"
+      ],
+      "writes": {
+        "plan_revisions": 0,
+        "approvals": 0,
+        "runs": 0,
+        "tasks": 0,
+        "command_ledger": 0,
+        "datasets": 0,
+        "agent_proposals": 0,
+        "agent_tool_invocations": 0
+      },
+      "overwrite_rejected": true,
+      "binding_unchanged": true,
+      "https_requests": 0
+    },
+    {
+      "vendor": "deepseek",
+      "phase": "skill-new",
+      "experiment": "EXP-AGENT-deepseek-skill-new-fc13e2c73007",
+      "status": "COMPLETED",
+      "binding_hash": "bee734c11072a9dd861d2fa17ae7c9c18c15059b19bd3e3e353bd32d619fdfbe",
+      "model_version": 1,
+      "skill_refs": [
+        "set_field@1",
+        "iv_measurement@1",
+        "set_temperature@1",
+        "guide-deepseek-skill-new-fc13e2c73007@1"
+      ],
+      "writes": {
+        "plan_revisions": 0,
+        "approvals": 0,
+        "runs": 0,
+        "tasks": 0,
+        "command_ledger": 0,
+        "datasets": 0,
+        "agent_proposals": 0,
+        "agent_tool_invocations": 0
+      },
+      "overwrite_rejected": true,
+      "binding_unchanged": true,
+      "https_requests": 1
+    }
+  ],
+  "images": {
+    "agent-drill": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "offline-provider": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "postgres": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+    "nats": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+    "web": "sha256:fd41b31ad649646db2ea6c0ee8f72201839967c3f6cd22f796402b6316aaccd0",
+    "api": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "engine": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "gateway": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "agent": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "outbox": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72"
+  },
+  "scope": "deployed API version changes; offline HTTPS; no live provider capability claim"
+}

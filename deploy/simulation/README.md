@@ -187,3 +187,131 @@ PLAYWRIGHT_BROWSERS_PATH="$PWD/.local-deploy/browsers" \
 ```
 
 它复用数据 API 演练生成新模拟数据，在缺失/损坏文件期间运行真实 Chromium，验证错误提示、下载禁用、无曲线；通过私有文件屏障协调文件恢复，再在同页重试并下载核对 SHA-256。无需真实 LLM/设备。报告使用独立 `d12d3-data-browser-*` 文件，不覆盖 API 历史报告。强制中断后的文件恢复要求与数据 API 演练相同，正常 finally 回收文件备份、浏览器状态和令牌。
+
+### 独立进程异常读回（D12d.3）
+
+开启隔离 QA 端口后：
+
+```bash
+.venv/bin/python deploy/simulation/check_backend.py \
+  --pytest tests/integration/test_telemetry_process_faults.py --report reports/d12d3-telemetry-process.txt
+```
+
+隔离测试代理注入过期窗口、斜率超限和零磁场目标的错误读回，验证后继零派发，恢复后动作不重复。使用测试签名密钥与 loopback HTTP，不修改系统时钟或正常部署。测试覆盖来源合法的异常读回，不替代认证攻击/mTLS/真机验证。完整门禁后恢复正常部署并关闭 QA 端口。
+
+### 活动写入进程中断（D12d.3）
+
+启用上述 QA 网络后可执行：
+
+```bash
+.venv/bin/python deploy/simulation/check_backend.py \
+  --pytest tests/integration/test_upload_process_faults.py --report reports/d12d3-upload-process.txt
+```
+
+使用测试专用启动器定位两个 fsync 边界并 SIGKILL 独立 Engine；重启后验证同一 Dataset 提交与零重复采集。只作用于随机测试库/临时文件和模拟 Gateway，不修改产品启动器。该测试不证明断电耐久性；强杀遗留的临时文件自动回收仍是缺口。完整记录见 `reports/d12d3-upload-acceptance.md`，测试后恢复正常 Compose 网络。
+
+### 知识检索/撤权进程验证（D12d.3）
+
+启用 QA 网络后执行：
+
+```bash
+.venv/bin/python deploy/simulation/check_backend.py \
+  --pytest tests/integration/test_knowledge_process_faults.py --report reports/d12d3-knowledge-process.txt
+```
+
+真实 PostgreSQL、独立 fork AgentWorker，模型在子进程内使用离线替身，父进程受控驱动 tick；不是 Compose Agent/HTTPS 模型验收。验证检索注入、两种撤权时机与正常对照，并显式记录撤权后 RUNNING 未收尾缺口。运行结束后恢复正常 Compose 网络，详见 `reports/d12d3-knowledge-acceptance.md`。
+
+### 知识撤权终态收尾回归（D12d.3）
+
+启用 QA 网络后执行：
+
+```bash
+.venv/bin/python deploy/simulation/check_backend.py \
+  --pytest tests/integration/test_knowledge_process_faults.py tests/integration/test_revoked_source_closure.py tests/integration/test_resources.py \
+  --report reports/d12d3-revocation-closure-targeted.txt
+```
+
+本批修改运行时与 PostgreSQL 适配器，修复知识撤权后的 RUNNING 滞留；仍禁止读取撤权历史。测试包含真实审计 INSERT 失败回滚、所有权连接终止及并发取消，不使用线上模型。源码验证不自动更新部署镜像；应在后续部署知识链路验收时构建新镜像并补 API/页面证据。运行后恢复常规 Compose 网络，详见 `reports/d12d3-revocation-closure-acceptance.md`。
+
+### 撤权状态视图部署验证（D12d.3）
+
+完整后端/Web 门禁通过并构建、启动新镜像后执行：
+
+```bash
+PLAYWRIGHT_BROWSERS_PATH="$PWD/.local-deploy/browsers" \
+  .venv/bin/python deploy/simulation/check_revocation_view.py
+```
+
+创建独立实验及 fixture 来源绑定的 READY AgentRun，通过 API 撤销来源，再用独立数据库网络容器内的 AgentWorker 单次 tick 收尾。真实 Chromium 验证等待提示到 FAILED，API 验证最小字段、轨迹/提案拒绝；模型调用与设备写入均为零。并未运行模型检索或响应中撤权。临时状态保存在私有目录，结束时撤销令牌、禁用测试配置；业务审计保留。完整记录见 `reports/d12d3-revocation-view-acceptance.md`。
+
+### 实际检索与 HTTPS 知识撤权（D12d.3）
+
+常规模拟部署启动后执行：
+
+```bash
+.venv/bin/python deploy/simulation/check_knowledge_faults.py
+```
+
+OpenAI/DeepSeek 两格式各三个案例，通过真实 API 导入来源、创建 AgentRun；专用常驻 worker 真实检索，再经隔离 HTTPS/SSE 替身返回总结或越权工具。撤权屏障位于第二轮响应发送前，API 撤权完成后才释放。校验来源 hash、两轮请求、终态收尾/不重放与零提案/设备写入。不调用线上 API、不提供浏览器证据；结束后删除专用容器/网络并禁用配置、撤销令牌，审计保留。报告 `reports/d12d3-knowledge-https-acceptance.md`。完整门禁应与部署演练串行运行，避免同机资源争用。
+
+### 非法用量与实际 HTTPS 流停滞（D12d.3）
+
+```bash
+.venv/bin/python deploy/simulation/check_streaming_faults.py
+```
+
+OpenAI/DeepSeek 各覆盖负数、布尔值、总量不一致 usage，以及发送第一个不完整工具分片后保持连接六秒。专用 profile 为 timeout_seconds=2、max_attempts=1；验证真实常驻 Agent FAILED/MODEL_FAILURE、预算预留保留、无成功模型事件/工具提交/设备写入，每项只有一次 HTTPS 请求。不是在线 API、取消或多次重试验收。入口自动清理专用容器、配置和令牌，审计保留；完整后端门禁须串行运行。证据见 `reports/d12d3-streaming-https-evidence.json`。
+
+### HTTPS 重试上限与部分输出后禁止重试（D12d.3）
+
+```bash
+.venv/bin/python deploy/simulation/check_retry_faults.py
+```
+
+两供应商各运行连续 429、部分 SSE 后超时，专用 profile 为 timeout_seconds=2、max_attempts=3。真实 HTTPS 请求数分别应为 3、1；全部 FAILED/MODEL_FAILURE，预算预留保留，工具/提案/执行写入为 0。与单次超时专项共享断言，但报告独立保存为 `reports/d12d3-retry-https-evidence.json`。不覆盖取消、重试后成功或预算耗尽。完整门禁与演练串行执行，随后恢复常规 Compose 网络并核对清理。
+
+### Agent 取消 API 与实际部署页面（D12d.3）
+
+```bash
+PLAYWRIGHT_BROWSERS_PATH="$PWD/.local-deploy/browsers" .venv/bin/python deploy/simulation/check_cancellation_faults.py
+```
+
+需要包含 d12_002 的新后端/Web 镜像和已显式升级的数据库。两供应商各覆盖调用前取消、部分 SSE 后 API 取消、部分 SSE 后 Chromium 页面取消，共六项。专用 profile timeout_seconds=90/max_attempts=1，替身在第一片后等待本机 release 文件；只有 API/浏览器确认 RUNNING + cancel_requested 后才释放剩余合法响应。最终 CANCELLED，未提交模型结果/工具/提案；调用前请求 0、运行中请求 1。页面等待确认时禁用重复操作，实际 worker 确认后才显示 CANCELLED，无网络 mock/手动 advance。
+
+当前入口写入 `reports/d12d3-cancel-deploy-evidence.json` 和两份供应商浏览器日志。第十五批 `d12d3-cancellation-api-*` 是旧版 RUN_BUSY 的历史证据，不能覆盖或作为新版验收。专用 worker/网络、配置和令牌自动清理，历史取消请求与审计保留。该证据不是即时 socket 中断、真实线上模型、MCP 远端副作用回滚或现场设备停止。
+
+### Agent HTTPS 调用期间强制中断/重启（D12d.3）
+
+```bash
+.venv/bin/python deploy/simulation/check_agent_crash.py
+```
+
+仅对临时 agent-drill 容器发送 SIGKILL；常规服务不作为故障目标。两供应商各覆盖保存取消意图后中断、未取消直接中断。等待实际 HTTPS 首片与 model_reserved 后，验证退出码 137/非 OOM、停机期间仍为 RUNNING，重启后分别 CANCELLED 或 FAILED/MODEL_INTERRUPTED。再次重启并等待新进程空 tick，状态/轨迹不变，每项 HTTPS 请求保持 1、工具/提案/执行写入 0。报告 `reports/d12d3-agent-crash-evidence.json`；不声称操作系统自动重启、物理断电或已提交工具恢复验收。
+
+### 重试成功、累计预算及用量读取（D12d.3）
+
+```bash
+.venv/bin/python deploy/simulation/check_retry_budget.py
+```
+
+两供应商各覆盖首次 429 后只读总结成功、48,000 预算下禁止继续重试、4,096 预算下调用前拒绝。预算场景在合法目标中加入 15,000 字节内容，替身只记录按客户端规则计算的每次预留数，不记录完整 payload；逐项校验累计预留边界与实际请求数。成功响应只有一次 usage，完成统计含两个唯一尝试 ID；三次重复 GET 及 worker 重启后用量/轨迹不变。报告 `reports/d12d3-retry-budget-evidence.json`。这些数字是保护性预留和替身报告用量，不是供应商实际账单。
+
+### 模型能力/Skill 版本绑定（D12d.3）
+
+```bash
+.venv/bin/python deploy/simulation/check_version_faults.py
+```
+
+两供应商各验证模型新版本、旧模型禁用、Skill 新版本。创建 READY 运行后暂缓专用 worker，通过正式 API 操作新版本及覆盖负路径，再启动真实 worker。新版模型声明不支持工具时新 Agent 发布被拒；旧模型禁用后即使有可用新版也不自动切换；新 Skill 不替换旧运行绑定。TLS 替身核对真实消息包含旧 instruction 标记且没有新标记。全部版本/令牌均清理，保持历史审计。报告 `reports/d12d3-version-binding-evidence.json`；不等于线上供应商能力探测。
+
+### 已提交工具边界的恢复（D12d.3）
+
+```bash
+.venv/bin/python deploy/simulation/check_tool_recovery.py
+```
+
+专用 worker poll_s=5，等待真实 checkpoint 进入 tools/iterations=1（模型已提交工具请求）或 model/iterations=1（read_snapshot 结果已提交），然后只对 agent-drill 发送 SIGKILL。停止后再次比对数据库边界，若下一 tick 已抢先推进则失败。新进程恢复后应完成两次 HTTPS、一次 read_snapshot 和一次 PROPOSED 提案，计划/审批/执行写入 0；第二次重启检查状态、轨迹、ledger、提案完全不变。入口不调用手工 advance、不注入 checkpoint。证据 `reports/d12d3-tool-recovery-evidence.json`。不覆盖 MCP 外部调用、提交事务内部中断或自动重启策略。
+
+### Agent 部署权限矩阵
+
+运行 `.venv/bin/python deploy/simulation/check_permissions.py`：为两种供应商格式分别创建真实 HTTPS/常驻 worker 产生的完成运行和未审批提案，再使用独立 observer/operator/approver/outsider 身份及匿名请求检查 HTTP 权限。每供应商 49 项断言，包含非提交人的详情/轨迹/提案/取消/推进拒绝、列表与用量隔离、实验外/匿名拒绝，以及 API 成员撤权后即时拒绝。提交人状态/轨迹/提案保持不变，零设备执行写入。测试身份、令牌和成员权限在 finally 中禁用/撤销；仅操作随机命名的隔离实验。不代表运行中提交人撤权、MCP 撤权或浏览器权限矩阵已完成。

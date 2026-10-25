@@ -1,0 +1,313 @@
+F.FF.F...F.............................................                  [100%]
+=================================== FAILURES ===================================
+_______ test_request_survives_new_store_and_worker_confirms_before_model _______
+
+agents = (<alap.application.agent_runtime.AgentRuntime object at 0x7fbb64556510>, <alap.application.agent_config.AgentRegistry ...ootcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt options=-csearch_path=test_fe0f652dd003412ea11830d494dcf87a')
+
+    def test_request_survives_new_store_and_worker_confirms_before_model(agents):  # noqa: F811
+        runtime, _, model, *_ = agents
+        run = start(agents)
+>       requested = runtime.store.request_cancel("owner", run["id"])
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/integration/test_agent_cancellation.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/alap/adapters/postgres/agents.py:237: in request_cancel
+    db.execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <psycopg.Connection [BAD] at 0x7fbb6458c7d0>
+query = 'UPDATE agent_runs SET cancel_requested_at=COALESCE(cancel_requested_at,clock_timestamp()) WHERE id=%s'
+params = ('bb662411-ba35-4b22-8eb8-e2f94c4570d0',), prepare = None
+binary = False
+
+    def execute(
+        self,
+        query: Query,
+        params: Params | None = None,
+        *,
+        prepare: bool | None = None,
+        binary: bool = False,
+    ) -> Cursor[Row]:
+        """Execute a query and return a cursor to read its results."""
+        try:
+            cur = self.cursor()
+            if binary:
+                cur.format = BINARY
+    
+            if isinstance(query, Template):
+                if params is not None:
+                    raise TypeError(
+                        "'execute()' with string template query doesn't support parameters"
+                    )
+                return cur.execute(query, prepare=prepare)
+            else:
+                return cur.execute(query, params, prepare=prepare)
+        except e._NO_TRACEBACK as ex:
+>           raise ex.with_traceback(None)
+E           psycopg.errors.CheckViolation: immutable agent binding or invalid revision
+E           CONTEXT:  PL/pgSQL function protect_agent_run() line 6 at RAISE
+
+.venv/lib/python3.14/site-packages/psycopg/connection.py:304: CheckViolation
+_____________ test_cancel_at_reservation_commit_never_calls_model ______________
+
+agents = (<alap.application.agent_runtime.AgentRuntime object at 0x7fbb64585090>, <alap.application.agent_config.AgentRegistry ...ootcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt options=-csearch_path=test_3b98c02a32b84bec80d1f972481ba762')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fbb6454b9b0>
+
+    def test_cancel_at_reservation_commit_never_calls_model(agents, monkeypatch):  # noqa: F811
+        runtime, _, model, *_ = agents
+        run = start(agents)
+        original = runtime.store.commit
+    
+        def before_commit(run, checkpoint, event, **kwargs):
+            if event["type"] == "model_reserved":
+                runtime.store.request_cancel("owner", run["id"])
+            return original(run, checkpoint, event, **kwargs)
+    
+        monkeypatch.setattr(runtime.store, "commit", before_commit)
+>       done = runtime.step("owner", run["id"])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/integration/test_agent_cancellation.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/alap/application/agent_runtime.py:138: in step
+    return self._step(actor, identity, cancel)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/alap/application/agent_runtime.py:164: in _step
+    return self._model(run, cp, cancel or Event())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/alap/application/agent_runtime.py:193: in _model
+    run = self.store.commit(
+tests/integration/test_agent_cancellation.py:52: in before_commit
+    runtime.store.request_cancel("owner", run["id"])
+src/alap/adapters/postgres/agents.py:237: in request_cancel
+    db.execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <psycopg.Connection [BAD] at 0x7fbb6458d8b0>
+query = 'UPDATE agent_runs SET cancel_requested_at=COALESCE(cancel_requested_at,clock_timestamp()) WHERE id=%s'
+params = ('357bb43f-59cd-485a-8d78-89103fae8ef3',), prepare = None
+binary = False
+
+    def execute(
+        self,
+        query: Query,
+        params: Params | None = None,
+        *,
+        prepare: bool | None = None,
+        binary: bool = False,
+    ) -> Cursor[Row]:
+        """Execute a query and return a cursor to read its results."""
+        try:
+            cur = self.cursor()
+            if binary:
+                cur.format = BINARY
+    
+            if isinstance(query, Template):
+                if params is not None:
+                    raise TypeError(
+                        "'execute()' with string template query doesn't support parameters"
+                    )
+                return cur.execute(query, prepare=prepare)
+            else:
+                return cur.execute(query, params, prepare=prepare)
+        except e._NO_TRACEBACK as ex:
+>           raise ex.with_traceback(None)
+E           psycopg.errors.CheckViolation: immutable agent binding or invalid revision
+E           CONTEXT:  PL/pgSQL function protect_agent_run() line 6 at RAISE
+
+.venv/lib/python3.14/site-packages/psycopg/connection.py:304: CheckViolation
+_______ test_cancel_at_tool_publication_discards_proposal_and_invocation _______
+
+agents = (<alap.application.agent_runtime.AgentRuntime object at 0x7fbb6455b100>, <alap.application.agent_config.AgentRegistry ...ootcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt options=-csearch_path=test_5923b9761aa140549a35eee0e8e9c6d4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fbb6e1e47c0>
+
+    def test_cancel_at_tool_publication_discards_proposal_and_invocation(agents, monkeypatch):  # noqa: F811
+        runtime, _, model, *_ = agents
+        run = start(agents)
+        model.outputs = [[call()]]
+        runtime.step("owner", run["id"])
+        original = runtime.store.commit
+    
+        def before_commit(run, checkpoint, event, **kwargs):
+            if kwargs.get("invocations"):
+                runtime.store.request_cancel("owner", run["id"])
+            return original(run, checkpoint, event, **kwargs)
+    
+        monkeypatch.setattr(runtime.store, "commit", before_commit)
+>       done = runtime.step("owner", run["id"])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/integration/test_agent_cancellation.py:75: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/alap/application/agent_runtime.py:138: in step
+    return self._step(actor, identity, cancel)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/alap/application/agent_runtime.py:163: in _step
+    return self._tools(run, cp)
+           ^^^^^^^^^^^^^^^^^^^^
+src/alap/application/agent_runtime.py:378: in _tools
+    return self.store.commit(
+tests/integration/test_agent_cancellation.py:71: in before_commit
+    runtime.store.request_cancel("owner", run["id"])
+src/alap/adapters/postgres/agents.py:237: in request_cancel
+    db.execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <psycopg.Connection [BAD] at 0x7fbb6451bb60>
+query = 'UPDATE agent_runs SET cancel_requested_at=COALESCE(cancel_requested_at,clock_timestamp()) WHERE id=%s'
+params = ('8e08715b-148d-4f73-a996-6064b3895246',), prepare = None
+binary = False
+
+    def execute(
+        self,
+        query: Query,
+        params: Params | None = None,
+        *,
+        prepare: bool | None = None,
+        binary: bool = False,
+    ) -> Cursor[Row]:
+        """Execute a query and return a cursor to read its results."""
+        try:
+            cur = self.cursor()
+            if binary:
+                cur.format = BINARY
+    
+            if isinstance(query, Template):
+                if params is not None:
+                    raise TypeError(
+                        "'execute()' with string template query doesn't support parameters"
+                    )
+                return cur.execute(query, prepare=prepare)
+            else:
+                return cur.execute(query, params, prepare=prepare)
+        except e._NO_TRACEBACK as ex:
+>           raise ex.with_traceback(None)
+E           psycopg.errors.CheckViolation: immutable agent binding or invalid revision
+E           CONTEXT:  PL/pgSQL function protect_agent_run() line 6 at RAISE
+
+.venv/lib/python3.14/site-packages/psycopg/connection.py:304: CheckViolation
+_______________ test_acknowledgement_and_trace_rollback_together _______________
+
+agents = (<alap.application.agent_runtime.AgentRuntime object at 0x7fbb645495b0>, <alap.application.agent_config.AgentRegistry ...ootcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt options=-csearch_path=test_25d14bd83c0c468c9a3de4f9d212596f')
+
+    def test_acknowledgement_and_trace_rollback_together(agents):  # noqa: F811
+        runtime, *_ = agents
+        run = start(agents)
+>       runtime.store.request_cancel("owner", run["id"])
+
+tests/integration/test_agent_cancellation.py:95: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/alap/adapters/postgres/agents.py:237: in request_cancel
+    db.execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <psycopg.Connection [BAD] at 0x7fbb6458d9a0>
+query = 'UPDATE agent_runs SET cancel_requested_at=COALESCE(cancel_requested_at,clock_timestamp()) WHERE id=%s'
+params = ('505a59fb-773b-40dc-978e-cdc6e8ad4c43',), prepare = None
+binary = False
+
+    def execute(
+        self,
+        query: Query,
+        params: Params | None = None,
+        *,
+        prepare: bool | None = None,
+        binary: bool = False,
+    ) -> Cursor[Row]:
+        """Execute a query and return a cursor to read its results."""
+        try:
+            cur = self.cursor()
+            if binary:
+                cur.format = BINARY
+    
+            if isinstance(query, Template):
+                if params is not None:
+                    raise TypeError(
+                        "'execute()' with string template query doesn't support parameters"
+                    )
+                return cur.execute(query, prepare=prepare)
+            else:
+                return cur.execute(query, params, prepare=prepare)
+        except e._NO_TRACEBACK as ex:
+>           raise ex.with_traceback(None)
+E           psycopg.errors.CheckViolation: immutable agent binding or invalid revision
+E           CONTEXT:  PL/pgSQL function protect_agent_run() line 6 at RAISE
+
+.venv/lib/python3.14/site-packages/psycopg/connection.py:304: CheckViolation
+_________ test_manual_step_excluded_but_cancel_request_reaches_worker __________
+
+agents = (<alap.application.agent_runtime.AgentRuntime object at 0x7fbb6456f450>, <alap.application.agent_config.AgentRegistry ...ootcert=/home/endsen/ALAP/.local-deploy/simulation/ca.crt options=-csearch_path=test_cf8556b0b2154e31b169d6fe0eabfea5')
+worker = <alap.application.agent_worker.AgentWorker object at 0x7fbb6e137e10>
+
+    def test_manual_step_excluded_but_cancel_request_reaches_worker(agents, worker):  # noqa: F811
+        runtime, _, model, *_ = agents
+        run = start(agents)
+        entered, release = Event(), Event()
+        original = model.stream
+        model.outputs = ["done"]
+    
+        def blocked(request, cancel):
+            entered.set()
+            assert release.wait(10)
+            yield from original(request, cancel)
+    
+        model.stream = blocked
+        with ThreadPoolExecutor(1) as pool:
+            future = pool.submit(worker.tick)
+            try:
+                assert entered.wait(10)
+                with pytest.raises(DomainError, match="RUN_BUSY"):
+                    runtime.step("owner", run["id"])
+>               pending = runtime.cancel("owner", run["id"])
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/integration/test_background_workers.py:96: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/alap/application/agent_runtime.py:120: in cancel
+    run = self.store.request_cancel(actor, identity)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/alap/adapters/postgres/agents.py:237: in request_cancel
+    db.execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <psycopg.Connection [BAD] at 0x7fbb6458f5c0>
+query = 'UPDATE agent_runs SET cancel_requested_at=COALESCE(cancel_requested_at,clock_timestamp()) WHERE id=%s'
+params = ('2153b110-2742-41e5-b4b4-cd9338164a5b',), prepare = None
+binary = False
+
+    def execute(
+        self,
+        query: Query,
+        params: Params | None = None,
+        *,
+        prepare: bool | None = None,
+        binary: bool = False,
+    ) -> Cursor[Row]:
+        """Execute a query and return a cursor to read its results."""
+        try:
+            cur = self.cursor()
+            if binary:
+                cur.format = BINARY
+    
+            if isinstance(query, Template):
+                if params is not None:
+                    raise TypeError(
+                        "'execute()' with string template query doesn't support parameters"
+                    )
+                return cur.execute(query, prepare=prepare)
+            else:
+                return cur.execute(query, params, prepare=prepare)
+        except e._NO_TRACEBACK as ex:
+>           raise ex.with_traceback(None)
+E           psycopg.errors.CheckViolation: immutable agent binding or invalid revision
+E           CONTEXT:  PL/pgSQL function protect_agent_run() line 6 at RAISE
+
+.venv/lib/python3.14/site-packages/psycopg/connection.py:304: CheckViolation
+=========================== short test summary info ============================
+FAILED tests/integration/test_agent_cancellation.py::test_request_survives_new_store_and_worker_confirms_before_model
+FAILED tests/integration/test_agent_cancellation.py::test_cancel_at_reservation_commit_never_calls_model
+FAILED tests/integration/test_agent_cancellation.py::test_cancel_at_tool_publication_discards_proposal_and_invocation
+FAILED tests/integration/test_agent_cancellation.py::test_acknowledgement_and_trace_rollback_together
+FAILED tests/integration/test_background_workers.py::test_manual_step_excluded_but_cancel_request_reaches_worker
+5 failed, 50 passed in 76.01s (0:01:16)

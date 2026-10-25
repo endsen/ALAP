@@ -1,0 +1,46 @@
+{
+  "checked_at": "2026-10-23T05:25:16.275435+00:00",
+  "experiment": "EXP-AGENT-view-cf03a7eb5802",
+  "seeded_context": true,
+  "worker": "independent DB-only container, one tick",
+  "before": {
+    "id": "cff9be03-268d-4025-be2c-760f85f97af4",
+    "experiment_id": "EXP-AGENT-view-cf03a7eb5802",
+    "definition_ref": "drill-view-cf03a7eb5802@2",
+    "revision": 0,
+    "goal": "\u5185\u5bb9\u4e0d\u53ef\u8bbf\u95ee",
+    "status": "READY",
+    "result": null,
+    "access_error": "SOURCE_REVOKED"
+  },
+  "after": {
+    "id": "cff9be03-268d-4025-be2c-760f85f97af4",
+    "experiment_id": "EXP-AGENT-view-cf03a7eb5802",
+    "definition_ref": "drill-view-cf03a7eb5802@2",
+    "revision": 1,
+    "goal": "\u5185\u5bb9\u4e0d\u53ef\u8bbf\u95ee",
+    "status": "FAILED",
+    "result": null,
+    "access_error": "SOURCE_REVOKED"
+  },
+  "business_writes": {
+    "plan_revisions": 0,
+    "approvals": 0,
+    "runs": 0,
+    "tasks": 0,
+    "command_ledger": 0,
+    "datasets": 0,
+    "model_reserved": 0,
+    "proposals": 0
+  },
+  "images": {
+    "web": "sha256:992f194b1d61e8c7bbefda70d6f2ca5172ae3eab9120367e2e2925bbfa2c58ba",
+    "api": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "engine": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "agent": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "outbox": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "postgres": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+    "gateway": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "nats": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490"
+  }
+}

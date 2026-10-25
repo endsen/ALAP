@@ -2344,3 +2344,11 @@ Agent checkpoint 的 external_refs 在加载和提交内锁定复核；提案与
 迁移 d09_001 为实验增加 title/objective/created_at，并增加 platform_roles、api_tokens、api_credentials、platform_configs、api_requests、api_audit。已有实验的 created_at 是迁移时间，不能当作历史采集时间。token 仅存摘要，凭据仅存绑定引用的认证密文；版本配置在应用入口拒绝覆盖，管理审计不可更新/删除。
 
 API 请求以 actor/operation/path/key 区分，HMAC 绑定请求及 If-Match，INFLIGHT 在调用前提交。跨服务操作不声明同事务，崩溃保留未知并要求检查业务结果；原有实验状态/outbox 原子事务保持。权限变化不产生虚构设备事件；SSE 按当前权限复核并可终止，客户端再获取权威快照。
+
+## D12 · Agent 持久化取消意图
+
+迁移 d12_002 在 agent_runs 增加 cancel_requested_at。该时间记录运行所有者首次提出取消的事实，不推进 checkpoint revision，也不改变 READY/RUNNING；API 返回 cancel_requested=true，不能据此显示 CANCELLED。申请人仍须通过当前成员、资源与来源访问复核。触发器仅允许非终态首次写入时间且其他全部字段不变；已写入时间不可清除或替换，原绑定不可变规则继续有效。重复请求保留首次时间；终态上的取消是无操作。
+
+请求使用短事务锁定 Agent 行，与 checkpoint 提交串行化；模型网络调用仍只持有 session 所有权锁，不持有行锁。持有运行所有权的调用者可立即确认，否则返回已持久化意图，由 worker 后续确认。worker 在推进前、后续工具调用前检查意图，最终提交事务再次锁行复查。若取消请求先取得提交顺序，则从上一个已提交 checkpoint 生成 CANCELLED/done，清空未提交 pending/result，保留历史与预算预留，丢弃本次工具 ledger/提案，并与 cancelled 轨迹同事务提交。轨迹保留 prior_stage 和 model_outcome_unknown。若原终态先提交，晚到的取消不覆盖该终态。模型预留提交被取消截断后不得继续发出模型请求；所有权连接失效仍不得重连提交。
+
+本实现是安全边界取消，不保证立即中断已经发出的模型或只读/MCP 请求；远端副作用及已消费 token 无法撤回，已完成历史提案不会删除。运行时仍受现有超时/预算约束。来源或提交人撤权不由取消请求绕过，失败状态也不能伪装为取消确认。相同 HTTP 幂等键可返回原先的待确认响应，最新状态以随后 GET 为准。当前本地源码/集成验证与实际 Compose 升级验收分开记录，见 IMPLEMENTATION_STATUS.md。

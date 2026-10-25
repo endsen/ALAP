@@ -181,6 +181,40 @@ class PostgresAPIStore(PostgresResourceStore):
                 (actor,),
             ).fetchall()
 
+    def run_summary(self, actor, identity):
+        """Owner-only status projection; revoked knowledge never grants history access."""
+        from alap.adapters.postgres.resources import check_references
+
+        with self.connect() as db:
+            row = db.execute("SELECT * FROM agent_runs WHERE id=%s", (identity,)).fetchone()
+            require(row is not None and row["actor_id"] == actor, "FORBIDDEN", "Run owner required")
+            self._access(
+                db,
+                actor,
+                row["experiment_id"],
+                row["bundle"]["config"]["manifest"]["scoped_instruments"],
+            )
+            require(
+                digest(row["bundle"]) == row["bundle_hash"], "REGISTRY_CORRUPT", "Bundle mismatch"
+            )
+            summary = {k: row[k] for k in ("id", "experiment_id", "definition_ref", "revision")}
+            summary["cancel_requested_at"] = row["cancel_requested_at"]
+            cp = row["checkpoint"]
+            try:
+                check_references(db, row, cp)
+            except DomainError as exc:
+                if exc.code != "SOURCE_REVOKED":
+                    raise
+                summary["checkpoint"] = {
+                    "status": cp["status"],
+                    "goal": "内容不可访问",
+                    "result": None,
+                }
+                summary["access_error"] = "SOURCE_REVOKED"
+            else:
+                summary["checkpoint"] = {k: cp.get(k) for k in ("status", "goal", "result")}
+            return summary
+
     def run_rows(self, actor, experiment, cursor, limit):
         with self.connect() as db:
             self._access(db, actor, experiment, [])
@@ -189,7 +223,7 @@ class PostgresAPIStore(PostgresResourceStore):
               AND id>%s ORDER BY id LIMIT %s""",
                 (experiment, actor, cursor, limit),
             ).fetchall()
-        return [self.load(actor, row["id"]) for row in rows]
+        return [self.run_summary(actor, row["id"]) for row in rows]
 
     def traces(self, actor, identity):
         self.load(

@@ -53,11 +53,16 @@ ADMIN = {
 
 def run_view(row):
     cp = row["checkpoint"]
-    return {k: row[k] for k in ("id", "experiment_id", "definition_ref", "revision")} | {
-        "goal": cp["goal"],
-        "status": cp["status"],
-        "result": cp.get("result"),
-    }
+    return (
+        {k: row[k] for k in ("id", "experiment_id", "definition_ref", "revision")}
+        | {
+            "goal": cp["goal"],
+            "status": cp["status"],
+            "result": cp.get("result"),
+            "cancel_requested": row.get("cancel_requested_at") is not None,
+        }
+        | ({"access_error": row["access_error"]} if "access_error" in row else {})
+    )
 
 
 class APIService:
@@ -112,7 +117,11 @@ class APIService:
                     repo.get("plan_revisions", row["plan_revision_id"])["plan_json"],
                 )
         if "agent_run_id" in path:
-            run = self.store.load(actor, path["agent_run_id"])
+            run = (
+                self.store.run_summary(actor, path["agent_run_id"])
+                if op == "getAgentRun"
+                else self.store.load(actor, path["agent_run_id"])
+            )
             if op in {"advanceAgentRun", "cancelAgentRun"}:
                 self.access(actor, run["experiment_id"], write=True)
         if op == "createAgentRun":
@@ -332,7 +341,7 @@ class APIService:
                 )
             )
         if op == "getAgentRun":
-            return run_view(self.store.load(actor, path["agent_run_id"]))
+            return run_view(self.store.run_summary(actor, path["agent_run_id"]))
         if op == "listAgentRuns":
             return {
                 "items": [

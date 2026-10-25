@@ -261,3 +261,133 @@ test("snapshot loading is explicit; resync event restores authoritative state", 
     page.getByRole("status").filter({ hasText: "实时同步" }),
   ).toBeVisible();
 });
+
+test("revoked knowledge status hides cached content and waits for authoritative closure", async ({
+  page,
+}) => {
+  let revoked = false;
+  let ended = false;
+  const view = () => ({
+    id: "ui-revoked",
+    experiment_id: "EXP-SIM-001",
+    definition_ref: "planner@1",
+    revision: ended ? 4 : 3,
+    status: ended ? "FAILED" : "RUNNING",
+    goal: revoked ? "内容不可访问" : "private cached goal",
+    result: null,
+    ...(revoked ? { access_error: "SOURCE_REVOKED" } : {}),
+  });
+  await page.route("**/api/v1/experiments/*/agent-runs?*", (route) =>
+    route.fulfill({ json: { items: [view()] } }),
+  );
+  await page.route("**/api/v1/agent-runs/ui-revoked", (route) =>
+    route.fulfill({ json: view() }),
+  );
+  await page.route("**/api/v1/agent-runs/ui-revoked/proposals", (route) =>
+    route.fulfill({
+      json: {
+        items: [
+          {
+            id: "cached-proposal",
+            state: "PROPOSED",
+            proposal: {
+              reason: "private cached proposal",
+              tasks: [],
+              requested_resources: [],
+            },
+          },
+        ],
+      },
+    }),
+  );
+  await page.route("**/api/v1/agent-runs/ui-revoked/trace", (route) =>
+    route.fulfill({
+      json: {
+        items: [
+          { seq: 1, event: { type: "tool", content: "private cached source" } },
+        ],
+      },
+    }),
+  );
+  await login(page);
+  await page.getByRole("button", { name: /private cached goal/ }).click();
+  const conversation = page.locator(".conversation");
+  await expect(
+    conversation.getByText("private cached proposal", { exact: true }),
+  ).toBeVisible();
+  revoked = true;
+  await expect(
+    conversation.getByText(/知识来源权限已撤销，等待后台结束处理/),
+  ).toBeVisible();
+  await expect(
+    conversation.getByRole("button", { name: "继续处理目标" }),
+  ).toBeDisabled();
+  await expect(
+    conversation.getByRole("button", { name: "停止 Agent" }),
+  ).toHaveCount(0);
+  await expect(conversation.getByText(/private cached/)).toHaveCount(0);
+  await expect(
+    conversation.getByText("查看处理轨迹", { exact: false }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /private cached goal/ }),
+  ).toHaveCount(0);
+  ended = true;
+  await expect(
+    conversation.getByText(/知识来源权限已撤销，本次处理已终止/),
+  ).toBeVisible();
+  await expect(
+    conversation.getByTitle("FAILED", { exact: true }),
+  ).toBeVisible();
+});
+
+test("cancel intent stays running until worker acknowledgement", async ({
+  page,
+}) => {
+  let requested = false;
+  let ended = false;
+  const view = () => ({
+    id: "ui-cancel",
+    experiment_id: "EXP-SIM-001",
+    definition_ref: "planner@1",
+    revision: ended ? 4 : 3,
+    status: ended ? "CANCELLED" : "RUNNING",
+    goal: "cancellable goal",
+    result: null,
+    cancel_requested: requested,
+  });
+  await page.route("**/api/v1/experiments/*/agent-runs?*", (route) =>
+    route.fulfill({ json: { items: [view()] } }),
+  );
+  await page.route("**/api/v1/agent-runs/ui-cancel", (route) =>
+    route.fulfill({ json: view() }),
+  );
+  for (const suffix of ["trace", "proposals"]) {
+    await page.route(`**/api/v1/agent-runs/ui-cancel/${suffix}`, (route) =>
+      route.fulfill({ json: { items: [] } }),
+    );
+  }
+  await page.route("**/api/v1/agent-runs/ui-cancel/cancel", (route) => {
+    requested = true;
+    return route.fulfill({ json: view() });
+  });
+  await login(page);
+  await page.getByRole("button", { name: /cancellable goal/ }).click();
+  const conversation = page.locator(".conversation");
+  await conversation.getByRole("button", { name: "停止 Agent" }).click();
+  await expect(
+    conversation.getByText("已请求取消，等待后台确认", { exact: true }),
+  ).toBeVisible();
+  await expect(conversation.locator('[title="RUNNING"]')).toBeVisible();
+  await expect(
+    conversation.getByRole("button", { name: "停止 Agent" }),
+  ).toBeDisabled();
+  await expect(
+    conversation.getByRole("button", { name: "继续处理目标" }),
+  ).toBeDisabled();
+  ended = true;
+  await expect(conversation.locator('[title="CANCELLED"]')).toBeVisible();
+  await expect(
+    conversation.getByText("已请求取消，等待后台确认", { exact: true }),
+  ).toHaveCount(0);
+});

@@ -1,0 +1,123 @@
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            BuildKit is currently disabled; enable it by removing the DOCKER_BUILDKIT=0
+            environment-variable.
+
+Sending build context to Docker daemon  2.754MB
+Step 1/14 : ARG PYTHON_IMAGE
+Step 2/14 : FROM ${PYTHON_IMAGE}
+ ---> a2b82f3c4855
+Step 3/14 : ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+ ---> Using cache
+ ---> 636cb7d6fd0c
+Step 4/14 : WORKDIR /app
+ ---> Using cache
+ ---> 06ca95c58370
+Step 5/14 : COPY requirements-dev.lock pyproject.toml ./
+ ---> Using cache
+ ---> 97aaa0c27512
+Step 6/14 : RUN pip install --no-cache-dir -r requirements-dev.lock
+ ---> Using cache
+ ---> da7ea4471a21
+Step 7/14 : COPY src ./src
+ ---> eaf0c9c31343
+Step 8/14 : COPY contracts ./contracts
+ ---> 4f99a5117149
+Step 9/14 : COPY migrations ./migrations
+ ---> 12c92e0644b8
+Step 10/14 : COPY alembic.ini ./
+ ---> 1457db6a620e
+Step 11/14 : COPY scripts ./scripts
+ ---> 5845fb5b5acc
+Step 12/14 : COPY deploy ./deploy
+ ---> dd8fd1ab10df
+Step 13/14 : RUN pip install --no-deps --no-build-isolation -e .
+ ---> Running in 3bf7341bca9a
+Obtaining file:///app
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: alap
+  Building editable for alap (pyproject.toml): started
+  Building editable for alap (pyproject.toml): finished with status 'done'
+  Created wheel for alap: filename=alap-0.1.0-0.editable-py3-none-any.whl size=1432 sha256=94dc97b6548784614be658de618220581f9cf4b25ede71029c78fe35c4767ef9
+  Stored in directory: /tmp/pip-ephem-wheel-cache-inxn3k8n/wheels/b8/36/9c/914153c626bda53913fc1c371da41560e7caf866363da7bf04
+Successfully built alap
+Installing collected packages: alap
+Successfully installed alap-0.1.0
+[91mWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+[0m ---> Removed intermediate container 3bf7341bca9a
+ ---> 9d78f2c9600c
+Step 14/14 : CMD ["uvicorn", "alap.adapters.api.bootstrap:factory", "--factory", "--host", "0.0.0.0", "--no-access-log"]
+ ---> Running in 57fe958ac70b
+ ---> Removed intermediate container 57fe958ac70b
+ ---> 72ac2df36138
+Successfully built 72ac2df36138
+Successfully tagged alap-backend:simulation
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            BuildKit is currently disabled; enable it by removing the DOCKER_BUILDKIT=0
+            environment-variable.
+
+Sending build context to Docker daemon  3.594MB
+Step 1/11 : ARG NODE_IMAGE
+Step 2/11 : FROM ${NODE_IMAGE}
+ ---> a5f4366e8346
+Step 3/11 : WORKDIR /app
+ ---> Using cache
+ ---> b482c6e0ca3f
+Step 4/11 : ENV NEXT_TELEMETRY_DISABLED=1
+ ---> Using cache
+ ---> c3d3a2309431
+Step 5/11 : COPY apps/web/package.json apps/web/package-lock.json ./
+ ---> Using cache
+ ---> e57e1590a398
+Step 6/11 : RUN npm ci
+ ---> Using cache
+ ---> b94e69df0cd5
+Step 7/11 : COPY apps/web ./
+ ---> fcf834bfb846
+Step 8/11 : ENV ALAP_API_ORIGIN=http://api:8000 NODE_ENV=production
+ ---> Running in e96c01bd88ad
+ ---> Removed intermediate container e96c01bd88ad
+ ---> 97a83528e45c
+Step 9/11 : RUN npm run build
+ ---> Running in 0d6c87f4d942
+
+> alap-web@0.1.0 build
+> next build
+
+▲ Next.js 16.4.2 (Turbopack)
+✓ Running next.config.ts took 469ms
+- Experiments (use with caution):
+  · cpus: 2
+  ⨯ useTypeScriptCli
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.7min
+  Running TypeScript ...
+  Finished TypeScript in 14.2s ...
+  Collecting page data using 2 workers ...
+  Generating static pages using 2 workers (0/2) ...
+✓ Generating static pages using 2 workers (2/2) in 223ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /_not-found
+└ ƒ /[[...route]]
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+ ---> Removed intermediate container 0d6c87f4d942
+ ---> 8456badebdd5
+Step 10/11 : EXPOSE 3000
+ ---> Running in afe4b1fa5fb8
+ ---> Removed intermediate container afe4b1fa5fb8
+ ---> 43e64049baba
+Step 11/11 : CMD ["./node_modules/.bin/next", "start", "--hostname", "0.0.0.0"]
+ ---> Running in 6c1c7631dd9b
+ ---> Removed intermediate container 6c1c7631dd9b
+ ---> 992f194b1d61
+Successfully built 992f194b1d61
+Successfully tagged alap-web:simulation

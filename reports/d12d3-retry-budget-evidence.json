@@ -1,0 +1,338 @@
+{
+  "completed_at": "2026-10-24T12:08:48.592298+00:00",
+  "cases": [
+    {
+      "vendor": "openai",
+      "mode": "retry_success",
+      "experiment": "EXP-AGENT-openai-retry-success-ca4e843995d7",
+      "run": "c3dfbd47-c2f2-4da7-af20-1ef815b134d1",
+      "https_requests": 2,
+      "attempt_reservations": [
+        9705,
+        9705
+      ],
+      "runtime_budget": 128000,
+      "usage": {
+        "groups": [
+          {
+            "vendor": "openai",
+            "model_ref": "drill-openai-retry_success-ca4e843995d7@1",
+            "agent_ref": "drill-openai-retry_success-ca4e843995d7@1",
+            "utc_day": "2026-10-24",
+            "experiment_id": "EXP-AGENT-openai-retry-success-ca4e843995d7",
+            "agent_run_ids": [
+              "c3dfbd47-c2f2-4da7-af20-1ef815b134d1"
+            ],
+            "model_completions": 1,
+            "recorded_attempts": 2,
+            "unknown_usage": 0,
+            "reported_tokens": {
+              "total_tokens": 150,
+              "prompt_tokens": 100,
+              "completion_tokens": 50
+            },
+            "estimated_cost": null
+          }
+        ],
+        "agent_runs": 1,
+        "model_completions": 1,
+        "recorded_attempts": 2,
+        "unknown_usage_completions": 0,
+        "usage_records": [
+          {
+            "total_tokens": 150,
+            "prompt_tokens": 100,
+            "completion_tokens": 50
+          }
+        ],
+        "reported_tokens": {
+          "prompt_tokens": 100,
+          "completion_tokens": 50,
+          "total_tokens": 150
+        },
+        "logical_requests": 1,
+        "unresolved_requests": 0,
+        "estimated_cost": null,
+        "scope": "current_actor_experiment",
+        "latency": null
+      },
+      "evidence": {
+        "status": "COMPLETED",
+        "stage": "done",
+        "iterations": 1,
+        "reserved_tokens": 64000,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        }
+      }
+    },
+    {
+      "vendor": "openai",
+      "mode": "retry_budget",
+      "experiment": "EXP-AGENT-openai-retry-budget-ca4e843995d7",
+      "run": "89c6c833-b406-43fc-b34e-118d35027cd1",
+      "https_requests": 1,
+      "attempt_reservations": [
+        24704
+      ],
+      "runtime_budget": 48000,
+      "usage": {
+        "groups": [],
+        "agent_runs": 1,
+        "model_completions": 0,
+        "recorded_attempts": 0,
+        "unknown_usage_completions": 0,
+        "usage_records": [],
+        "reported_tokens": {
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "total_tokens": null
+        },
+        "logical_requests": 1,
+        "unresolved_requests": 1,
+        "estimated_cost": null,
+        "scope": "current_actor_experiment",
+        "latency": null
+      },
+      "evidence": {
+        "status": "FAILED",
+        "stage": "done",
+        "iterations": 1,
+        "reserved_tokens": 48000,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        }
+      }
+    },
+    {
+      "vendor": "openai",
+      "mode": "budget_preflight",
+      "experiment": "EXP-AGENT-openai-budget-preflight-ca4e843995d7",
+      "run": "2d327696-be55-4f77-9dd4-a61d5d9a5e75",
+      "https_requests": 0,
+      "attempt_reservations": [],
+      "runtime_budget": 4096,
+      "usage": {
+        "groups": [],
+        "agent_runs": 1,
+        "model_completions": 0,
+        "recorded_attempts": 0,
+        "unknown_usage_completions": 0,
+        "usage_records": [],
+        "reported_tokens": {
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "total_tokens": null
+        },
+        "logical_requests": 0,
+        "unresolved_requests": 0,
+        "estimated_cost": null,
+        "scope": "current_actor_experiment",
+        "latency": null
+      },
+      "evidence": {
+        "status": "FAILED",
+        "stage": "done",
+        "iterations": 0,
+        "reserved_tokens": 0,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        }
+      }
+    },
+    {
+      "vendor": "deepseek",
+      "mode": "retry_success",
+      "experiment": "EXP-AGENT-deepseek-retry-success-ca4e843995d7",
+      "run": "91dd0dd0-26a4-4ab5-b437-b350da092522",
+      "https_requests": 2,
+      "attempt_reservations": [
+        9700,
+        9700
+      ],
+      "runtime_budget": 128000,
+      "usage": {
+        "groups": [
+          {
+            "vendor": "deepseek",
+            "model_ref": "drill-deepseek-retry_success-ca4e843995d7@1",
+            "agent_ref": "drill-deepseek-retry_success-ca4e843995d7@1",
+            "utc_day": "2026-10-24",
+            "experiment_id": "EXP-AGENT-deepseek-retry-success-ca4e843995d7",
+            "agent_run_ids": [
+              "91dd0dd0-26a4-4ab5-b437-b350da092522"
+            ],
+            "model_completions": 1,
+            "recorded_attempts": 2,
+            "unknown_usage": 0,
+            "reported_tokens": {
+              "total_tokens": 150,
+              "prompt_tokens": 100,
+              "completion_tokens": 50
+            },
+            "estimated_cost": null
+          }
+        ],
+        "agent_runs": 1,
+        "model_completions": 1,
+        "recorded_attempts": 2,
+        "unknown_usage_completions": 0,
+        "usage_records": [
+          {
+            "total_tokens": 150,
+            "prompt_tokens": 100,
+            "completion_tokens": 50
+          }
+        ],
+        "reported_tokens": {
+          "prompt_tokens": 100,
+          "completion_tokens": 50,
+          "total_tokens": 150
+        },
+        "logical_requests": 1,
+        "unresolved_requests": 0,
+        "estimated_cost": null,
+        "scope": "current_actor_experiment",
+        "latency": null
+      },
+      "evidence": {
+        "status": "COMPLETED",
+        "stage": "done",
+        "iterations": 1,
+        "reserved_tokens": 64000,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        }
+      }
+    },
+    {
+      "vendor": "deepseek",
+      "mode": "retry_budget",
+      "experiment": "EXP-AGENT-deepseek-retry-budget-ca4e843995d7",
+      "run": "44cfb7fd-a253-419e-bcd8-ac0067aeebfa",
+      "https_requests": 1,
+      "attempt_reservations": [
+        24699
+      ],
+      "runtime_budget": 48000,
+      "usage": {
+        "groups": [],
+        "agent_runs": 1,
+        "model_completions": 0,
+        "recorded_attempts": 0,
+        "unknown_usage_completions": 0,
+        "usage_records": [],
+        "reported_tokens": {
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "total_tokens": null
+        },
+        "logical_requests": 1,
+        "unresolved_requests": 1,
+        "estimated_cost": null,
+        "scope": "current_actor_experiment",
+        "latency": null
+      },
+      "evidence": {
+        "status": "FAILED",
+        "stage": "done",
+        "iterations": 1,
+        "reserved_tokens": 48000,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        }
+      }
+    },
+    {
+      "vendor": "deepseek",
+      "mode": "budget_preflight",
+      "experiment": "EXP-AGENT-deepseek-budget-preflight-ca4e843995d7",
+      "run": "245bf144-14b1-4be4-896f-a86418cd2eca",
+      "https_requests": 0,
+      "attempt_reservations": [],
+      "runtime_budget": 4096,
+      "usage": {
+        "groups": [],
+        "agent_runs": 1,
+        "model_completions": 0,
+        "recorded_attempts": 0,
+        "unknown_usage_completions": 0,
+        "usage_records": [],
+        "reported_tokens": {
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "total_tokens": null
+        },
+        "logical_requests": 0,
+        "unresolved_requests": 0,
+        "estimated_cost": null,
+        "scope": "current_actor_experiment",
+        "latency": null
+      },
+      "evidence": {
+        "status": "FAILED",
+        "stage": "done",
+        "iterations": 0,
+        "reserved_tokens": 0,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        }
+      }
+    }
+  ],
+  "images": {
+    "agent-drill": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "offline-provider": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "postgres": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+    "nats": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+    "web": "sha256:fd41b31ad649646db2ea6c0ee8f72201839967c3f6cd22f796402b6316aaccd0",
+    "api": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "engine": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "gateway": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "agent": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "outbox": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72"
+  },
+  "scope": "HTTPS substitute; cumulative reservation bounds, not provider billing"
+}

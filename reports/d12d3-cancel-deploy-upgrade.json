@@ -1,0 +1,28 @@
+{
+  "before": {
+    "schema": "d12_001",
+    "commands": 45,
+    "datasets": 15
+  },
+  "after": {
+    "schema": "d12_002",
+    "commands": 45,
+    "datasets": 15
+  },
+  "checked_at": "2026-10-24T05:21:14.839063+00:00",
+  "images": {
+    "backend": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "web": "sha256:fd41b31ad649646db2ea6c0ee8f72201839967c3f6cd22f796402b6316aaccd0"
+  },
+  "old_images": {
+    "postgres": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+    "nats": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+    "web": "sha256:992f194b1d61e8c7bbefda70d6f2ca5172ae3eab9120367e2e2925bbfa2c58ba",
+    "api": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "engine": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "agent": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "outbox": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "gateway": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c"
+  },
+  "cold_backup": "pre-cancel-deploy-20261024"
+}

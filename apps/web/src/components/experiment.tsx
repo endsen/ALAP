@@ -351,12 +351,26 @@ function Conversation({
     client,
     selected ? "/agent-runs/" + id(selected) : null,
   );
+  const [restrictedRun, setRestrictedRun] = useState<AgentRun>();
+  const restricted = !!(run.value?.access_error || restrictedRun);
+  useEffect(() => {
+    if (run.value?.access_error) {
+      setRestrictedRun(run.value);
+      refresh();
+    }
+  }, [run.value, refresh]);
   const proposals = useResource<{
     items: { id: string; state: string; proposal: Proposal }[];
-  }>(client, selected ? `/agent-runs/${id(selected)}/proposals` : null);
+  }>(
+    client,
+    selected && !restricted ? `/agent-runs/${id(selected)}/proposals` : null,
+  );
   const trace = useResource<{
     items: { seq: number; event: Record<string, unknown> }[];
-  }>(client, selected ? `/agent-runs/${id(selected)}/trace` : null);
+  }>(
+    client,
+    selected && !restricted ? `/agent-runs/${id(selected)}/trace` : null,
+  );
   const action = useAction();
   const alive = useRef(true);
   const [progress, setProgress] = useState<AgentRun>();
@@ -409,7 +423,11 @@ function Conversation({
       }
     });
   }
-  const current = progress || run.value;
+  const current = restricted
+    ? run.value?.access_error
+      ? run.value
+      : restrictedRun
+    : progress || run.value;
   return (
     <>
       <div className="conversation-heading">
@@ -421,6 +439,10 @@ function Conversation({
           </small>
         </div>
         {current && <Status value={current.status} />}
+        {current?.cancel_requested &&
+          ["READY", "RUNNING"].includes(current.status) && (
+            <span role="status">已请求取消，等待后台确认</span>
+          )}
       </div>
       <div className="conversation-body">
         <Problem error={action.error} />
@@ -442,6 +464,14 @@ function Conversation({
           </div>
         ) : run.loading && !current ? (
           <Loading />
+        ) : restricted ? (
+          <article className="agent-message" role="status">
+            {current?.status === "FAILED"
+              ? "知识来源权限已撤销，本次处理已终止。历史内容和提案不可访问。"
+              : current && ["COMPLETED", "CANCELLED"].includes(current.status)
+                ? "该运行已结束；知识来源权限已撤销，历史内容和提案不可访问。"
+                : "知识来源权限已撤销，等待后台结束处理。历史内容和提案不可访问。"}
+          </article>
         ) : (
           current && (
             <>
@@ -461,9 +491,13 @@ function Conversation({
                   <p>
                     {action.busy
                       ? "正在处理目标与工具结果…"
-                      : current.status === "FAILED"
-                        ? "本次处理失败，未产生可用的最终答复。"
-                        : "会话已建立，继续处理可生成结果。"}
+                      : current.status === "CANCELLED"
+                        ? "本次处理已取消。"
+                        : current.cancel_requested
+                          ? "取消请求已保存，等待后台确认。"
+                          : current.status === "FAILED"
+                            ? "本次处理失败，未产生可用的最终答复。"
+                            : "会话已建立，继续处理可生成结果。"}
                   </p>
                 )}
               </article>
@@ -568,6 +602,8 @@ function Conversation({
                 !writable ||
                 action.busy ||
                 !current ||
+                restricted ||
+                current.cancel_requested ||
                 ["COMPLETED", "FAILED", "CANCELLED"].includes(current.status)
               }
               onClick={() => void advance()}
@@ -575,11 +611,14 @@ function Conversation({
               {action.busy ? "正在处理…" : "继续处理目标 →"}
             </button>
             {current &&
+              !restricted &&
               !["COMPLETED", "FAILED", "CANCELLED"].includes(
                 current.status,
               ) && (
                 <button
-                  disabled={!writable || action.busy}
+                  disabled={
+                    !writable || action.busy || !!current.cancel_requested
+                  }
                   onClick={() =>
                     void action.act(async () => {
                       await client.mutate(`/agent-runs/${id(selected)}/cancel`);

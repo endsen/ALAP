@@ -1,0 +1,278 @@
+{
+  "completed_at": "2026-10-23T11:09:00.227184+00:00",
+  "cases": [
+    {
+      "vendor": "openai",
+      "mode": "knowledge_control",
+      "experiment": "EXP-AGENT-openai-knowledge-control-a5de2d54c4ed",
+      "run": "44e2f4b4-bf53-4e0f-9374-8f7433e07318",
+      "https_requests": 2,
+      "evidence": {
+        "status": "COMPLETED",
+        "stage": "done",
+        "iterations": 2,
+        "reserved_tokens": 128000,
+        "result_is_null": false,
+        "references": [
+          {
+            "id": "274fee77-31a0-437c-bff4-bfa72d640e84",
+            "hash": "8c22e94f061c0b360a69721551590b04a69963a234e10557d32036ec9118d771",
+            "kind": "knowledge"
+          }
+        ],
+        "event": {
+          "type": "model_completed",
+          "usage": {
+            "total_tokens": 150,
+            "prompt_tokens": 100,
+            "completion_tokens": 50
+          },
+          "attempts": [
+            {
+              "id": "46242e09-b938-40d5-ada9-1dd50dc25cbb",
+              "model": "offline-openai",
+              "vendor": "openai"
+            }
+          ],
+          "decision": "done",
+          "output_hash": "f359a65bee3e6af68f87afbd5120b7a3644a15262d281b11ac7dafe32449c95a",
+          "actual_model": "offline-openai"
+        },
+        "source_hash": "8c22e94f061c0b360a69721551590b04a69963a234e10557d32036ec9118d771",
+        "tools": [
+          "search_knowledge@1"
+        ],
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "proposals": 0
+        }
+      }
+    },
+    {
+      "vendor": "openai",
+      "mode": "knowledge_injection",
+      "experiment": "EXP-AGENT-openai-knowledge-injection-a5de2d54c4ed",
+      "run": "53e8fe4a-c8c4-49b8-84c4-4ecf9cd69d18",
+      "https_requests": 2,
+      "evidence": {
+        "status": "FAILED",
+        "stage": "done",
+        "iterations": 2,
+        "reserved_tokens": 128000,
+        "result_is_null": true,
+        "references": [
+          {
+            "id": "7d3e859b-56ef-49d8-a997-50ba19b3710e",
+            "hash": "ffaf16bdf3546eafd0b97c57807aa6e9218d9fed9bd3d8cedfcf2b51b0082579",
+            "kind": "knowledge"
+          }
+        ],
+        "event": {
+          "code": "MODEL_FAILURE",
+          "type": "blocked"
+        },
+        "source_hash": "ffaf16bdf3546eafd0b97c57807aa6e9218d9fed9bd3d8cedfcf2b51b0082579",
+        "tools": [
+          "search_knowledge@1"
+        ],
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "proposals": 0
+        }
+      }
+    },
+    {
+      "vendor": "openai",
+      "mode": "knowledge_revoke",
+      "experiment": "EXP-AGENT-openai-knowledge-revoke-a5de2d54c4ed",
+      "run": "94f03a3a-1b80-42d6-9f36-1b05816ab051",
+      "https_requests": 2,
+      "evidence": {
+        "status": "FAILED",
+        "stage": "done",
+        "iterations": 2,
+        "reserved_tokens": 128000,
+        "result_is_null": true,
+        "references": [
+          {
+            "id": "2bf54b7f-0a59-490b-af6a-618c45201e76",
+            "hash": "b20055577992ce509f89b2640dd64708da6508bbf0d71aeaadb7edf1802e278b",
+            "kind": "knowledge"
+          }
+        ],
+        "event": {
+          "code": "SOURCE_REVOKED",
+          "type": "blocked",
+          "prior_stage": "inflight",
+          "model_outcome_unknown": true
+        },
+        "source_hash": "b20055577992ce509f89b2640dd64708da6508bbf0d71aeaadb7edf1802e278b",
+        "tools": [
+          "search_knowledge@1"
+        ],
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "proposals": 0
+        }
+      }
+    },
+    {
+      "vendor": "deepseek",
+      "mode": "knowledge_control",
+      "experiment": "EXP-AGENT-deepseek-knowledge-control-a5de2d54c4ed",
+      "run": "a2eceedf-624a-4fd8-a00f-bedb4172cd11",
+      "https_requests": 2,
+      "evidence": {
+        "status": "COMPLETED",
+        "stage": "done",
+        "iterations": 2,
+        "reserved_tokens": 128000,
+        "result_is_null": false,
+        "references": [
+          {
+            "id": "fa3d09e4-b9ec-4ec2-98d5-da7aa79e713d",
+            "hash": "2ea808c1193e3e995762e73abddca372945cc93f9503f7cb62d55070793eee8e",
+            "kind": "knowledge"
+          }
+        ],
+        "event": {
+          "type": "model_completed",
+          "usage": {
+            "total_tokens": 150,
+            "prompt_tokens": 100,
+            "completion_tokens": 50
+          },
+          "attempts": [
+            {
+              "id": "02647084-67e3-4224-8cde-8e76835c434e",
+              "model": "offline-deepseek",
+              "vendor": "deepseek"
+            }
+          ],
+          "decision": "done",
+          "output_hash": "f359a65bee3e6af68f87afbd5120b7a3644a15262d281b11ac7dafe32449c95a",
+          "actual_model": "offline-deepseek"
+        },
+        "source_hash": "2ea808c1193e3e995762e73abddca372945cc93f9503f7cb62d55070793eee8e",
+        "tools": [
+          "search_knowledge@1"
+        ],
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "proposals": 0
+        }
+      }
+    },
+    {
+      "vendor": "deepseek",
+      "mode": "knowledge_injection",
+      "experiment": "EXP-AGENT-deepseek-knowledge-injection-a5de2d54c4ed",
+      "run": "2bc15c37-de7c-4e36-8bb8-a4e40f2c5a72",
+      "https_requests": 2,
+      "evidence": {
+        "status": "FAILED",
+        "stage": "done",
+        "iterations": 2,
+        "reserved_tokens": 128000,
+        "result_is_null": true,
+        "references": [
+          {
+            "id": "b1be6db6-a03c-4c44-bd20-1b4214d16061",
+            "hash": "b97db4e5435b739299be0370a75c7c4fb391b0fefdc9bbf1622e3bac0edaded0",
+            "kind": "knowledge"
+          }
+        ],
+        "event": {
+          "code": "MODEL_FAILURE",
+          "type": "blocked"
+        },
+        "source_hash": "b97db4e5435b739299be0370a75c7c4fb391b0fefdc9bbf1622e3bac0edaded0",
+        "tools": [
+          "search_knowledge@1"
+        ],
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "proposals": 0
+        }
+      }
+    },
+    {
+      "vendor": "deepseek",
+      "mode": "knowledge_revoke",
+      "experiment": "EXP-AGENT-deepseek-knowledge-revoke-a5de2d54c4ed",
+      "run": "8cae6420-e400-4eb2-9400-ff9491097fdb",
+      "https_requests": 2,
+      "evidence": {
+        "status": "FAILED",
+        "stage": "done",
+        "iterations": 2,
+        "reserved_tokens": 128000,
+        "result_is_null": true,
+        "references": [
+          {
+            "id": "8b2c874a-c540-4430-b75e-36ca50817712",
+            "hash": "525ae96c919ac321fd05cddddc289d811359b61b2eae93ead46582fb94462714",
+            "kind": "knowledge"
+          }
+        ],
+        "event": {
+          "code": "SOURCE_REVOKED",
+          "type": "blocked",
+          "prior_stage": "inflight",
+          "model_outcome_unknown": true
+        },
+        "source_hash": "525ae96c919ac321fd05cddddc289d811359b61b2eae93ead46582fb94462714",
+        "tools": [
+          "search_knowledge@1"
+        ],
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "proposals": 0
+        }
+      }
+    }
+  ],
+  "model": "isolated HTTPS/SSE substitute, no online vendor calls",
+  "images": {
+    "offline-provider": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "agent-drill": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "web": "sha256:992f194b1d61e8c7bbefda70d6f2ca5172ae3eab9120367e2e2925bbfa2c58ba",
+    "api": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "engine": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "agent": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "outbox": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "postgres": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+    "gateway": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "nats": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "test_databases": 0,
+  "test_roles": 0,
+  "mode": "ACTIVE",
+  "live_tokens": 0,
+  "pending_outbox": 0,
+  "active_runs": 0,
+  "active_fixture_agent_runs": 0,
+  "enabled_fixture_agents": 0,
+  "enabled_fault_skills": 0,
+  "enabled_fixture_models": 0,
+  "enabled_fixture_credentials": 0,
+  "commands": 45,
+  "web_http": 200,
+  "anonymous_api_http": 401,
+  "committed_artifacts_verified": 15,
+  "checked_at": "2026-10-23T16:07:34.223132+00:00",
+  "services_running": 8,
+  "qa_ports_removed": true,
+  "isolated_model_network_removed": true
+}

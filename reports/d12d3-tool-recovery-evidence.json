@@ -1,0 +1,286 @@
+{
+  "completed_at": "2026-10-24T22:20:06.789943+00:00",
+  "cases": [
+    {
+      "vendor": "openai",
+      "phase": "pending-tools",
+      "experiment": "EXP-AGENT-openai-pending-tools-5edc5da1dae4",
+      "killed_exit_code": 137,
+      "boundary": {
+        "status": "RUNNING",
+        "stage": "tools",
+        "iterations": 1,
+        "tool_calls": 0,
+        "history_count": 0,
+        "pending_ids": [
+          "offline-read"
+        ],
+        "reserved_tokens": 64000,
+        "invocations": [],
+        "proposals": [],
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0
+        }
+      },
+      "final": {
+        "status": "COMPLETED",
+        "stage": "done",
+        "iterations": 2,
+        "tool_calls": 2,
+        "history_count": 2,
+        "pending_ids": [],
+        "reserved_tokens": 128000,
+        "invocations": [
+          [
+            "offline-propose",
+            "propose_plan@1",
+            "d81c4030a103364f54d51fe0aa54d384fe987fadd7c2b0b2b3dcad019f48ab64"
+          ],
+          [
+            "offline-read",
+            "read_snapshot@1",
+            "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+          ]
+        ],
+        "proposals": [
+          [
+            "a0ebd430-8cad-5a64-b1a0-a4d0e3fa1ac5",
+            "a205733b862078c718ee516a791098819855897b416390eae601573386a16eeb",
+            "PROPOSED"
+          ]
+        ],
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0
+        }
+      },
+      "second_restart_no_change": true,
+      "https_requests": 2
+    },
+    {
+      "vendor": "openai",
+      "phase": "committed-read",
+      "experiment": "EXP-AGENT-openai-committed-read-5edc5da1dae4",
+      "killed_exit_code": 137,
+      "boundary": {
+        "status": "RUNNING",
+        "stage": "model",
+        "iterations": 1,
+        "tool_calls": 1,
+        "history_count": 1,
+        "pending_ids": [],
+        "reserved_tokens": 64000,
+        "invocations": [
+          [
+            "offline-read",
+            "read_snapshot@1",
+            "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+          ]
+        ],
+        "proposals": [],
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0
+        }
+      },
+      "final": {
+        "status": "COMPLETED",
+        "stage": "done",
+        "iterations": 2,
+        "tool_calls": 2,
+        "history_count": 2,
+        "pending_ids": [],
+        "reserved_tokens": 128000,
+        "invocations": [
+          [
+            "offline-propose",
+            "propose_plan@1",
+            "d81c4030a103364f54d51fe0aa54d384fe987fadd7c2b0b2b3dcad019f48ab64"
+          ],
+          [
+            "offline-read",
+            "read_snapshot@1",
+            "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+          ]
+        ],
+        "proposals": [
+          [
+            "18531f39-7452-51f4-8bc2-9a4d51877e81",
+            "71762c2201320f5165f6619cca0a00dcdd68f9d30c5ceb19275cb312d3907645",
+            "PROPOSED"
+          ]
+        ],
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0
+        }
+      },
+      "second_restart_no_change": true,
+      "https_requests": 2
+    },
+    {
+      "vendor": "deepseek",
+      "phase": "pending-tools",
+      "experiment": "EXP-AGENT-deepseek-pending-tools-5edc5da1dae4",
+      "killed_exit_code": 137,
+      "boundary": {
+        "status": "RUNNING",
+        "stage": "tools",
+        "iterations": 1,
+        "tool_calls": 0,
+        "history_count": 0,
+        "pending_ids": [
+          "offline-read"
+        ],
+        "reserved_tokens": 64000,
+        "invocations": [],
+        "proposals": [],
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0
+        }
+      },
+      "final": {
+        "status": "COMPLETED",
+        "stage": "done",
+        "iterations": 2,
+        "tool_calls": 2,
+        "history_count": 2,
+        "pending_ids": [],
+        "reserved_tokens": 128000,
+        "invocations": [
+          [
+            "offline-propose",
+            "propose_plan@1",
+            "d81c4030a103364f54d51fe0aa54d384fe987fadd7c2b0b2b3dcad019f48ab64"
+          ],
+          [
+            "offline-read",
+            "read_snapshot@1",
+            "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+          ]
+        ],
+        "proposals": [
+          [
+            "e3909344-b0d4-57e9-854e-5b698c719859",
+            "5b69a27f007c987b3d7cc372825fc4c1f2380800382193721afd667b4ffe7602",
+            "PROPOSED"
+          ]
+        ],
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0
+        }
+      },
+      "second_restart_no_change": true,
+      "https_requests": 2
+    },
+    {
+      "vendor": "deepseek",
+      "phase": "committed-read",
+      "experiment": "EXP-AGENT-deepseek-committed-read-5edc5da1dae4",
+      "killed_exit_code": 137,
+      "boundary": {
+        "status": "RUNNING",
+        "stage": "model",
+        "iterations": 1,
+        "tool_calls": 1,
+        "history_count": 1,
+        "pending_ids": [],
+        "reserved_tokens": 64000,
+        "invocations": [
+          [
+            "offline-read",
+            "read_snapshot@1",
+            "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+          ]
+        ],
+        "proposals": [],
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0
+        }
+      },
+      "final": {
+        "status": "COMPLETED",
+        "stage": "done",
+        "iterations": 2,
+        "tool_calls": 2,
+        "history_count": 2,
+        "pending_ids": [],
+        "reserved_tokens": 128000,
+        "invocations": [
+          [
+            "offline-propose",
+            "propose_plan@1",
+            "d81c4030a103364f54d51fe0aa54d384fe987fadd7c2b0b2b3dcad019f48ab64"
+          ],
+          [
+            "offline-read",
+            "read_snapshot@1",
+            "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+          ]
+        ],
+        "proposals": [
+          [
+            "dea025a4-beba-56b6-9ee0-3791eec1533a",
+            "2a7da993637a4e91ceb6b4586a88165d633e5254858f11bb888f3aff1d69b79a",
+            "PROPOSED"
+          ]
+        ],
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0
+        }
+      },
+      "second_restart_no_change": true,
+      "https_requests": 2
+    }
+  ],
+  "images": {
+    "agent-drill": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "offline-provider": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "postgres": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+    "nats": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+    "web": "sha256:fd41b31ad649646db2ea6c0ee8f72201839967c3f6cd22f796402b6316aaccd0",
+    "api": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "engine": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "gateway": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "agent": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72",
+    "outbox": "sha256:89d67e17b32cb1954d483c64aefc3ea3b7484052ea1a22708eaf246e0b005c72"
+  },
+  "scope": "committed boundaries, worker poll_s=5; actual HTTPS, no manual advance"
+}

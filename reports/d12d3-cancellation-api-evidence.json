@@ -1,0 +1,170 @@
+{
+  "completed_at": "2026-10-24T02:09:52.329884+00:00",
+  "cases": [
+    {
+      "vendor": "openai",
+      "phase": "before",
+      "experiment": "EXP-AGENT-openai-before-0ffcd329eb47",
+      "cancel_http_status": 200,
+      "cancel_error": null,
+      "evidence": {
+        "status": "CANCELLED",
+        "stage": "done",
+        "iterations": 0,
+        "reserved_tokens": 0,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        }
+      },
+      "trace_events": [
+        {
+          "type": "cancelled"
+        }
+      ],
+      "https_requests": 0
+    },
+    {
+      "vendor": "openai",
+      "phase": "inflight",
+      "experiment": "EXP-AGENT-openai-inflight-0ffcd329eb47",
+      "cancel_http_status": 409,
+      "cancel_error": "RUN_BUSY",
+      "evidence": {
+        "status": "FAILED",
+        "stage": "done",
+        "iterations": 1,
+        "reserved_tokens": 64000,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        }
+      },
+      "trace_events": [
+        {
+          "type": "model_reserved",
+          "tokens": 64000,
+          "context": {
+            "bytes": 1805,
+            "dropped": [],
+            "policy_hash": "632f17cf2f8a32e13d4bd97513d82b96f09373526956becaf1b5d67c608a2cf1",
+            "included_skills": [
+              "guide-openai-inflight-0ffcd329eb47@1",
+              "iv_measurement@1",
+              "set_field@1",
+              "set_temperature@1"
+            ],
+            "snapshot_version": 1
+          },
+          "iteration": 1
+        },
+        {
+          "code": "MODEL_FAILURE",
+          "type": "blocked"
+        }
+      ],
+      "https_requests": 1
+    },
+    {
+      "vendor": "deepseek",
+      "phase": "before",
+      "experiment": "EXP-AGENT-deepseek-before-0ffcd329eb47",
+      "cancel_http_status": 200,
+      "cancel_error": null,
+      "evidence": {
+        "status": "CANCELLED",
+        "stage": "done",
+        "iterations": 0,
+        "reserved_tokens": 0,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        }
+      },
+      "trace_events": [
+        {
+          "type": "cancelled"
+        }
+      ],
+      "https_requests": 0
+    },
+    {
+      "vendor": "deepseek",
+      "phase": "inflight",
+      "experiment": "EXP-AGENT-deepseek-inflight-0ffcd329eb47",
+      "cancel_http_status": 409,
+      "cancel_error": "RUN_BUSY",
+      "evidence": {
+        "status": "FAILED",
+        "stage": "done",
+        "iterations": 1,
+        "reserved_tokens": 64000,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        }
+      },
+      "trace_events": [
+        {
+          "type": "model_reserved",
+          "tokens": 64000,
+          "context": {
+            "bytes": 1809,
+            "dropped": [],
+            "policy_hash": "632f17cf2f8a32e13d4bd97513d82b96f09373526956becaf1b5d67c608a2cf1",
+            "included_skills": [
+              "guide-deepseek-inflight-0ffcd329eb47@1",
+              "iv_measurement@1",
+              "set_field@1",
+              "set_temperature@1"
+            ],
+            "snapshot_version": 1
+          },
+          "iteration": 1
+        },
+        {
+          "code": "MODEL_FAILURE",
+          "type": "blocked"
+        }
+      ],
+      "https_requests": 1
+    }
+  ],
+  "scope": "current API boundary only; inflight cancellation is not implemented",
+  "images": {
+    "agent-drill": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "offline-provider": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "postgres": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+    "nats": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+    "web": "sha256:992f194b1d61e8c7bbefda70d6f2ca5172ae3eab9120367e2e2925bbfa2c58ba",
+    "api": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "engine": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "agent": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "outbox": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "gateway": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c"
+  }
+}

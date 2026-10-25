@@ -2,6 +2,7 @@
 
 from contextlib import contextmanager
 from contextvars import ContextVar
+from copy import deepcopy
 from datetime import timedelta
 
 import psycopg
@@ -10,7 +11,7 @@ from psycopg.types.json import Jsonb
 
 from alap.adapters.postgres.read_locks import lock_read
 from alap.application.experiments import digest, require
-from alap.domain.rules import freeze_revision
+from alap.domain.rules import DomainError, freeze_revision
 
 
 class PostgresAgentStore:
@@ -215,6 +216,90 @@ class PostgresAgentStore:
                 check_references(db, row, row["checkpoint"])
             return row
 
+    def request_cancel(self, actor, identity):
+        # A short row lock serializes intent with checkpoint publication, not network I/O.
+        run = self.load(actor, identity)
+        with self.connect() as db:
+            self._access(
+                db,
+                actor,
+                run["experiment_id"],
+                run["bundle"]["config"]["manifest"]["scoped_instruments"],
+            )
+            row = db.execute(
+                "SELECT * FROM agent_runs WHERE id=%s FOR UPDATE", (identity,)
+            ).fetchone()
+            if row["checkpoint"].get("external_refs"):
+                from alap.adapters.postgres.resources import check_references
+
+                check_references(db, row, row["checkpoint"])
+            if row["cancel_requested_at"] is None and row["checkpoint"]["status"] not in {
+                "COMPLETED",
+                "FAILED",
+                "CANCELLED",
+            }:
+                db.execute(
+                    "UPDATE agent_runs SET cancel_requested_at="
+                    "COALESCE(cancel_requested_at,clock_timestamp()) WHERE id=%s",
+                    (identity,),
+                )
+        return self.load(actor, identity)
+
+    def fail_revoked_source(self, actor, identity):
+        """Close a confirmed knowledge revocation without returning its protected history."""
+        owner = self._owner.get()
+        require(owner is not None and owner[0] == identity, "RUN_BUSY", "Run ownership required")
+        # Never reconnect after ownership loss. Authorization and the final write share
+        # this transaction; source grants remain locked until commit.
+        with self._commit_connection(identity) as db:
+            row = db.execute("SELECT * FROM agent_runs WHERE id=%s", (identity,)).fetchone()
+            require(row is not None and row["actor_id"] == actor, "FORBIDDEN", "Run owner required")
+            self._access(
+                db,
+                actor,
+                row["experiment_id"],
+                row["bundle"]["config"]["manifest"]["scoped_instruments"],
+            )
+            require(
+                digest(row["bundle"]) == row["bundle_hash"], "REGISTRY_CORRUPT", "Bundle mismatch"
+            )
+            if row["checkpoint"]["status"] not in {"READY", "RUNNING"}:
+                return False
+            from alap.adapters.postgres.resources import check_references
+
+            try:
+                check_references(db, row, row["checkpoint"])
+            except DomainError as exc:
+                if exc.code != "SOURCE_REVOKED":
+                    raise
+            else:
+                return False  # Grant was restored, or there was no revoked source.
+            checkpoint = dict(row["checkpoint"])
+            prior_stage = checkpoint["stage"]
+            checkpoint.update(status="FAILED", stage="done", error="SOURCE_REVOKED", result=None)
+            changed = db.execute(
+                "UPDATE agent_runs SET checkpoint=%s,revision=revision+1 "
+                "WHERE id=%s AND revision=%s",
+                (Jsonb(checkpoint), identity, row["revision"]),
+            ).rowcount
+            require(changed == 1, "STATE_CONFLICT", "Stale Agent checkpoint")
+            db.execute(
+                "INSERT INTO agent_trace(run_id,seq,event) VALUES (%s,%s,%s)",
+                (
+                    identity,
+                    row["revision"] + 1,
+                    Jsonb(
+                        {
+                            "type": "blocked",
+                            "code": "SOURCE_REVOKED",
+                            "prior_stage": prior_stage,
+                            "model_outcome_unknown": prior_stage == "inflight",
+                        }
+                    ),
+                ),
+            )
+            return True
+
     @contextmanager
     def exclusive(self, identity):
         # Session advisory lock survives short transactions, but not a crashed process.
@@ -275,6 +360,24 @@ class PostgresAgentStore:
                 manifest["scoped_instruments"],
                 proposal=bool(proposals),
             )
+            current = db.execute(
+                "SELECT * FROM agent_runs WHERE id=%s FOR UPDATE", (run["id"],)
+            ).fetchone()
+            require(current["revision"] == run["revision"], "STATE_CONFLICT", "Stale checkpoint")
+            if current["cancel_requested_at"] is not None and current["checkpoint"]["status"] in {
+                "READY",
+                "RUNNING",
+            }:
+                # Intent wins only when it committed before this publication lock.
+                # Discard uncommitted model/tool output; retain prior history and reservations.
+                checkpoint = deepcopy(current["checkpoint"])
+                event = {
+                    "type": "cancelled",
+                    "prior_stage": checkpoint["stage"],
+                    "model_outcome_unknown": checkpoint["stage"] == "inflight",
+                }
+                checkpoint.update(status="CANCELLED", stage="done", result=None, pending=[])
+                invocations, proposals, check_snapshot = (), (), False
             if check_snapshot or event["type"] == "model_reserved":
                 self._active(db, run["bundle"], run["definition_ref"])
             if check_snapshot or event["type"] == "model_reserved":

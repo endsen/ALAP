@@ -108,7 +108,19 @@ print(json.dumps(result))
     return json.loads(execute(runtime, code))
 
 
-def main(*, faults=False):
+def main(
+    *,
+    faults=False,
+    knowledge=False,
+    streaming=False,
+    retries=False,
+    cancellations=False,
+    crashes=False,
+    budgets=False,
+    versions=False,
+    tool_recovery=False,
+    permissions=False,
+):
     runtime = Runtime(ROOT / ".local-deploy/simulation")
     services = runtime.containers()
     assert set(services) == set(SERVICES) and all(c["State"]["Running"] for c in services.values())
@@ -125,7 +137,43 @@ def main(*, faults=False):
             for v in ("openai", "deepseek")
         ],
     }
-    if faults:
+    if permissions:
+        from permission_faults import cases
+
+        state["cases"] = cases(suffix)
+        state["permission_actors"] = {
+            role: "drill-acl-" + role + "-" + suffix
+            for role in ("observer", "operator", "approver", "outsider")
+        }
+    elif tool_recovery:
+        from tool_recovery_faults import cases
+
+        state["cases"] = cases(suffix)
+    elif versions:
+        from version_faults import cases
+
+        state["cases"] = cases(suffix)
+    elif budgets:
+        from retry_budget_faults import cases
+
+        state["cases"] = cases(suffix)
+    elif crashes:
+        from agent_crash_faults import cases
+
+        state["cases"] = cases(suffix)
+    elif cancellations:
+        from cancellation_faults import cases
+
+        state["cases"] = cases(suffix)
+    elif streaming or retries:
+        from streaming_faults import cases
+
+        state["cases"] = cases(suffix, retries=retries)
+    elif knowledge:
+        from knowledge_faults import cases
+
+        state["cases"] = cases(suffix)
+    elif faults:
         from model_faults import cases
 
         state["cases"] = cases(suffix)
@@ -137,6 +185,8 @@ def main(*, faults=False):
         settings = json.loads((runtime.directory / "agent.json").read_text())
         assert settings["mode"] == "simulation"
         settings["experiment_ids"] = [c["experiment"] for c in state["cases"]]
+        if tool_recovery:
+            settings["poll_s"] = 5
         private_write(directory / "agent.json", json.dumps(settings).encode())
         common = {
             "image": services["api"]["Image"],
@@ -237,6 +287,38 @@ def main(*, faults=False):
                 runtime.project + "_database",
                 runtime.project + "_offline-model",
             }
+            if permissions:
+                from permission_faults import run_permissions
+
+                return run_permissions(runtime, state, directory, deployed)
+            if tool_recovery:
+                from tool_recovery_faults import run_tool_recovery
+
+                return run_tool_recovery(runtime, state, directory, deployed)
+            if versions:
+                from version_faults import run_versions
+
+                return run_versions(runtime, state, directory, deployed)
+            if budgets:
+                from retry_budget_faults import run_budgets
+
+                return run_budgets(runtime, state, directory, deployed)
+            if crashes:
+                from agent_crash_faults import run_crashes
+
+                return run_crashes(runtime, state, directory, deployed)
+            if cancellations:
+                from cancellation_faults import run_cancellations
+
+                return run_cancellations(runtime, state, directory, deployed)
+            if streaming or retries:
+                from streaming_faults import run_streaming
+
+                return run_streaming(runtime, state, directory, deployed, retries=retries)
+            if knowledge:
+                from knowledge_faults import run_knowledge
+
+                return run_knowledge(runtime, state, directory, deployed)
             if faults:
                 from model_faults import run_faults
 
@@ -316,7 +398,13 @@ with store.connect() as db:
     pending=db.execute("SELECT id,actor_id FROM agent_runs WHERE experiment_id=ANY(%s) "
         "AND checkpoint->>'status' IN ('READY','RUNNING')",(EXPS,)).fetchall()
 for row in pending:
-    runtime.cancel(row['actor_id'],row['id'])
+    from alap.domain.rules import DomainError
+    try:
+        runtime.cancel(row['actor_id'],row['id'])
+    except DomainError as exc:
+        if exc.code!='SOURCE_REVOKED': raise
+        with store.exclusive(row['id']):
+            store.fail_revoked_source(row['actor_id'],row['id'])
 """.replace("EXPS", repr([c["experiment"] for c in state["cases"]])),
             )
             # Disable even partial seed configurations. Preserve immutable audit/business history.
@@ -330,8 +418,22 @@ with psycopg.connect(database_url()) as db:
                "WHERE ref=ANY(%s) AND enabled", (REFS,))
     db.execute("UPDATE api_credentials SET enabled=FALSE,revision=revision+1 "
                "WHERE ref=ANY(%s) AND enabled", (IDS,))
-""".replace("REFS", repr([i + "@1" for i in ids])).replace("IDS", repr(ids))
-            guides = [c["guide"] + "@1" for c in state["cases"] if "guide" in c]
+""".replace(
+                "REFS",
+                repr(
+                    [
+                        c["id"] + "@" + str(v)
+                        for c in state["cases"]
+                        for v in [1, *c.get("extra_versions", [])]
+                    ]
+                ),
+            ).replace("IDS", repr(ids))
+            guides = [
+                c["guide"] + "@" + str(v)
+                for c in state["cases"]
+                if "guide" in c
+                for v in [1, *c.get("extra_versions", [])]
+            ]
             if guides:
                 code += (
                     "    db.execute(\"UPDATE agent_registry SET state='DISABLED' \""
@@ -341,6 +443,21 @@ with psycopg.connect(database_url()) as db:
                 code += (
                     '    db.execute("UPDATE api_tokens SET revoked=TRUE WHERE token_hash=%s", ('
                     + repr(hashlib.sha256(token.encode()).hexdigest())
+                    + ",))\n"
+                )
+            if state.get("permission_actors"):
+                code += (
+                    '    db.execute("UPDATE api_tokens SET revoked=TRUE WHERE actor_id=ANY(%s)", ('
+                    + repr(list(state["permission_actors"].values()))
+                    + ",))\n"
+                    '    db.execute("UPDATE principals SET disabled_at=clock_timestamp() "'
+                    ' "WHERE id=ANY(%s)", ('
+                    + repr(list(state["permission_actors"].values()))
+                    + ",))\n"
+                    '    db.execute("UPDATE experiment_memberships SET "'
+                    ' "revoked_at=clock_timestamp() "'
+                    ' "WHERE actor_id=ANY(%s)", ('
+                    + repr(list(state["permission_actors"].values()))
                     + ",))\n"
                 )
             execute(runtime, code)

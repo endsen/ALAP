@@ -1,0 +1,182 @@
+{
+  "completed_at": "2026-10-23T22:18:10.129858+00:00",
+  "cases": [
+    {
+      "vendor": "openai",
+      "mode": "rate_limit",
+      "experiment": "EXP-AGENT-openai-rate-limit-30a165571932",
+      "https_requests": 3,
+      "max_attempts": 3,
+      "evidence": {
+        "status": "FAILED",
+        "stage": "done",
+        "iterations": 1,
+        "reserved_tokens": 64000,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        }
+      },
+      "usage": {
+        "groups": [],
+        "agent_runs": 1,
+        "model_completions": 0,
+        "recorded_attempts": 0,
+        "unknown_usage_completions": 0,
+        "usage_records": [],
+        "reported_tokens": {
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "total_tokens": null
+        },
+        "logical_requests": 1,
+        "unresolved_requests": 1,
+        "estimated_cost": null,
+        "scope": "current_actor_experiment",
+        "latency": null
+      }
+    },
+    {
+      "vendor": "openai",
+      "mode": "read_timeout",
+      "experiment": "EXP-AGENT-openai-read-timeout-30a165571932",
+      "https_requests": 1,
+      "max_attempts": 3,
+      "evidence": {
+        "status": "FAILED",
+        "stage": "done",
+        "iterations": 1,
+        "reserved_tokens": 64000,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        }
+      },
+      "usage": {
+        "groups": [],
+        "agent_runs": 1,
+        "model_completions": 0,
+        "recorded_attempts": 0,
+        "unknown_usage_completions": 0,
+        "usage_records": [],
+        "reported_tokens": {
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "total_tokens": null
+        },
+        "logical_requests": 1,
+        "unresolved_requests": 1,
+        "estimated_cost": null,
+        "scope": "current_actor_experiment",
+        "latency": null
+      }
+    },
+    {
+      "vendor": "deepseek",
+      "mode": "rate_limit",
+      "experiment": "EXP-AGENT-deepseek-rate-limit-30a165571932",
+      "https_requests": 3,
+      "max_attempts": 3,
+      "evidence": {
+        "status": "FAILED",
+        "stage": "done",
+        "iterations": 1,
+        "reserved_tokens": 64000,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        }
+      },
+      "usage": {
+        "groups": [],
+        "agent_runs": 1,
+        "model_completions": 0,
+        "recorded_attempts": 0,
+        "unknown_usage_completions": 0,
+        "usage_records": [],
+        "reported_tokens": {
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "total_tokens": null
+        },
+        "logical_requests": 1,
+        "unresolved_requests": 1,
+        "estimated_cost": null,
+        "scope": "current_actor_experiment",
+        "latency": null
+      }
+    },
+    {
+      "vendor": "deepseek",
+      "mode": "read_timeout",
+      "experiment": "EXP-AGENT-deepseek-read-timeout-30a165571932",
+      "https_requests": 1,
+      "max_attempts": 3,
+      "evidence": {
+        "status": "FAILED",
+        "stage": "done",
+        "iterations": 1,
+        "reserved_tokens": 64000,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "agent_proposals": 0,
+          "agent_tool_invocations": 0
+        }
+      },
+      "usage": {
+        "groups": [],
+        "agent_runs": 1,
+        "model_completions": 0,
+        "recorded_attempts": 0,
+        "unknown_usage_completions": 0,
+        "usage_records": [],
+        "reported_tokens": {
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "total_tokens": null
+        },
+        "logical_requests": 1,
+        "unresolved_requests": 1,
+        "estimated_cost": null,
+        "scope": "current_actor_experiment",
+        "latency": null
+      }
+    }
+  ],
+  "scope": "isolated HTTPS substitute; timeout profile 2s; max_attempts 3; no online calls",
+  "images": {
+    "offline-provider": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "agent-drill": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "postgres": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+    "nats": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+    "web": "sha256:992f194b1d61e8c7bbefda70d6f2ca5172ae3eab9120367e2e2925bbfa2c58ba",
+    "api": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "engine": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "agent": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "outbox": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c",
+    "gateway": "sha256:72ac2df361381a951f7ea094f7c03bfa6db03cae1ab4b143ca07b59c4944df4c"
+  }
+}

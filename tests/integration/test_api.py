@@ -763,3 +763,41 @@ def test_workspace_scope_identity_and_plan_context(api):
     assert get(api, "/experiments/EXP-SIM-001/plan-context", "observer").status_code == 403
     assert get(api, "/experiments/EXP-SIM-001/available-agents", "outsider").status_code == 403
     assert get(api, "/experiments/EXP-SIM-001/available-agents").status_code == 200
+
+
+def test_inflight_cancel_api_returns_intent_then_authoritative_terminal(api):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+
+    runtime, model = api[1].runtime, api[-1]
+    run = runtime.start("owner", "EXP-SIM-001", "planner@1", "cancel boundary")
+    entered, release = Event(), Event()
+    original = model.stream
+    model.outputs = ["must not publish"]
+
+    def blocked(request, cancel):
+        entered.set()
+        assert release.wait(10)
+        yield from original(request, cancel)
+
+    model.stream = blocked
+    path = "/agent-runs/" + run["id"]
+    with ThreadPoolExecutor(1) as pool:
+        future = pool.submit(runtime.step, "owner", run["id"])
+        try:
+            assert entered.wait(10)
+            assert send(api, "POST", path + "/cancel", actor="observer").status_code == 403
+            response = send(api, "POST", path + "/cancel", key="cancel-intent")
+            assert response.status_code == 200
+            assert response.json()["status"] == "RUNNING"
+            assert response.json()["cancel_requested"] is True
+            assert get(api, path).json()["cancel_requested"] is True
+            assert (
+                send(api, "POST", path + "/cancel", key="cancel-intent").json() == response.json()
+            )
+        finally:
+            release.set()
+        assert future.result()["checkpoint"]["status"] == "CANCELLED"
+    final = get(api, path).json()
+    assert final["status"] == "CANCELLED" and final["result"] is None
+    assert final["cancel_requested"] is True

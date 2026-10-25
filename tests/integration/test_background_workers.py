@@ -74,7 +74,7 @@ def test_worker_keyset_progress_past_revoked_actor(agents, worker):  # noqa: F81
     assert len(model.requests) == 1
 
 
-def test_manual_step_and_cancel_exclude_running_worker(agents, worker):  # noqa: F811
+def test_manual_step_excluded_but_cancel_request_reaches_worker(agents, worker):  # noqa: F811
     runtime, _, model, *_ = agents
     run = start(agents)
     entered, release = Event(), Event()
@@ -91,13 +91,23 @@ def test_manual_step_and_cancel_exclude_running_worker(agents, worker):  # noqa:
         future = pool.submit(worker.tick)
         try:
             assert entered.wait(10)
-            for action in (runtime.step, runtime.cancel):
-                with pytest.raises(DomainError, match="RUN_BUSY"):
-                    action("owner", run["id"])
+            with pytest.raises(DomainError, match="RUN_BUSY"):
+                runtime.step("owner", run["id"])
+            pending = runtime.cancel("owner", run["id"])
+            assert pending["checkpoint"]["status"] == "RUNNING"
+            assert pending["cancel_requested_at"] is not None
+            assert (
+                runtime.cancel("owner", run["id"])["cancel_requested_at"]
+                == pending["cancel_requested_at"]
+            )
         finally:
             release.set()
-        assert future.result()["runs"][0]["status"] == "COMPLETED"
+        assert future.result()["runs"][0]["status"] == "CANCELLED"
     assert len(model.requests) == 1
+    done = runtime.store.load("owner", run["id"])
+    assert done["checkpoint"]["result"] is None
+    assert done["checkpoint"]["reserved_tokens"] > 0
+    assert worker.tick()["runs"] == []
 
 
 def test_lost_agent_lock_cannot_commit_or_replay_model(agents, worker):  # noqa: F811

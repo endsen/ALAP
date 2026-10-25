@@ -1,0 +1,93 @@
+> npm exec -- openapi-typescript ../../contracts/openapi.yaml -o /tmp/alap-web-contract-yz1r7fnu/api.d.ts
+npm notice run alap-web@0.1.0 npx
+npm notice run 'openapi-typescript' ../../contracts/openapi.yaml -o /tmp/alap-web-contract-yz1r7fnu/api.d.ts
+✨ openapi-typescript 7.13.0
+🚀 ../../contracts/openapi.yaml → /tmp/alap-web-contract-yz1r7fnu/api.d.ts [201.8ms]
+> npm run format:check
+npm notice run alap-web@0.1.0 format:check
+npm notice run prettier --check .
+Checking formatting...
+All matched files use Prettier code style!
+> npm run typecheck
+npm notice run alap-web@0.1.0 typecheck
+npm notice run tsc --noEmit
+> npm test
+npm notice run alap-web@0.1.0 test
+npm notice run node --import tsx --test --test-isolation=none tests/unit/*.test.ts
+✔ ambiguous delivery retains idempotency key and blocks changed payload (34.250341ms)
+✔ 401 expires session and no input contents become error messages (0.70072ms)
+✔ version forms preserve nested identity, deduplicate scope and remove omitted optional secrets (1.269455ms)
+✔ invalid numeric budgets and malformed schemas cannot be silently coerced (0.452213ms)
+✔ version diff includes scope removal, changed budget and nested permission (0.324143ms)
+✔ SSE split boundaries, multiline content and heartbeat (0.526827ms)
+✔ dedup, gap and cursor mismatch never fabricate state (0.234882ms)
+✔ oversized or invalid cursors and incomplete frames are not applied (0.258583ms)
+✔ candidate binds exact snapshot, policy and capability versions (0.473285ms)
+✔ diff identifies resources, risks and changed task constraints (0.543967ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 167.819219
+> npm run build
+npm notice run alap-web@0.1.0 build
+npm notice run next build
+▲ Next.js 16.4.2 (Turbopack)
+✓ Running next.config.ts took 193ms
+- Experiments (use with caution):
+  · cpus: 2
+  ⨯ useTypeScriptCli
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 514ms
+  Running TypeScript ...
+  Finished TypeScript in 5.2s ...
+  Collecting page data using 2 workers ...
+  Generating static pages using 2 workers (0/2) ...
+✓ Generating static pages using 2 workers (2/2) in 176ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /_not-found
+└ ƒ /[[...route]]
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+> npm run test:e2e
+npm notice run alap-web@0.1.0 test:e2e
+npm notice run playwright test
+[WebServer] npm notice run alap-web@0.1.0 start
+[WebServer] npm notice run next start --hostname 127.0.0.1 --port 53000
+[WebServer] (node:179466) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 19 tests using 1 worker
+
+(node:179524) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/e2e/console.spec.ts:24:5 › admin can import, validate, publish and inspect an immutable Skill version (3.3s)
+  ✓   2 tests/e2e/console.spec.ts:69:5 › credentials stay masked and model configuration is versioned without a live model call (2.5s)
+  ✓   3 tests/e2e/console.spec.ts:115:5 › Agent draft binds actual model, permissions and budgets before publication (4.9s)
+  ✓   4 tests/e2e/console.spec.ts:165:5 › MCP discovery uses actual local HTTP server and requires separate grant (1.8s)
+  ✓   5 tests/e2e/console.spec.ts:186:5 › knowledge import, retrieval and access revocation operate on actual sources (1.7s)
+  ✓   6 tests/e2e/console.spec.ts:211:5 › dashboard drills into scoped traces and unknown usage is not zero (1.5s)
+  ✓   7 tests/e2e/console.spec.ts:238:5 › non-admin cannot open administration and offline mode disables writes (695ms)
+  ✓   8 tests/e2e/console.spec.ts:255:5 › permission denial clears previously loaded configuration (771ms)
+  ✓   9 tests/e2e/console.spec.ts:278:5 › mobile console remains within viewport and keyboard confirmation can be dismissed (767ms)
+  ✓  10 tests/e2e/workspace.spec.ts:34:5 › real simulated experiment: goal, plan, approval, Run, verified curve and download (23.9s)
+  ✓  11 tests/e2e/workspace.spec.ts:91:5 › observer cannot write; reload discards token (1.6s)
+  ✓  12 tests/e2e/workspace.spec.ts:104:5 › SSE disconnect blocks writes and snapshot reconnect restores them (2.7s)
+  ✓  13 tests/e2e/workspace.spec.ts:119:5 › mobile login remains accessible and fits viewport (1.5s)
+  ✓  14 tests/e2e/workspace.spec.ts:132:5 › version conflict keeps confirmation open and does not claim success (1.9s)
+  ✓  15 tests/e2e/workspace.spec.ts:157:5 › SSE access revocation clears protected workspace (1.6s)
+  ✓  16 tests/e2e/workspace.spec.ts:170:5 › create sample and experiment, display unknown instruments (2.9s)
+  ✓  17 tests/e2e/workspace.spec.ts:200:5 › expired identity returns login instead of retaining private content (1.5s)
+  ✓  18 tests/e2e/workspace.spec.ts:218:5 › snapshot loading is explicit; resync event restores authoritative state (3.1s)
+  ✓  19 tests/e2e/workspace.spec.ts:265:5 › revoked knowledge status hides cached content and waits for authoritative closure (5.7s)
+
+  19 passed (1.2m)

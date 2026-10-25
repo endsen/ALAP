@@ -1,0 +1,33 @@
+
+> python -m ruff check .
+All checks passed!
+
+> python -m ruff format --check .
+209 files already formatted
+
+> python scripts/build_lifecycle_reference.py --check
+PASS: lifecycle reference covers 135 transitions
+
+> python scripts/build_design.py --check
+PASS: combined v3.1 design is current
+
+> python scripts/build_openapi.py --check
+PASS: generated OpenAPI is current
+
+> python contracts/validate_contracts.py
+PASS: 13 schemas/examples and full OpenAPI specification
+
+> python -m pytest -q
+........................................................................ [ 12%]
+........................................................................ [ 24%]
+........................................................................ [ 37%]
+........................................................................ [ 49%]
+........................................................................ [ 61%]
+........................................................................ [ 74%]
+........................................................................ [ 86%]
+........................................................................ [ 99%]
+.....                                                                    [100%]
+581 passed in 524.74s (0:08:44)
+
+> python -m pip check
+No broken requirements found.
