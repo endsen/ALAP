@@ -1,0 +1,72 @@
+[
+  {
+    "path": "/experiments/EXP-BROWSER-9858ee674487",
+    "observer": false,
+    "status": 200
+  },
+  {
+    "path": "/experiments/EXP-BROWSER-9858ee674487/members/drill-acl-data-d7fb48814db4",
+    "observer": false,
+    "status": 200
+  },
+  {
+    "path": "/datasets/01e32b93-c327-47ec-98f6-024c2404cd61",
+    "observer": true,
+    "status": 200
+  },
+  {
+    "path": "/datasets/01e32b93-c327-47ec-98f6-024c2404cd61/series",
+    "observer": true,
+    "status": 200
+  },
+  {
+    "path": "/datasets/01e32b93-c327-47ec-98f6-024c2404cd61/download",
+    "observer": true,
+    "status": 200
+  },
+  {
+    "path": "/experiments/EXP-BROWSER-9858ee674487",
+    "observer": false,
+    "status": 200
+  },
+  {
+    "path": "/experiments/EXP-BROWSER-9858ee674487/members/drill-acl-data-d7fb48814db4",
+    "observer": false,
+    "status": 200
+  },
+  {
+    "path": "/datasets/01e32b93-c327-47ec-98f6-024c2404cd61",
+    "observer": true,
+    "status": 403
+  },
+  {
+    "path": "/datasets/01e32b93-c327-47ec-98f6-024c2404cd61/series",
+    "observer": true,
+    "status": 403
+  },
+  {
+    "path": "/datasets/01e32b93-c327-47ec-98f6-024c2404cd61/download",
+    "observer": true,
+    "status": 403
+  },
+  {
+    "path": "/instruments",
+    "observer": true,
+    "status": 200
+  },
+  {
+    "path": "/instruments/sim-smu",
+    "observer": true,
+    "status": 403
+  },
+  {
+    "path": "/experiments/EXP-BROWSER-9858ee674487",
+    "observer": false,
+    "status": 200
+  },
+  {
+    "path": "/experiments/EXP-BROWSER-9858ee674487/members/drill-acl-data-d7fb48814db4",
+    "observer": false,
+    "status": 200
+  }
+]

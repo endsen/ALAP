@@ -1,0 +1,491 @@
+{
+  "completed_at": "2026-10-25T17:29:41.639403+00:00",
+  "cases": [
+    {
+      "vendor": "openai",
+      "phase": "cache",
+      "experiment": "EXP-AGENT-openai-mcp-cache-ef8b7b48d911",
+      "evidence": {
+        "status": "COMPLETED",
+        "error": null,
+        "history": [
+          {
+            "calls": [
+              {
+                "id": "offline-mcp",
+                "name": "mcp_107566c48ba14a73ac61a54774b5a710",
+                "arguments": {
+                  "query": "fixture"
+                }
+              }
+            ],
+            "results": [
+              {
+                "id": "offline-mcp",
+                "value": {
+                  "value": 3
+                }
+              }
+            ]
+          }
+        ],
+        "tool_calls": 1,
+        "calls": [
+          [
+            "SUCCEEDED",
+            {
+              "value": 3
+            }
+          ]
+        ],
+        "invocations": 1,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "proposals": 0
+        }
+      },
+      "discovery_grants": 0,
+      "recovery": {
+        "boundary": {
+          "checkpoint": {
+            "goal": "D12D3:mcp_control\nRead reviewed MCP data.",
+            "stage": "tools",
+            "result": null,
+            "status": "RUNNING",
+            "history": [],
+            "pending": [
+              {
+                "id": "offline-mcp",
+                "name": "mcp_107566c48ba14a73ac61a54774b5a710",
+                "arguments": {
+                  "query": "fixture"
+                }
+              }
+            ],
+            "snapshot": {
+              "authority": "database_snapshot_not_physical_readback",
+              "resources": [
+                "sim-magnet",
+                "sim-smu",
+                "sim-temp"
+              ],
+              "risk_levels": [
+                "operator_review"
+              ],
+              "experiment_id": "EXP-AGENT-openai-mcp-cache-ef8b7b48d911",
+              "experiment_state": "DRAFT",
+              "snapshot_version": 1,
+              "unknown_commands": [],
+              "resource_controls": [
+                {
+                  "id": "sim-magnet",
+                  "reason": "epoch_reconciled",
+                  "quarantined": false
+                },
+                {
+                  "id": "sim-smu",
+                  "reason": "epoch_reconciled",
+                  "quarantined": false
+                },
+                {
+                  "id": "sim-temp",
+                  "reason": "epoch_reconciled",
+                  "quarantined": false
+                }
+              ],
+              "approval_boundaries": []
+            },
+            "iterations": 1,
+            "tool_calls": 0,
+            "seen_call_ids": [],
+            "reserved_tokens": 64000
+          },
+          "revision": 2,
+          "calls": [
+            [
+              "offline-mcp",
+              "107566c4-8ba1-4a73-ac61-a54774b5a710",
+              "1f6fada276a6660fc165dc149a6e460736bc6a23bd8d322de5087ef2bf5c8164",
+              "SUCCEEDED",
+              {
+                "value": 3
+              }
+            ]
+          ],
+          "invocations": 0
+        },
+        "blocked_sessions": 1,
+        "killed_exit_code": 137,
+        "checkpoint_unchanged_after_kill": true,
+        "grant_revoked_before_restart": false,
+        "cache_identity_and_result_preserved": true
+      },
+      "mcp_requests": 1,
+      "https_requests": 2,
+      "restart_no_change": true
+    },
+    {
+      "vendor": "openai",
+      "phase": "cache-revoke",
+      "experiment": "EXP-AGENT-openai-mcp-cache-revoke-ef8b7b48d911",
+      "evidence": {
+        "status": "FAILED",
+        "error": "MCP_REVOKED",
+        "history": [],
+        "tool_calls": 0,
+        "calls": [
+          [
+            "SUCCEEDED",
+            {
+              "value": 3
+            }
+          ]
+        ],
+        "invocations": 0,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "proposals": 0
+        }
+      },
+      "discovery_grants": 0,
+      "recovery": {
+        "boundary": {
+          "checkpoint": {
+            "goal": "D12D3:mcp_control\nRead reviewed MCP data.",
+            "stage": "tools",
+            "result": null,
+            "status": "RUNNING",
+            "history": [],
+            "pending": [
+              {
+                "id": "offline-mcp",
+                "name": "mcp_d2b85901a41e437f889c27d8c3107c4c",
+                "arguments": {
+                  "query": "fixture"
+                }
+              }
+            ],
+            "snapshot": {
+              "authority": "database_snapshot_not_physical_readback",
+              "resources": [
+                "sim-magnet",
+                "sim-smu",
+                "sim-temp"
+              ],
+              "risk_levels": [
+                "operator_review"
+              ],
+              "experiment_id": "EXP-AGENT-openai-mcp-cache-revoke-ef8b7b48d911",
+              "experiment_state": "DRAFT",
+              "snapshot_version": 1,
+              "unknown_commands": [],
+              "resource_controls": [
+                {
+                  "id": "sim-magnet",
+                  "reason": "epoch_reconciled",
+                  "quarantined": false
+                },
+                {
+                  "id": "sim-smu",
+                  "reason": "epoch_reconciled",
+                  "quarantined": false
+                },
+                {
+                  "id": "sim-temp",
+                  "reason": "epoch_reconciled",
+                  "quarantined": false
+                }
+              ],
+              "approval_boundaries": []
+            },
+            "iterations": 1,
+            "tool_calls": 0,
+            "seen_call_ids": [],
+            "reserved_tokens": 64000
+          },
+          "revision": 2,
+          "calls": [
+            [
+              "offline-mcp",
+              "d2b85901-a41e-437f-889c-27d8c3107c4c",
+              "b2c0154e7672c0908aca6633b773b72cde5592d9e9fbe168e32085a777cca9d2",
+              "SUCCEEDED",
+              {
+                "value": 3
+              }
+            ]
+          ],
+          "invocations": 0
+        },
+        "blocked_sessions": 1,
+        "killed_exit_code": 137,
+        "checkpoint_unchanged_after_kill": true,
+        "grant_revoked_before_restart": true,
+        "cache_identity_and_result_preserved": true
+      },
+      "mcp_requests": 1,
+      "https_requests": 1,
+      "restart_no_change": true
+    },
+    {
+      "vendor": "deepseek",
+      "phase": "cache",
+      "experiment": "EXP-AGENT-deepseek-mcp-cache-ef8b7b48d911",
+      "evidence": {
+        "status": "COMPLETED",
+        "error": null,
+        "history": [
+          {
+            "calls": [
+              {
+                "id": "offline-mcp",
+                "name": "mcp_bb860913db9b46f89c30d35eae8a701d",
+                "arguments": {
+                  "query": "fixture"
+                }
+              }
+            ],
+            "results": [
+              {
+                "id": "offline-mcp",
+                "value": {
+                  "value": 3
+                }
+              }
+            ]
+          }
+        ],
+        "tool_calls": 1,
+        "calls": [
+          [
+            "SUCCEEDED",
+            {
+              "value": 3
+            }
+          ]
+        ],
+        "invocations": 1,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "proposals": 0
+        }
+      },
+      "discovery_grants": 0,
+      "recovery": {
+        "boundary": {
+          "checkpoint": {
+            "goal": "D12D3:mcp_control\nRead reviewed MCP data.",
+            "stage": "tools",
+            "result": null,
+            "status": "RUNNING",
+            "history": [],
+            "pending": [
+              {
+                "id": "offline-mcp",
+                "name": "mcp_bb860913db9b46f89c30d35eae8a701d",
+                "arguments": {
+                  "query": "fixture"
+                }
+              }
+            ],
+            "snapshot": {
+              "authority": "database_snapshot_not_physical_readback",
+              "resources": [
+                "sim-magnet",
+                "sim-smu",
+                "sim-temp"
+              ],
+              "risk_levels": [
+                "operator_review"
+              ],
+              "experiment_id": "EXP-AGENT-deepseek-mcp-cache-ef8b7b48d911",
+              "experiment_state": "DRAFT",
+              "snapshot_version": 1,
+              "unknown_commands": [],
+              "resource_controls": [
+                {
+                  "id": "sim-magnet",
+                  "reason": "epoch_reconciled",
+                  "quarantined": false
+                },
+                {
+                  "id": "sim-smu",
+                  "reason": "epoch_reconciled",
+                  "quarantined": false
+                },
+                {
+                  "id": "sim-temp",
+                  "reason": "epoch_reconciled",
+                  "quarantined": false
+                }
+              ],
+              "approval_boundaries": []
+            },
+            "iterations": 1,
+            "tool_calls": 0,
+            "seen_call_ids": [],
+            "reserved_tokens": 64000
+          },
+          "revision": 2,
+          "calls": [
+            [
+              "offline-mcp",
+              "bb860913-db9b-46f8-9c30-d35eae8a701d",
+              "54056fd171b18114f7d79be455d1248f6278b5073144daaff215ac28319527bd",
+              "SUCCEEDED",
+              {
+                "value": 3
+              }
+            ]
+          ],
+          "invocations": 0
+        },
+        "blocked_sessions": 1,
+        "killed_exit_code": 137,
+        "checkpoint_unchanged_after_kill": true,
+        "grant_revoked_before_restart": false,
+        "cache_identity_and_result_preserved": true
+      },
+      "mcp_requests": 1,
+      "https_requests": 2,
+      "restart_no_change": true
+    },
+    {
+      "vendor": "deepseek",
+      "phase": "cache-revoke",
+      "experiment": "EXP-AGENT-deepseek-mcp-cache-revoke-ef8b7b48d911",
+      "evidence": {
+        "status": "FAILED",
+        "error": "MCP_REVOKED",
+        "history": [],
+        "tool_calls": 0,
+        "calls": [
+          [
+            "SUCCEEDED",
+            {
+              "value": 3
+            }
+          ]
+        ],
+        "invocations": 0,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "proposals": 0
+        }
+      },
+      "discovery_grants": 0,
+      "recovery": {
+        "boundary": {
+          "checkpoint": {
+            "goal": "D12D3:mcp_control\nRead reviewed MCP data.",
+            "stage": "tools",
+            "result": null,
+            "status": "RUNNING",
+            "history": [],
+            "pending": [
+              {
+                "id": "offline-mcp",
+                "name": "mcp_46c929a3dd3040db9090533335f008df",
+                "arguments": {
+                  "query": "fixture"
+                }
+              }
+            ],
+            "snapshot": {
+              "authority": "database_snapshot_not_physical_readback",
+              "resources": [
+                "sim-magnet",
+                "sim-smu",
+                "sim-temp"
+              ],
+              "risk_levels": [
+                "operator_review"
+              ],
+              "experiment_id": "EXP-AGENT-deepseek-mcp-cache-revoke-ef8b7b48d911",
+              "experiment_state": "DRAFT",
+              "snapshot_version": 1,
+              "unknown_commands": [],
+              "resource_controls": [
+                {
+                  "id": "sim-magnet",
+                  "reason": "epoch_reconciled",
+                  "quarantined": false
+                },
+                {
+                  "id": "sim-smu",
+                  "reason": "epoch_reconciled",
+                  "quarantined": false
+                },
+                {
+                  "id": "sim-temp",
+                  "reason": "epoch_reconciled",
+                  "quarantined": false
+                }
+              ],
+              "approval_boundaries": []
+            },
+            "iterations": 1,
+            "tool_calls": 0,
+            "seen_call_ids": [],
+            "reserved_tokens": 64000
+          },
+          "revision": 2,
+          "calls": [
+            [
+              "offline-mcp",
+              "46c929a3-dd30-40db-9090-533335f008df",
+              "afa4039376d49864fdef4796a13396a6ee14ba8645b2184e33675ccde82ac006",
+              "SUCCEEDED",
+              {
+                "value": 3
+              }
+            ]
+          ],
+          "invocations": 0
+        },
+        "blocked_sessions": 1,
+        "killed_exit_code": 137,
+        "checkpoint_unchanged_after_kill": true,
+        "grant_revoked_before_restart": true,
+        "cache_identity_and_result_preserved": true
+      },
+      "mcp_requests": 1,
+      "https_requests": 1,
+      "restart_no_change": true
+    }
+  ],
+  "images": {
+    "offline-mcp": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "offline-provider": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "agent-drill": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "postgres": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+    "nats": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+    "api": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "engine": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "gateway": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "agent": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "outbox": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "web": "sha256:fd41b31ad649646db2ea6c0ee8f72201839967c3f6cd22f796402b6316aaccd0"
+  },
+  "scope": "maintenance discovery; API grant/revoke; loopback MCP; real HTTPS model"
+}

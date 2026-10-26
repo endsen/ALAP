@@ -1,0 +1,12 @@
+{
+  "previous_images": {
+    "backend": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "web": "sha256:fd41b31ad649646db2ea6c0ee8f72201839967c3f6cd22f796402b6316aaccd0"
+  },
+  "images": {
+    "backend": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "web": "sha256:571301f71280098ba022b3befbe59551b4a1daa139684e04bdb400b6141db71a"
+  },
+  "schema": "d12_002",
+  "migration": false
+}

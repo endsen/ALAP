@@ -177,3 +177,21 @@ def test_version_binding_requires_old_instruction_in_real_payload(vendor):
     payload["messages"][-1]["content"] = "Skill reference guide@2 VERSION_PIN_NEW"
     with pytest.raises(AssertionError):
         calls(payload, vendor)
+
+
+@pytest.mark.parametrize("vendor", ["openai", "deepseek"])
+@pytest.mark.parametrize("mode", ["mcp_control", "mcp_revoke"])
+def test_mcp_model_requires_actual_scoped_tool_exchange(vendor, mode):
+    payload = request(vendor)
+    payload["messages"].append({"role": "user", "content": "D12D3:" + mode})
+    payload["tools"].append({"function": {"name": "mcp_fixture"}})
+    first = calls(payload, vendor)
+    emitted = first[0]["choices"][0]["delta"]["tool_calls"][0]
+    assert emitted["id"] == "offline-mcp" and emitted["function"]["name"] == "mcp_fixture"
+    payload["messages"].append(
+        {"role": "tool", "tool_call_id": "offline-mcp", "content": json.dumps({"value": 3})}
+    )
+    assert calls(payload, vendor)[0]["choices"][0]["delta"]["content"] == "Read-only retry result."
+    payload["messages"][-1]["content"] = json.dumps({"value": "forged"})
+    with pytest.raises(AssertionError):
+        calls(payload, vendor)

@@ -30,11 +30,16 @@ def response_chunks(payload, host, path, proposal):
     tools = {t["function"]["name"] for t in payload["tools"]}
     mode = scenario_mode(payload)
     knowledge = mode in {"knowledge_control", "knowledge_injection", "knowledge_revoke"}
-    assert tools == (
-        {"read_snapshot", "propose_plan", "search_knowledge"}
-        if knowledge
-        else {"read_snapshot", "propose_plan"}
-    )
+    mcp = mode in {"mcp_control", "mcp_revoke"}
+    if mcp:
+        assert len(tools) == 3 and {"read_snapshot", "propose_plan"} <= tools
+        mcp_name = next(t for t in tools if t.startswith("mcp_"))
+    else:
+        assert tools == (
+            {"read_snapshot", "propose_plan", "search_knowledge"}
+            if knowledge
+            else {"read_snapshot", "propose_plan"}
+        )
     messages = payload["messages"]
     snapshots = [
         json.loads(m["content"].removeprefix("Authoritative scoped snapshot: "))
@@ -48,7 +53,11 @@ def response_chunks(payload, host, path, proposal):
     if mode == "version_pin":
         assert any("VERSION_PIN_OLD" in m.get("content", "") for m in messages)
         assert not any("VERSION_PIN_NEW" in m.get("content", "") for m in messages)
-    if mode in {"retry_success", "retry_budget", "version_pin"}:
+    mcp_results = [m for m in messages if m["role"] == "tool"] if mcp else []
+    if mcp_results:
+        assert len(mcp_results) == 1 and mcp_results[0]["tool_call_id"] == "offline-mcp"
+        assert json.loads(mcp_results[0]["content"]) == {"value": 3}
+    if mode in {"retry_success", "retry_budget", "version_pin"} or mcp_results:
         yield {
             "model": payload["model"],
             "choices": [
@@ -67,7 +76,9 @@ def response_chunks(payload, host, path, proposal):
         return
     # A real first tool round trip must precede the proposal; no fixture writes a plan.
     results = [m for m in messages if m["role"] == "tool"]
-    if knowledge:
+    if mcp:
+        args, name, call_id = {"query": "fixture"}, mcp_name, "offline-mcp"
+    elif knowledge:
         if results:
             assert len(results) == 1 and results[0]["tool_call_id"] == "offline-search"
             assert messages[-2]["tool_calls"][0]["function"]["name"] == "search_knowledge"
@@ -233,7 +244,7 @@ class Handler(BaseHTTPRequestHandler):
             # after an incomplete tool-call delta; do not fake a timeout response.
             time.sleep(6)
             return
-        if mode == "cancel_hold":
+        if mode in {"cancel_hold", "mcp_revoke"}:
             self.wfile.write(("data: " + json.dumps(chunks[0]) + "\n\n").encode())
             self.wfile.flush()
             (control / (exp + ".partial")).touch()

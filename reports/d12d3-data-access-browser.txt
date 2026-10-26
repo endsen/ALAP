@@ -1,0 +1,10 @@
+npm notice run alap-web@0.1.0 npx
+npm notice run 'playwright' test --config playwright.deployment.config.ts data-access.spec.ts --output /home/endsen/ALAP/.local-deploy/data-access-mbzucxe3/results
+
+Running 1 test using 1 worker
+
+(node:291109) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/deployment/data-access.spec.ts:7:5 › loaded dataset hides protected content after scope reduction (3.2s)
+
+  1 passed (4.1s)

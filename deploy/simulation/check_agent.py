@@ -121,7 +121,12 @@ def main(
     tool_recovery=False,
     permissions=False,
     access_revocation=False,
+    principal_disable=False,
+    mcp_faults=False,
+    mcp_runtime=False,
+    mcp_cache=False,
 ):
+    mcp_faults = mcp_faults or mcp_runtime or mcp_cache
     runtime = Runtime(ROOT / ".local-deploy/simulation")
     services = runtime.containers()
     assert set(services) == set(SERVICES) and all(c["State"]["Running"] for c in services.values())
@@ -138,7 +143,16 @@ def main(
             for v in ("openai", "deepseek")
         ],
     }
-    if access_revocation:
+    if mcp_faults:
+        from mcp_faults import cases
+
+        state["cases"] = cases(suffix, advanced=mcp_runtime, cache=mcp_cache)
+    elif principal_disable:
+        from access_revocation_faults import cases
+
+        state["cases"] = cases(suffix, principals=True)
+        state["permission_actors"] = {c["id"]: "drill-acl-" + c["id"] for c in state["cases"]}
+    elif access_revocation:
         from access_revocation_faults import cases
 
         state["cases"] = cases(suffix)
@@ -247,6 +261,29 @@ def main(
             },
             "networks": {"offline-model": {"internal": True}},
         }
+        if mcp_faults:
+            override["services"]["offline-mcp"] = common | {
+                "command": ["python", "/fixture/mcp_provider.py"],
+                "network_mode": "service:agent-drill",
+                "volumes": [
+                    str(directory / "control") + ":/control",
+                    str(ROOT / "deploy/simulation/mcp_provider.py")
+                    + ":/fixture/mcp_provider.py:ro",
+                ],
+            }
+        if mcp_cache:
+            (directory / "control" / "agent-start").touch()
+            override["services"]["agent-drill"]["command"] = [
+                "python",
+                "/fixture/agent_start_gate.py",
+                "--config",
+                "/config/agent.json",
+            ]
+            override["services"]["agent-drill"]["volumes"] += [
+                str(directory / "control") + ":/control",
+                str(ROOT / "deploy/simulation/agent_start_gate.py")
+                + ":/fixture/agent_start_gate.py:ro",
+            ]
         private_write(directory / "compose.yaml", yaml.safe_dump(override).encode())
         drill = Runtime(runtime.directory, override=directory / "compose.yaml")
         token = None
@@ -287,12 +324,32 @@ def main(
                 time.sleep(1)
             else:
                 raise ValueError("Offline provider did not become ready")
+            if mcp_faults:
+                drill.run(
+                    drill.compose + ["up", "-d", "--no-build", "--pull", "never", "offline-mcp"]
+                )
+                from model_faults import wait
+
+                wait(
+                    lambda: drill.output(drill.compose + ["logs", "offline-mcp"]),
+                    lambda logs: "offline-mcp-ready" in logs,
+                )
             deployed = drill.containers()
             # DNS aliases and the test CA never enter normal services; worker has no egress.
             assert set(deployed["agent-drill"]["NetworkSettings"]["Networks"]) == {
                 runtime.project + "_database",
                 runtime.project + "_offline-model",
             }
+            if mcp_faults:
+                from mcp_faults import run_mcp
+
+                return run_mcp(
+                    runtime, state, directory, deployed, advanced=mcp_runtime, cache=mcp_cache
+                )
+            if principal_disable:
+                from access_revocation_faults import run_access_revocation
+
+                return run_access_revocation(runtime, state, directory, deployed, principals=True)
             if access_revocation:
                 from access_revocation_faults import run_access_revocation
 
@@ -395,6 +452,8 @@ def main(
             )
             return 0
         finally:
+            if mcp_faults:
+                drill.run(drill.compose + ["rm", "-f", "-s", "offline-mcp"])
             drill.run(drill.compose + ["rm", "-f", "-s", "agent-drill", "offline-provider"])
             # Cancel interrupted fixture AgentRuns via the existing audited application path.
             execute(
@@ -471,6 +530,16 @@ with psycopg.connect(database_url()) as db:
                     ' "revoked_at=clock_timestamp() "'
                     ' "WHERE actor_id=ANY(%s)", ('
                     + repr(list(state["permission_actors"].values()))
+                    + ",))\n"
+                )
+            if mcp_faults:
+                code += (
+                    '    db.execute("UPDATE mcp_grants SET revoked=TRUE WHERE tool_id IN "'
+                    ' "(SELECT id FROM mcp_tools WHERE connection_ref=ANY(%s))", ('
+                    + repr([c["id"] + "@1" for c in state["cases"]])
+                    + ",))\n"
+                    '    db.execute("UPDATE mcp_connections SET enabled=FALSE WHERE ref=ANY(%s)", ('
+                    + repr([c["id"] + "@1" for c in state["cases"]])
                     + ",))\n"
                 )
             execute(runtime, code)

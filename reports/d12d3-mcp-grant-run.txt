@@ -1,0 +1,72 @@
+ Network alap-simulation_offline-model Creating 
+ Network alap-simulation_offline-model Creating 
+ Network alap-simulation_offline-model Created 
+ Network alap-simulation_offline-model Created 
+ Container alap-simulation-offline-provider-1 Creating 
+ Container alap-simulation-agent-drill-1 Creating 
+ Container alap-simulation-agent-drill-1 Created 
+ Container alap-simulation-offline-provider-1 Created 
+ Container alap-simulation-offline-provider-1 Starting 
+ Container alap-simulation-agent-drill-1 Starting 
+ Container alap-simulation-offline-provider-1 Started 
+ Container alap-simulation-agent-drill-1 Started 
+ Container alap-simulation-agent-drill-1 Running 
+ Container alap-simulation-offline-mcp-1 Creating 
+ Container alap-simulation-offline-mcp-1 Created 
+ Container alap-simulation-offline-mcp-1 Starting 
+ Container alap-simulation-offline-mcp-1 Started 
+Traceback (most recent call last):
+  File "<stdin>", line 13, in <module>
+  File "/app/src/alap/application/agent_resources.py", line 48, in register_connection
+    self.store.register_connection(ref, asdict(connection))
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/src/alap/adapters/postgres/resources.py", line 159, in register_connection
+    db.execute(
+    ~~~~~~~~~~^
+        """INSERT INTO mcp_connections(ref,config,config_hash) VALUES (%s,%s,%s)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ON CONFLICT DO NOTHING""",
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (ref, Jsonb(config), digest(config)),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.14/site-packages/psycopg/connection.py", line 304, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.InsufficientPrivilege: permission denied for table mcp_connections
+ Container alap-simulation-offline-mcp-1 Stopping 
+ Container alap-simulation-offline-mcp-1 Stopped 
+Going to remove alap-simulation-offline-mcp-1
+ Container alap-simulation-offline-mcp-1 Removing 
+ Container alap-simulation-offline-mcp-1 Removed 
+ Container alap-simulation-agent-drill-1 Stopping 
+ Container alap-simulation-offline-provider-1 Stopping 
+ Container alap-simulation-offline-provider-1 Stopped 
+ Container alap-simulation-agent-drill-1 Stopped 
+Going to remove alap-simulation-agent-drill-1, alap-simulation-offline-provider-1
+ Container alap-simulation-offline-provider-1 Removing 
+ Container alap-simulation-agent-drill-1 Removing 
+ Container alap-simulation-offline-provider-1 Removed 
+ Container alap-simulation-agent-drill-1 Removed 
+Traceback (most recent call last):
+  File "/home/endsen/ALAP/deploy/simulation/check_mcp_faults.py", line 10, in <module>
+    raise SystemExit(main(mcp_faults=True))
+                     ~~~~^^^^^^^^^^^^^^^^^
+  File "/home/endsen/ALAP/deploy/simulation/check_agent.py", line 330, in main
+    return run_mcp(runtime, state, directory, deployed)
+  File "/home/endsen/ALAP/deploy/simulation/mcp_faults.py", line 59, in run_mcp
+    subprocess.check_output(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        [DOCKER, "exec", "-i", worker, "python", "-"], env=runtime.env, input=seed.encode()
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/lib/python3.14/subprocess.py", line 473, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+               **kwargs).stdout
+               ^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/home/endsen/ALAP/.local-deploy/bin/docker', 'exec', '-i', 'be9df565a68e3d5de2cda26b64d2da0da1e14f803fc6452312625783ade06b34', 'python', '-']' returned non-zero exit status 1.

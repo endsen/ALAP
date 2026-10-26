@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Client, id } from "@/lib/api";
+import { APIError, Client, id } from "@/lib/api";
 import { useAction, useResource } from "@/lib/hooks";
 import type {
   Experiment,
@@ -537,12 +537,34 @@ function Instruments({
   );
 }
 function Dataset({ client, dataset }: { client: Client; dataset: string }) {
+  const [generation, setGeneration] = useState(0);
+  return (
+    <DatasetView
+      key={`${dataset}:${generation}`}
+      client={client}
+      dataset={dataset}
+      retry={() => setGeneration((value) => value + 1)}
+    />
+  );
+}
+function DatasetView({
+  client,
+  dataset,
+  retry,
+}: {
+  client: Client;
+  dataset: string;
+  retry: () => void;
+}) {
   const manifest = useResource<Manifest>(client, `/datasets/${id(dataset)}`);
   const series = useResource<Series>(
     client,
     manifest.value ? `/datasets/${id(dataset)}/series` : null,
   );
   const action = useAction();
+  const denied = [manifest.error, series.error, action.error].find(
+    (error) => error instanceof APIError && [401, 403].includes(error.status),
+  );
   return (
     <div className="page">
       <div className="page-heading">
@@ -553,7 +575,7 @@ function Dataset({ client, dataset }: { client: Client; dataset: string }) {
         </div>
         <button
           className="primary"
-          disabled={!manifest.value || action.busy}
+          disabled={!!denied || !manifest.value || action.busy}
           onClick={() =>
             void action.act(() =>
               client.download(
@@ -566,9 +588,9 @@ function Dataset({ client, dataset }: { client: Client; dataset: string }) {
           下载原始 HDF5 ↓
         </button>
       </div>
-      <Problem error={manifest.error} retry={manifest.refresh} />
-      <Problem error={action.error} />
-      {manifest.loading ? (
+      <Problem error={denied || manifest.error} retry={retry} />
+      {!denied && <Problem error={action.error} />}
+      {denied ? null : manifest.loading ? (
         <Loading />
       ) : (
         manifest.value && (

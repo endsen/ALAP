@@ -1,6 +1,6 @@
 # ALAP 实施状态
 
-更新：2026-10-25。本文件区分“已设计”“已实现”“本地验证”“集成/现场验证”。整体平台尚未完成。
+更新：2026-10-26。本文件区分“已设计”“已实现”“本地验证”“集成/现场验证”。整体平台尚未完成。
 
 ## 分期交接入口
 
@@ -18,6 +18,16 @@
 - 下一工作项仍为 D12d.2 常驻 Agent/API 模型链路，D12d/D12 整体未完成。本条作为实现提交之后的文档交接另行提交。
 
 ## D12d.3 · 故障矩阵（2026-10-22，进行中）
+
+- 第二十九批（2026-10-26，本地部署验收完成）：修复数据页清单/曲线/下载返回权限错误后仍显示旧内容的缺口，禁用下载并支持重新授权后的全新读取。旧镜像 Chromium 复现下载 403 后按钮仍启用；Web **10 单元/22 fixture 浏览器**通过；新镜像 **14 项 HTTP 断言与 1 项实际 Chromium 权限收缩/恢复下载案例**通过。加密冷备份 `pre-data-access-20261026` 后仅更新 Web 为 **571301f7**，后端 a7a87199、schema d12_002 不变。完整后端 **642 项通过（588.85 秒）**，真实 PostgreSQL/NATS、格式/契约/生成/依赖检查通过。收尾八服务 ACTIVE、测试库/角色/token/测试身份与成员权限/活动运行/待确认取消/待发布事件均为 0；命令保持 45、15 份文件校验通过，QA 端口已移除。见 `reports/d12d3-data-access-acceptance.md`、`reports/d12d3-data-access-backend-validation.txt` 和 `reports/d12d3-data-access-final-runtime.json`。权限变化在请求返回错误后生效，不等同后台主动撤权推送；其他页面/字段矩阵继续保留。
+
+- 第二十八批（2026-10-26，本地部署验收完成）：两供应商 MCP SUCCEEDED 缓存提交边界中断/恢复前撤权共 **4 项常驻部署案例通过**。独立事务仅持 AgentRun 行锁，确认 mcp_calls 成功、checkpoint 仍 tools 且 worker 被锁阻塞后 SIGKILL（137/非 OOM），锁释放后状态仍一致。保留授权时恢复 COMPLETED、一次远端调用/两次模型请求；撤权时 FAILED/MCP_REVOKED、缓存不进入历史/ledger、一次远端调用/一次模型请求。缓存身份/hash/结果保持，第二次重启不重放，执行写入 0。完整后端 **642 项通过（599.42 秒）**，真实 PostgreSQL/NATS 及格式/契约/生成/依赖检查通过。收尾八服务 ACTIVE、d12_002/镜像一致，测试库/角色/token/启用测试配置及身份/成员权限/MCP 连接与授权/活动运行/待确认取消/待发布事件均为 0；命令保持 45、15 份文件校验通过，QA 端口与隔离模型网络移除。见 `reports/d12d3-mcp-cache-backend-validation.txt`、`reports/d12d3-mcp-cache-final-runtime.json` 和 `reports/d12d3-mcp-cache-acceptance.md`。
+
+- 第二十七批（2026-10-26，本地部署验收完成）：两供应商 MCP Schema 漂移/请求在途撤权共 **4 项常驻部署案例通过**。漂移后旧 current=false、旧 grant 撤销、新 hash/current 但新 grant=0，远端 tools/call=0；在途撤权时已确认 INFLIGHT，返回后 UNKNOWN/null，Agent history/ledger/提案写入 0。均 FAILED/MCP_REVOKED、每项模型请求 1，重授权后终态重启不重放。完整后端 **642 项通过（587.88 秒）**，真实 PostgreSQL/NATS 及格式/契约/生成/依赖检查通过。收尾八服务 ACTIVE、d12_002/镜像一致，测试库/角色/token/启用测试配置及身份/成员权限/MCP 连接与授权/活动运行/待确认取消/待发布事件均为 0；命令保持 45、15 份文件校验通过，QA 端口和隔离模型网络移除。见 `reports/d12d3-mcp-runtime-backend-validation.txt`、`reports/d12d3-mcp-runtime-final-runtime.json` 和 `reports/d12d3-mcp-runtime-acceptance.md`；SUCCEEDED 缓存的中断恢复仍待部署验证。
+
+- 第二十六批（2026-10-25 验证，2026-10-26 收尾完成）：两供应商 MCP 正常只读/模型 HTTPS 响应期间撤权共 **4 项常驻部署案例通过**。发现不生成授权；经实际管理 API 审批与撤销，正常 MCP/模型请求 1/2、撤权 0/1，终态 COMPLETED/FAILED(MCP_REVOKED)，设备执行和提案写入 0，终态重启不重放。MCP 独立服务仅绑定专用 worker 回环，未放宽地址或角色策略。首轮维护准备误用 Agent 角色注册被拒，改用临时管理容器后通过；完整后端 **642 项通过（649.85 秒）**，真实 PostgreSQL/NATS、格式/契约/生成/依赖检查通过。收尾八服务 ACTIVE、d12_002/镜像一致，测试库/角色/token/启用测试配置及身份/成员权限/MCP 连接与授权/活动运行/待确认取消/待发布事件均为 0；命令保持 45、15 份文件校验通过，QA 端口与隔离模型网络移除。见 `reports/d12d3-mcp-grant-backend-validation.txt`、`reports/d12d3-mcp-grant-final-runtime.json` 和 `reports/d12d3-mcp-grant-acceptance.md`。
+
+- 第二十五批（2026-10-25，本地部署验收完成）：两供应商非管理员 operator 调用前/真实 HTTPS 响应期间主体禁用共 **4 项部署案例通过**。非管理员禁用请求 403，admin 管理 API 禁用后原令牌/运行读取与取消立即 401；数据库确认原成员与设备范围仍有效。worker 收尾 FAILED/ACCESS_REVOKED，请求分别 0/1，预算保留、工具/提案/执行写入 0，重启后状态/轨迹不变且不重放。完整后端 **638 项通过（583.49 秒）**，真实 PostgreSQL/NATS 及格式/契约/生成/依赖检查通过。收尾八服务 ACTIVE、d12_002/镜像一致，测试库/角色/token/启用测试配置及身份/成员权限/活动运行/待确认取消/待发布事件均为 0；命令保持 45、15 份文件校验通过，QA 端口和隔离模型网络移除。见 `reports/d12d3-principal-disable-backend-validation.txt`、`reports/d12d3-principal-disable-final-runtime.json` 和 `reports/d12d3-principal-disable-acceptance.md`。
 
 - 第二十四批（2026-10-25，本地部署验收完成）：加密冷备份后部署后端 a7a87199（Web fd41b31a 保持），d12_002 无迁移、原有命令 45/数据 15 保持。非管理员 operator 的两供应商调用前成员撤权/真实 HTTPS 响应期间成员撤权或范围缩减共 **6 项部署案例通过**；FAILED/ACCESS_REVOKED、请求数 0/1/1，未提交工具/提案/执行写入 0，重授权并重启无重放。完整后端 **638 项通过（652.42 秒）**，真实 PostgreSQL/NATS 及格式/契约/生成/依赖检查通过。收尾八服务 ACTIVE、新镜像一致、测试库/角色/token/启用测试配置及身份/成员权限/活动运行/待确认取消/待发布事件均为 0，命令保持 45、15 份文件校验通过，QA 端口和隔离模型网络移除。见 `reports/d12d3-access-deploy-backend-validation.txt`、`reports/d12d3-access-deploy-final-runtime.json` 和 `reports/d12d3-access-deploy-acceptance.md`。
 

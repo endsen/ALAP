@@ -319,3 +319,23 @@ PLAYWRIGHT_BROWSERS_PATH="$PWD/.local-deploy/browsers" .venv/bin/python deploy/s
 ### 提交人权限失效的部署收尾
 
 在包含 `fail_revoked_access` 的新后端镜像上运行 `.venv/bin/python deploy/simulation/check_access_revocation.py`。两供应商格式各三项：非管理员实验 operator 调用前成员撤权、真实 HTTPS 首片后成员撤权、首片后设备范围缩减。使用真实成员 API 提交变化，先确认读取/取消 403，再释放本地 TLS 模型流；只读数据库核对受限 FAILED/ACCESS_REVOKED 和无工具/提案/设备执行写入。重授权后读取终态、重启 worker 等待空 tick，确认状态/轨迹/请求数不变。调用前请求 0，流中各 1。维护锁及 finally 清理专用容器、网络、身份、令牌、成员权限和测试配置；异常遗留运行按受限收尾路径处理。不覆盖主体禁用、MCP 特定授权撤销、所有角色/字段/页面或真实在线模型。
+
+### 主体禁用的部署收尾
+
+运行 `.venv/bin/python deploy/simulation/check_principal_disable.py`。复用撤权部署工具但为每项创建独立随机非管理员身份，两供应商各调用前/真实 HTTPS 首片后两个位置；先验证非管理员禁用请求拒绝，再经 admin 管理 API 禁用，原令牌读取/取消返回 401。只读核对成员仍授权且设备范围不变，确认是主体禁用触发收尾。FAILED/ACCESS_REVOKED、无工具/提案/执行写入，重启等待空 tick 后状态/轨迹/请求数不变；调用前请求 0、流中 1。主体保持禁用，不通过维护 SQL 伪造恢复或重新授权。finally 撤销测试成员权限/令牌、禁用配置并移除专用容器和网络。此证据不覆盖 MCP 独立授权撤销或主体恢复流程。
+
+### MCP 常驻部署授权故障
+
+运行 `.venv/bin/python deploy/simulation/check_mcp_faults.py`：新增 `offline-mcp` 独立容器，仅共享专用 agent-drill 的网络空间并绑定 127.0.0.1:8877，没有宿主端口。采用现有 MCPConnection.allow_loopback 显式测试许可，不放宽公网/TLS 策略。注册和真实 HTTP 发现由短生命周期管理容器完成（共享测试网络空间，单独挂载 API 凭据）；Agent worker 保持原受限数据库角色。发现不创建 grant，审批/撤销通过现有实际管理 HTTP API，发布绑定 MCP 的 Agent v2。
+
+两供应商格式各正常对照/模型响应首片期间撤权，共四项。正常真实 MCP 请求一次、scope 注入正确、结果经真实工具交换送回模型；撤权在完整工具请求提交/派发前生效，远端调用为零、FAILED/MCP_REVOKED。终态后重启 worker 等待空 tick，状态/轨迹/调用计数不变。finally 先移除 MCP 容器再移除 worker，撤销随机连接下授权、禁用连接与配置。报告 `d12d3-mcp-grant-*`。维护发现不等同 HTTP 管理 API discovery；本批不验证 MCP 在途撤权、Schema 漂移、缓存恢复或外部线上 MCP 服务。
+
+### MCP Schema 漂移与在途撤权
+
+运行 `.venv/bin/python deploy/simulation/check_mcp_runtime.py`，复用独立回环 MCP 服务与受限 Agent。两供应商各两个场景：模型响应首片后修改服务端 outputSchema，运行期真实 tools/list 使旧工具失效、旧授权撤销、新工具无授权，阻止 tools/call；或在远端收到 tools/call 后阻塞响应，先确认数据库 INFLIGHT、通过管理 API 撤权，再释放响应，校验 UNKNOWN/null、FAILED/MCP_REVOKED 和零 Agent ledger/history/提案。专用测试连接 timeout=60 秒，响应屏障有 50 秒上限，不修改生产默认值。在途场景终态后重授权，再统一重启 worker，检查无重放。报告 `d12d3-mcp-runtime-*`。这不覆盖 SUCCEEDED 缓存提交边界的崩溃恢复或远端副作用回滚。
+
+### MCP 成功缓存的进程中断恢复
+
+运行 `.venv/bin/python deploy/simulation/check_mcp_cache.py`，两供应商分别保留授权/恢复前撤权，共四项。真实 MCP tools/call 收到请求后先阻塞响应；独立维护事务对本项 AgentRun 执行 SELECT FOR UPDATE（不修改数据），然后释放 MCP 响应，等待 mcp_calls=SUCCEEDED、Agent checkpoint 仍 tools、pg_blocking_pids 确认 worker 提交受阻，再 SIGKILL 专用 worker。检查退出码 137/非 OOM，释放锁后再次比较 checkpoint/版本/缓存/ledger。
+
+专用启动屏障仅等待标记后 exec 原 Agent server；恢复时先重建回环 MCP 服务再放行 worker。保留授权时同一 call_id/tool_id/input_hash/result 缓存被复用、远端 tools/call 不重复；恢复前管理 API 撤权时历史/ledger 不接收缓存且 FAILED/MCP_REVOKED。MCP 服务调用日志、真实 HTTPS 次数、预算和最终再次重启的不变性均核对。行锁与启动屏障有时间上限/finally 释放，未手工 advance、改 checkpoint 或伪造缓存。报告 `d12d3-mcp-cache-*`；不代表断电或远端物理写的恢复保证。

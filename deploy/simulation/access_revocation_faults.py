@@ -12,7 +12,7 @@ from model_faults import wait
 from operations import DOCKER
 
 
-def cases(suffix):
+def cases(suffix, *, principals=False):
     return [
         {
             "experiment": f"EXP-AGENT-{v}-access-{phase}-{suffix}",
@@ -24,14 +24,12 @@ def cases(suffix):
             "timeout_seconds": 90,
         }
         for v in ("openai", "deepseek")
-        for phase in ("before", "membership", "scope")
+        for phase in (("before", "inflight") if principals else ("before", "membership", "scope"))
     ]
 
 
-def run_access_revocation(runtime, state, directory, deployed):
+def run_access_revocation(runtime, state, directory, deployed, *, principals=False):
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    actor = state["permission_actors"]["operator"]
-    token = state["permission_tokens"]["operator"]
 
     def api(path, body=None, *, admin=False, method=None, expected=200, revision=None):
         headers = {
@@ -79,8 +77,11 @@ with psycopg.connect(database_url()) as db:
 
     worker = deployed["agent-drill"]["Id"]
     records = []
-    assert api("/me")["role"] != "admin"
     for case in state["cases"]:
+        actor_key = case["id"] if principals else "operator"
+        actor = state["permission_actors"][actor_key]
+        token = state["permission_tokens"][actor_key]
+        assert api("/me")["role"] != "admin"
         exp, phase = case["experiment"], case["phase"]
         prefix = "/experiments/" + exp
         scope = {
@@ -88,7 +89,7 @@ with psycopg.connect(database_url()) as db:
             "risk_levels": ["operator_review"],
         }
 
-        def membership(revoked=False, limited=False, *, prefix=prefix, scope=scope):
+        def membership(revoked=False, limited=False, *, prefix=prefix, scope=scope, actor=actor):
             revision = api(prefix, admin=True)["revision"]
             return api(
                 prefix + "/members/" + actor,
@@ -124,14 +125,40 @@ with psycopg.connect(database_url()) as db:
         reserved = evidence(run["id"], exp)
         assert reserved["actor"] == actor
         assert reserved["checkpoint"]["stage"] == ("model" if before else "inflight")
-        membership(revoked=phase != "scope", limited=phase == "scope")
+        if principals:
+            api("/principals/" + actor + "/disable", method="POST", expected=403)
+            assert (
+                api("/principals/" + actor + "/disable", admin=True, method="POST")["disabled"]
+                is True
+            )
+        else:
+            membership(revoked=phase != "scope", limited=phase == "scope")
+        if principals:
+            authority = json.loads(
+                execute(
+                    runtime,
+                    """import json,psycopg
+from alap.adapters.postgres.settings import database_url
+with psycopg.connect(database_url()) as db:
+ db.execute('SET TRANSACTION READ ONLY')
+ p=db.execute('SELECT disabled_at IS NOT NULL FROM principals WHERE id=%s',(ACTOR,)).fetchone()
+ m=db.execute('SELECT revoked_at IS NULL,scope FROM experiment_memberships '
+              'WHERE actor_id=%s AND experiment_id=%s',(ACTOR,EXP)).fetchone()
+ print(json.dumps({'disabled':p[0],'member_granted':m[0],'scope':m[1]}))
+""".replace("ACTOR", repr(actor)).replace("EXP", repr(exp)),
+                )
+            )
+            assert authority == {"disabled": True, "member_granted": True, "scope": scope}
+        denied = 401 if principals else 403
         for suffix in ("", "/trace", "/proposals"):
-            assert api(path + suffix, expected=403)["error"]["code"] == "FORBIDDEN"
-        api(path + "/cancel", method="POST", expected=403)
+            assert api(path + suffix, expected=denied)["error"]["code"] == (
+                "UNAUTHENTICATED" if principals else "FORBIDDEN"
+            )
+        api(path + "/cancel", method="POST", expected=denied)
         if before:
             runtime.output([DOCKER, "start", worker])
         else:
-            # Release actual SSE only after membership mutation and access denial committed.
+            # Release actual SSE only after authorization mutation and access denial committed.
             (directory / "control" / (exp + ".release")).touch()
         closed = wait(
             lambda identity=run["id"], exp=exp: evidence(identity, exp),
@@ -155,11 +182,12 @@ with psycopg.connect(database_url()) as db:
             }
         ]
         assert all(n == 0 for n in closed["writes"].values())
-        api(path, expected=403)
-        membership()
-        assert api(path)["status"] == "FAILED"
-        trace = api(path + "/trace")
-        assert api(path + "/proposals")["items"] == []
+        api(path, expected=denied)
+        if not principals:
+            membership()
+            assert api(path)["status"] == "FAILED"
+            trace = api(path + "/trace")
+            assert api(path + "/proposals")["items"] == []
         runtime.output([DOCKER, "restart", worker])
         started = json.loads(runtime.output([DOCKER, "inspect", worker]))[0]["State"]["StartedAt"]
         wait(
@@ -167,7 +195,11 @@ with psycopg.connect(database_url()) as db:
             lambda logs: '"runs": []' in logs,
         )
         assert evidence(run["id"], exp) == closed
-        assert api(path + "/trace") == trace
+        if principals:
+            api(path + "/trace", expected=401)
+            api("/me", expected=401)
+        else:
+            assert api(path + "/trace") == trace
         log = directory / "control" / (exp + ".requests")
         count = len(log.read_text().splitlines()) if log.exists() else 0
         assert count == (0 if before else 1)
@@ -183,22 +215,30 @@ with psycopg.connect(database_url()) as db:
                 "https_requests": count,
                 "execution_writes": closed["writes"],
                 "blocked_event": closed["events"][-1],
-                "regrant_restart_no_change": True,
+                **(
+                    {"disabled_restart_no_change": True}
+                    if principals
+                    else {"regrant_restart_no_change": True}
+                ),
+                "denied_http": denied,
             }
         )
-    (ROOT / "reports/d12d3-access-deploy-evidence.json").write_text(
+    report = "principal-disable" if principals else "access-deploy"
+    (ROOT / f"reports/d12d3-{report}-evidence.json").write_text(
         json.dumps(
             {
                 "completed_at": datetime.now(UTC).isoformat(),
                 "cases": records,
                 "images": {k: c["Image"] for k, c in deployed.items()},
                 "scope": (
-                    "non-admin operator; API membership revoke/scope reduction; local HTTPS SSE"
+                    "non-admin operator; API principal disable; local HTTPS SSE"
+                    if principals
+                    else "API membership revoke/scope reduction; non-admin; local HTTPS SSE"
                 ),
             },
             indent=2,
         )
         + "\n"
     )
-    print("PASS: six deployed submitter revocation cases; no output publication or replay")
+    print(f"PASS: {len(records)} deployed {report} cases; no output publication or replay")
     return 0

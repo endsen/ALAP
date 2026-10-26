@@ -1,0 +1,20 @@
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            BuildKit is currently disabled; enable it by removing the DOCKER_BUILDKIT=0
+            environment-variable.
+
+Sending build context to Docker daemon  2.988MB
+Step 1/11 : ARG NODE_IMAGE
+Step 2/11 : FROM ${NODE_IMAGE}
+ ---> a5f4366e8346
+Step 3/11 : WORKDIR /app
+ ---> Using cache
+ ---> b482c6e0ca3f
+Step 4/11 : ENV NEXT_TELEMETRY_DISABLED=1
+ ---> Using cache
+ ---> c3d3a2309431
+Step 5/11 : COPY apps/web/package.json apps/web/package-lock.json ./
+ ---> Using cache
+ ---> e57e1590a398
+Step 6/11 : RUN npm ci
+ ---> Running in f92c190db843
+The command '/bin/sh -c npm ci' returned a non-zero code: 137

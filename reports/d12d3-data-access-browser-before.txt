@@ -1,0 +1,39 @@
+npm notice run alap-web@0.1.0 npx
+npm notice run 'playwright' test --config playwright.deployment.config.ts data-access.spec.ts --output /home/endsen/ALAP/.local-deploy/data-access-t503i8ky/results
+
+Running 1 test using 1 worker
+
+(node:280430) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/deployment/data-access.spec.ts:6:5 › loaded dataset hides protected content after scope reduction (21.8s)
+
+
+  1) tests/deployment/data-access.spec.ts:6:5 › loaded dataset hides protected content after scope reduction 
+
+    Error: expect(locator).toBeDisabled() failed
+
+    Locator:  getByRole('button', { name: '下载原始 HDF5' })
+    Expected: disabled
+    Received: enabled
+    Timeout:  20000ms
+
+    Call log:
+      - Expect "toBeDisabled" getByRole('button', { name: '下载原始 HDF5' }) with timeout 20000ms
+      - waiting for getByRole('button', { name: '下载原始 HDF5' })
+        44 × locator resolved to <button class="primary">下载原始 HDF5 ↓</button>
+           - unexpected value "enabled"
+
+
+      23 |     page.getByRole("alert").filter({ hasText: "你没有此资源或操作的权限" }),
+      24 |   ).toContainText("你没有此资源或操作的权限");
+    > 25 |   await expect(download).toBeDisabled();
+         |                          ^
+      26 |   await expect(page.locator("svg")).toHaveCount(0);
+      27 |   await expect(
+      28 |     page.getByRole("heading", { name: "来源与采集记录" }),
+        at /home/endsen/ALAP/apps/web/tests/deployment/data-access.spec.ts:25:26
+
+    Error Context: ../../.local-deploy/data-access-t503i8ky/results/data-access-loaded-dataset-afe63-ntent-after-scope-reduction/error-context.md
+
+  1 failed
+    tests/deployment/data-access.spec.ts:6:5 › loaded dataset hides protected content after scope reduction 

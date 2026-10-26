@@ -1,0 +1,5 @@
+Pre-gate audit did not pass: pending_outbox=204.
+mode=ACTIVE; schema=d12_002; commands=45.
+Test identities, memberships, live tokens and active execution runs were all zero.
+Subsequent read-only query: 14 pending control.recovery_started.v1 events.
+No outbox rows deleted or manually marked published; final audit must independently require zero.

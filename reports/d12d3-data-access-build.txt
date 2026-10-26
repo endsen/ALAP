@@ -1,0 +1,67 @@
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            BuildKit is currently disabled; enable it by removing the DOCKER_BUILDKIT=0
+            environment-variable.
+
+Sending build context to Docker daemon  2.988MB
+Step 1/11 : ARG NODE_IMAGE
+Step 2/11 : FROM ${NODE_IMAGE}
+ ---> a5f4366e8346
+Step 3/11 : WORKDIR /app
+ ---> Using cache
+ ---> b482c6e0ca3f
+Step 4/11 : ENV NEXT_TELEMETRY_DISABLED=1
+ ---> Using cache
+ ---> c3d3a2309431
+Step 5/11 : COPY apps/web/package.json apps/web/package-lock.json ./
+ ---> Using cache
+ ---> e57e1590a398
+Step 6/11 : RUN npm ci
+ ---> Using cache
+ ---> b94e69df0cd5
+Step 7/11 : COPY apps/web ./
+ ---> efc93cbb7c38
+Step 8/11 : ENV ALAP_API_ORIGIN=http://api:8000 NODE_ENV=production
+ ---> Running in 79f9e937034b
+ ---> Removed intermediate container 79f9e937034b
+ ---> a335a7e15a68
+Step 9/11 : RUN npm run build
+ ---> Running in 5b6b5dc4287a
+
+> alap-web@0.1.0 build
+> next build
+
+▲ Next.js 16.4.2 (Turbopack)
+✓ Running next.config.ts took 43ms
+- Experiments (use with caution):
+  · cpus: 2
+  ⨯ useTypeScriptCli
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 4.6s
+  Running TypeScript ...
+  Finished TypeScript in 5.3s ...
+  Collecting page data using 2 workers ...
+  Generating static pages using 2 workers (0/2) ...
+✓ Generating static pages using 2 workers (2/2) in 144ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /_not-found
+└ ƒ /[[...route]]
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+ ---> Removed intermediate container 5b6b5dc4287a
+ ---> 82d4666a5074
+Step 10/11 : EXPOSE 3000
+ ---> Running in bc7a1cb87b72
+ ---> Removed intermediate container bc7a1cb87b72
+ ---> d073388dd8bf
+Step 11/11 : CMD ["./node_modules/.bin/next", "start", "--hostname", "0.0.0.0"]
+ ---> Running in 4210bcf620af
+ ---> Removed intermediate container 4210bcf620af
+ ---> 571301f71280
+Successfully built 571301f71280
+Successfully tagged alap-web:simulation

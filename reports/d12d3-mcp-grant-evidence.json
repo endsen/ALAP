@@ -1,0 +1,177 @@
+{
+  "completed_at": "2026-10-25T11:37:34.669571+00:00",
+  "cases": [
+    {
+      "vendor": "openai",
+      "phase": "control",
+      "experiment": "EXP-AGENT-openai-mcp-control-f3c0caa35682",
+      "evidence": {
+        "status": "COMPLETED",
+        "error": null,
+        "history": [
+          {
+            "calls": [
+              {
+                "id": "offline-mcp",
+                "name": "mcp_5b2922d3c6534edbb9d93c077ca12031",
+                "arguments": {
+                  "query": "fixture"
+                }
+              }
+            ],
+            "results": [
+              {
+                "id": "offline-mcp",
+                "value": {
+                  "value": 3
+                }
+              }
+            ]
+          }
+        ],
+        "tool_calls": 1,
+        "calls": [
+          [
+            "SUCCEEDED",
+            {
+              "value": 3
+            }
+          ]
+        ],
+        "invocations": 1,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "proposals": 0
+        }
+      },
+      "discovery_grants": 0,
+      "mcp_requests": 1,
+      "https_requests": 2,
+      "restart_no_change": true
+    },
+    {
+      "vendor": "openai",
+      "phase": "revoke",
+      "experiment": "EXP-AGENT-openai-mcp-revoke-f3c0caa35682",
+      "evidence": {
+        "status": "FAILED",
+        "error": "MCP_REVOKED",
+        "history": [],
+        "tool_calls": 0,
+        "calls": [],
+        "invocations": 0,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "proposals": 0
+        }
+      },
+      "discovery_grants": 0,
+      "mcp_requests": 0,
+      "https_requests": 1,
+      "restart_no_change": true
+    },
+    {
+      "vendor": "deepseek",
+      "phase": "control",
+      "experiment": "EXP-AGENT-deepseek-mcp-control-f3c0caa35682",
+      "evidence": {
+        "status": "COMPLETED",
+        "error": null,
+        "history": [
+          {
+            "calls": [
+              {
+                "id": "offline-mcp",
+                "name": "mcp_6099ac0fac224aa0b155f82764ef43ee",
+                "arguments": {
+                  "query": "fixture"
+                }
+              }
+            ],
+            "results": [
+              {
+                "id": "offline-mcp",
+                "value": {
+                  "value": 3
+                }
+              }
+            ]
+          }
+        ],
+        "tool_calls": 1,
+        "calls": [
+          [
+            "SUCCEEDED",
+            {
+              "value": 3
+            }
+          ]
+        ],
+        "invocations": 1,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "proposals": 0
+        }
+      },
+      "discovery_grants": 0,
+      "mcp_requests": 1,
+      "https_requests": 2,
+      "restart_no_change": true
+    },
+    {
+      "vendor": "deepseek",
+      "phase": "revoke",
+      "experiment": "EXP-AGENT-deepseek-mcp-revoke-f3c0caa35682",
+      "evidence": {
+        "status": "FAILED",
+        "error": "MCP_REVOKED",
+        "history": [],
+        "tool_calls": 0,
+        "calls": [],
+        "invocations": 0,
+        "writes": {
+          "plan_revisions": 0,
+          "approvals": 0,
+          "runs": 0,
+          "tasks": 0,
+          "command_ledger": 0,
+          "datasets": 0,
+          "proposals": 0
+        }
+      },
+      "discovery_grants": 0,
+      "mcp_requests": 0,
+      "https_requests": 1,
+      "restart_no_change": true
+    }
+  ],
+  "images": {
+    "offline-mcp": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "agent-drill": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "offline-provider": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "postgres": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+    "nats": "sha256:76e4b7a718f0b9e1a07442fe62b12973678a93c1ec2d494355f470dd59402490",
+    "api": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "engine": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "gateway": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "agent": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "outbox": "sha256:a7a87199c15b8061cb0093de4c00e15498bb26af27607b8319d5c39424036025",
+    "web": "sha256:fd41b31ad649646db2ea6c0ee8f72201839967c3f6cd22f796402b6316aaccd0"
+  },
+  "scope": "maintenance discovery; API grant/revoke; loopback MCP; real HTTPS model"
+}
