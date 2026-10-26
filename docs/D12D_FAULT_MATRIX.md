@@ -21,7 +21,7 @@
 | EVAL-11 稳定但读数过期 | `tests/test_stability.py::test_window_guards`；`tests/test_stability.py::test_wrong_observed_values_are_rejected` | U/P：独立 Engine/Gateway 经 HTTP 测试代理接收过期窗口，READBACK_STALE、后继零派发；恢复正常读回后三任务完成、动作各一次。见 `tests/integration/test_telemetry_process_faults.py` / `reports/d12d3-telemetry-process.txt`；Compose/真机证据未提供 |
 | EVAL-12 批准后改计划 | `tests/integration/test_persistence.py::test_superseding_plan_invalidates_approval_and_freezes_run`；`test_policy_change_blocks_execution` | I/C：实际部署批准后将温度目标 295→296 K、计划 hash 改变，旧审批 SUPERSEDED；旧快照 STATE_CONFLICT，最新快照复用旧审批 PLAN_STALE，执行写入 0。见 `reports/d12d3-plan-evidence.json`。已有 Run 冻结及策略变化仍为 I 级证据 |
 | EVAL-13 重复建议循环 | `tests/integration/test_resources.py::test_equivalent_proposal_from_independent_runs_is_deduplicated`；`test_collaboration_count_and_cooldown_are_durable` | I：内容去重/冷却/预算；待常驻 Agent 重复响应不产生自激 Run 的部署证据 |
-| EVAL-14 网关冒充设备 | `tests/test_gateway_transport.py::test_mutual_tls_requires_client_certificate`；`tests/integration/test_execution.py::test_gateway_authorization_gates` | I：证书缺失及签名/资源约束；C mTLS 基础已有。**合法但身份错误的证书与设备映射**需专项核对，不能用“无证书失败”替代身份映射验收 |
+| EVAL-14 网关冒充设备 | `tests/test_gateway_transport.py::test_mutual_tls_requires_client_certificate`；`tests/integration/test_execution.py::test_gateway_authorization_gates` | I：证书缺失及签名/资源约束；C mTLS 基础已有。P：第 30 批迁入同 CA/同主机名错误服务端、错误客户端与未登记资源拒写验证；静态绑定实现见 ADR-054，C 升级/轮换和现场证据仍待补 |
 | EVAL-15 零目标/不稳回读 | `tests/test_stability.py::test_wrong_observed_values_are_rejected`；`tests/test_plans.py::test_readback_must_match_setpoint` | U/P：经 HTTP 接收斜率超限窗口返回 READBACK_UNSTABLE；零磁场目标下超容差读回返回 READBACK_INVALID，采集未派发。恢复后动作各一次，见 `reports/d12d3-telemetry-process.txt`；非现场磁通/真实仪器证据 |
 | EVAL-16 两供应商格式 | `tests/test_models.py::test_same_planner_input_unified_tool_proposal`；`reports/d12d2-compose-evidence.json` | U/C：OpenAI/DeepSeek 本地 TLS 格式与实际模型标识；未调用官方在线 API |
 | EVAL-17 流式异常/用量 | `tests/test_models.py`（分片、截断、限流、超时、取消、invalid usage）；`tests/test_offline_provider.py` | U/C：真实 HTTPS 截断 SSE、429、缺失 usage 已验，两供应商各一轮；见 `reports/d12d3-model-faults.json`。第十三批再补两供应商负数/布尔/不一致 usage 与部分 SSE 后实际读超时共八项，见 `reports/d12d3-streaming-https-evidence.json`；第十三批 2s/max_attempts=1；第十四批 max_attempts=3 时连续 429 各三次请求、部分 SSE 后超时各一次，共四项通过，见 `reports/d12d3-retry-https-evidence.json`。第十五批两供应商调用前取消/调用中 RUN_BUSY 共四项 C 级边界通过，见 `reports/d12d3-cancellation-api-evidence.json`；第十六批已编码持久化意图与安全边界确认，12 项 I 级专项、615 项完整后端及 Web 10 单元/20 fixture 浏览器通过，第十七批新镜像及 d12_002 已部署，两供应商六项 API/浏览器取消通过，见 `reports/d12d3-cancel-deploy-evidence.json`，不能标记完整取消验收。第十九批两供应商首次 429 后成功、累计预留不足阻止重试、调用前预算不足共六项 C 级通过，见 `reports/d12d3-retry-budget-evidence.json`；其他期限/上下文/并发预算组合仍待补 |
@@ -147,3 +147,22 @@ finally 停止隔离服务，通过应用用例取消未终结的本次 AgentRun
 旧 Web 镜像的 Chromium 已复现下载 403 后按钮仍启用，见 `reports/d12d3-data-access-browser-before.txt`。源码修复统一处理清单/曲线/下载的 401/403：隐藏曲线与来源记录、禁用下载；显式重试重新挂载资源读取，避免直接恢复旧缓存。新增两个 fixture 浏览器案例覆盖下载拒绝、曲线拒绝、重复拒绝及重新授权读取；Web 10 单元/22 浏览器门禁通过。部署复验及本批完整收尾结果见 `reports/d12d3-data-access-acceptance.md`。
 
 该修复在请求收到权限错误后生效；尚无后台权限推送来主动抹除已加载数据，不能撤回用户此前已下载的文件。不代表所有角色/页面/字段组合已经通过；其余矩阵缺口和 D12d.4 门禁保持。
+
+
+## 第三十批：证书绑定与独立监护基础（2026-10-26）
+
+在 1a3d456 基线迁入旧 stash 的独立证书绑定和上传测试可移植修正；未恢复旧业务实现或整份历史文档。HTTPS endpoint 绑定服务端指纹，发送 RPC 前校验；Gateway 从 TLS socket 取得调用方指纹，按连接隔离，转发头不能伪造。真实 PostgreSQL + 独立 mTLS Gateway 验证三类拒写与正常命令，负路径 journal/模拟动作零，中心 UNKNOWN 不自动重派。配置生成与升级约束见 deploy/simulation/README.md。旧 EVAL-14 “仅证书链”缺口已补 P 级静态登记，不宣称已部署或现场通过。
+
+EVAL-09 新增独立进程监护基础与专用输出模型：源表归零、磁体/温控保持，持久锁存、旧心跳拒绝、显式确认后仍需新心跳和输出命令。SIGSTOP/SIGKILL 故障验证的是该独立模型，**未接入 Gateway/Engine 链，不等于源表执行中断网的完整验收**。实现、限制与下一批接线要求见 D12D_EDGE_SUPERVISION.md；原执行链监护缺口仍保留。
+
+### 第 31 批：EVAL-09 可选模拟执行链增量
+
+第 30 批隔离输出模型已接入显式配置的 Gateway/Engine 路径（ADR-056）。新增三进程正常采集、Engine SIGKILL/数据库所有权失效、错误心跳密钥和 Gateway 同时死亡后的显式恢复；失败时源表归零、无部分 Dataset、命令确认失败/任务失败/Run 暂停，锁存禁止新 epoch，动作不重放。详见 `tests/integration/test_edge_execution.py`、`reports/d12d3-edge-execution-focused.txt`。
+
+这是 P/I 本地模拟证据；上文默认部署没有监护服务的描述仍适用于默认 Compose。真正网络分区、维护授权/恢复、执行中监护/存储异常组合和 C 级部署尚待补齐，EVAL-09 不标为整项通过，不进入长测或现场。
+
+### 第 32 批：维护授权与锁存解除门禁
+
+EVAL-09 增加人类 admin 维护 API、独立 API→Gateway 凭据、事故/世代/epoch/策略/读回精确绑定、双侧命令收敛检查、monitor 鲜度/源表为零和事务审计。确认仅 WAITING；Engine 后续握手不恢复旧 Run 或重试失败命令。拒绝非人类/非管理员、旧审查、过期授权、监护停止推进、非零源表、未对账 journal；丢失确认回复保持待核对，不自动重发。证据见 `reports/d12d3-edge-maintenance-focused.txt` 和 `tests/integration/test_edge_maintenance.py`。
+
+当前仅 P/I 本地 HTTP/数据库/模拟进程门禁；C 级证书与部署组合、真实网络分区和现场仍未完成，EVAL-09 继续保留未整项通过。

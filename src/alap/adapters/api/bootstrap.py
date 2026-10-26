@@ -14,6 +14,7 @@ from alap.adapters.storage.hdf5 import Hdf5Store
 from alap.application.api import APIService
 from alap.application.control import ControlService
 from alap.application.datasets import DatasetService
+from alap.application.edge_maintenance import EdgeMaintenanceService
 from alap.application.execution import ExecutionService
 from alap.application.experiments import ExperimentService
 from alap.contracts import ContractCatalog
@@ -50,6 +51,7 @@ def build_service(dsn, key, settings, *, gateways=None, authenticator=None):
         datasets=data,
         secrets=vault,
         configure=manager,
+        maintenance=EdgeMaintenanceService(execution, store),
     )
 
 

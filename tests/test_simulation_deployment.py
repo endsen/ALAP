@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 import yaml
 from cryptography import x509
+from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import ExtendedKeyUsageOID
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -39,6 +40,19 @@ def test_private_secrets_and_distinct_certificate_purposes(tmp_path):
         assert list(cert.extensions.get_extension_for_class(x509.ExtendedKeyUsage).value) == [
             purpose
         ]
+
+    def pin(name):
+        return (
+            x509.load_pem_x509_certificate((root / f"{name}.crt").read_bytes())
+            .fingerprint(hashes.SHA256())
+            .hex()
+        )
+
+    for component in ("api", "engine"):
+        settings = json.loads((root / f"{component}.json").read_text())
+        assert settings["gateway_transport"]["endpoints"]["gw"]["server_sha256"] == pin("gateway")
+    settings = json.loads((root / "gateway.json").read_text())
+    assert settings["client_sha256"] == [pin("engine-client"), pin("api-client")]
     assert not (root / "ca.key").exists()
     assert not (root / "deployment").exists()  # Preparing files must not provision a database.
     agent = json.loads((root / "agent.json").read_text())

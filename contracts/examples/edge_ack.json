@@ -1,0 +1,12 @@
+{
+  "incident": "00000000-0000-4000-8000-000000000001",
+  "generation": "00000000-0000-4000-8000-000000000002",
+  "gateway_epoch": "00000000-0000-4000-8000-000000000003",
+  "policy_version": "sim-v1",
+  "expected_outputs": {
+    "sim-smu": 0,
+    "sim-temp": 295,
+    "sim-magnet": 0
+  },
+  "reason": "Reviewed reconciled simulation incident"
+}

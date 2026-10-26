@@ -12,6 +12,7 @@ from threading import RLock
 import psycopg
 from psycopg.rows import dict_row
 
+from alap.adapters.gateway.pulse import command_heartbeat
 from alap.adapters.postgres.repository import PostgresRepository
 from alap.domain.rules import DomainError
 
@@ -110,13 +111,22 @@ class OwnedGateway:
 
     def __init__(self, owner, gateway):
         self.owner, self.gateway = owner, gateway
+        self.heartbeat_check = None
 
     def _call(self, method, *args):
         self.owner.check()
         return getattr(self.gateway, method)(*args)
 
     def accept(self, signed):
-        return self._call("accept", signed)
+        self.owner.check()
+        if getattr(self.gateway, "supervision_auth", None) is None:
+            return self.gateway.accept(signed)
+        if self.heartbeat_check is None:
+            raise DomainError("SUPERVISION_UNCONFIGURED", "Engine authorization check required")
+        command = self.gateway.auth.open(signed)["command"]
+        self.heartbeat_check(command)
+        with command_heartbeat(self.gateway, command, self.heartbeat_check):
+            return self.gateway.accept(signed)
 
     def query(self, command_id):
         return self._call("query", command_id)

@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alap.local/schemas/edge_ack.schema.json",
+  "title": "Simulation edge maintenance review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "incident",
+    "generation",
+    "gateway_epoch",
+    "policy_version",
+    "expected_outputs",
+    "reason"
+  ],
+  "properties": {
+    "incident": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "generation": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "gateway_epoch": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "policy_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "expected_outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sim-smu",
+        "sim-temp",
+        "sim-magnet"
+      ],
+      "properties": {
+        "sim-smu": {
+          "type": "number"
+        },
+        "sim-temp": {
+          "type": "number"
+        },
+        "sim-magnet": {
+          "type": "number"
+        }
+      }
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000,
+      "pattern": "\\S"
+    }
+  }
+}

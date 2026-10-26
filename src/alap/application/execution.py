@@ -611,6 +611,91 @@ class ExecutionService:
                     )
                 return  # Retain terminal history; contradictions become separate incidents.
             task = next(t for t in ctx["tasks"] if t["id"] == command["task_id"])
+            if receipt["state"] == "FAILED_CONFIRMED":
+                result = receipt["result"]
+                require(
+                    command["instrument_id"] == "sim-smu"
+                    and result.get("kind") == "edge_interrupted"
+                    and result.get("safe_stop_confirmed") is True
+                    and result.get("device_quiescent") is True
+                    and result.get("artifact") is None
+                    and isinstance(result.get("edge_incident"), str)
+                    and bool(result["edge_incident"]),
+                    "RECONCILIATION_PENDING",
+                    "Durable simulation interruption evidence required",
+                )
+                require(
+                    reconcile or command["state"] not in ("UNKNOWN", "NEEDS_RECONCILIATION"),
+                    "RECONCILIATION_REQUIRED",
+                    "Unknown outcome requires explicit reconciliation",
+                )
+                for row, kind in [
+                    (command, Kind.COMMAND),
+                    (task, Kind.TASK),
+                    (ctx["run"], Kind.RUN),
+                ]:
+                    if row["state"] not in ("UNKNOWN", "NEEDS_RECONCILIATION"):
+                        self._change(
+                            repo,
+                            ctx,
+                            row,
+                            kind,
+                            "uncertain",
+                            actor,
+                            {
+                                "outcome_uncertain": {
+                                    "receipt": identity,
+                                    "incident": result["edge_incident"],
+                                }
+                            },
+                        )
+                    if row["state"] == "UNKNOWN":
+                        self._change(
+                            repo,
+                            ctx,
+                            row,
+                            kind,
+                            "begin_reconciliation",
+                            actor,
+                            {"dispatch_disabled": {"run": ctx["run"]["id"]}},
+                            authority=Authority.RECONCILER,
+                        )
+                facts = {
+                    key: {"receipt": identity}
+                    for key in (
+                        "reconciliation_complete",
+                        "failure_confirmed",
+                        "device_quiescent",
+                        "result_durable",
+                    )
+                }
+                self._change(
+                    repo,
+                    ctx,
+                    command,
+                    Kind.COMMAND,
+                    "reconciled_failure",
+                    actor,
+                    facts,
+                    authority=Authority.RECONCILER,
+                )
+                self._change(
+                    repo,
+                    ctx,
+                    task,
+                    Kind.TASK,
+                    "reconciled_failure",
+                    actor,
+                    {
+                        "reconciliation_complete": {"receipt": identity},
+                        "device_quiescent": {"receipt": identity},
+                        "command_failed": {"command": command_id},
+                    },
+                    authority=Authority.RECONCILER,
+                )
+                repo.update("runs", ctx["run"]["id"], {"dispatch_blocked": True})
+                self._settle_run(repo, ctx, actor)
+                return
             if command["state"] in ("UNKNOWN", "NEEDS_RECONCILIATION"):
                 require(
                     reconcile,

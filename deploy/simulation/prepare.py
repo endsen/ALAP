@@ -46,6 +46,7 @@ def prepare(root):
         .sign(ca_key, hashes.SHA256())
     )
     write(root, "ca.crt", ca.public_bytes(serialization.Encoding.PEM), 0o444)
+    fingerprints = {}
     for name in ("postgres", "nats", "gateway", "engine-client", "api-client"):
         key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         client = name.endswith("-client")
@@ -78,6 +79,7 @@ def prepare(root):
             )
             .sign(ca_key, hashes.SHA256())
         )
+        fingerprints[name] = cert.fingerprint(hashes.SHA256()).hex()
         write(root, name + ".crt", cert.public_bytes(serialization.Encoding.PEM), 0o444)
         write(
             root,
@@ -140,6 +142,7 @@ tls {{ cert_file: /config/nats.crt, key_file: /run/secrets/nats.key }}
                 "endpoints": {
                     "gw": {
                         "url": "https://gateway:8091",
+                        "server_sha256": fingerprints["gateway"],
                         "ca_file": "/config/ca.crt",
                         "client_cert_file": f"/config/{component}-client.crt",
                         "client_key_file": f"/run/secrets/{component}-client.key",
@@ -156,6 +159,7 @@ tls {{ cert_file: /config/nats.crt, key_file: /run/secrets/nats.key }}
             common
             | {
                 "gateway_id": "gw",
+                "client_sha256": [fingerprints[name] for name in ("engine-client", "api-client")],
                 "journal_path": "/data/journal.sqlite",
                 "physical_path": "/data/physical.sqlite",
                 "signing_key_file": "/run/secrets/gateway.signing",

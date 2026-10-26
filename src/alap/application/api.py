@@ -12,6 +12,8 @@ from alap.application.series import dataset_series
 from alap.domain.rules import DomainError
 
 ADMIN = {
+    "getEdgeMaintenance",
+    "acknowledgeEdge",
     "getAgent",
     "getSkill",
     "validateAgent",
@@ -78,12 +80,14 @@ class APIService:
         datasets=None,
         secrets: CredentialManager | None = None,
         configure=None,
+        maintenance=None,
     ):
         self.base, self.store = foundation, store
         self.events = EventService(foundation)
         self.registry, self.runtime, self.resources = registry, runtime, resources
         self.control, self.datasets, self.secrets = control, datasets, secrets
         self.configure = configure
+        self.maintenance = maintenance
 
     def access(self, actor, experiment, *, write=False):
         with self.base.transaction() as repo:
@@ -96,6 +100,13 @@ class APIService:
             self.store.role(actor, {"admin"})
         if op in {"createExperiment", "createSample"}:
             self.store.role(actor, {"admin", "researcher"})
+        if op in {"getEdgeMaintenance", "acknowledgeEdge"}:
+            with self.base.transaction() as repo:
+                require(
+                    self.base._principal(repo, actor)["kind"] == "user",
+                    "FORBIDDEN",
+                    "Human administrator required",
+                )
         experiment = path.get("experiment_id")
         if experiment and op != "setExperimentScope":
             self.access(
@@ -137,6 +148,13 @@ class APIService:
 
     def execute(self, actor, op, path, body, query, expected, key):
         self.authorize(actor, op, path, body)
+        if op in {"getEdgeMaintenance", "acknowledgeEdge"}:
+            require(
+                self.maintenance is not None, "SERVICE_UNAVAILABLE", "Maintenance not configured"
+            )
+            if op == "getEdgeMaintenance":
+                return self.maintenance.snapshot(actor, path["gateway_id"])
+            return self.maintenance.acknowledge(actor, path["gateway_id"], body)
         e = path.get("experiment_id")
         ref = path.get("ref")
         if op in {"getAgent", "getSkill"}:

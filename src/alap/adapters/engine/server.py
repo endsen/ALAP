@@ -16,7 +16,7 @@ from alap.adapters.storage.hdf5 import Hdf5Store
 from alap.application.datasets import DatasetService
 from alap.application.engine_worker import EngineWorker
 from alap.application.execution import ExecutionService
-from alap.application.experiments import ExperimentService
+from alap.application.experiments import ExperimentService, require
 from alap.contracts import ContractCatalog
 
 
@@ -36,6 +36,22 @@ def build_worker(owner, settings, stopping):
         authenticator=auth,
         gateways={identity: OwnedGateway(owner, port) for identity, port in ports.items()},
     )
+
+    def heartbeat_check(command):
+        with owner.transaction() as repo:
+            ctx = engine._locked(repo, settings["engine_actor"], command["run_id"])
+            require(
+                str(ctx["generation"]["epoch"]) == command["control_epoch"],
+                "EPOCH_STALE",
+                "Epoch changed",
+            )
+            engine._lease_facts(repo, ctx)
+            require(
+                not ctx["run"]["dispatch_blocked"], "DISPATCH_BLOCKED", "Run dispatch is blocked"
+            )
+
+    for gateway in engine.gateways.values():
+        gateway.heartbeat_check = heartbeat_check
     datasets = DatasetService(engine, Hdf5Store(settings["artifact_root"]))
     return EngineWorker(
         engine,

@@ -184,9 +184,21 @@ def test_mutual_tls_requires_client_certificate(gateway, tmp_path):
     ) as url:
         context = ssl.create_default_context(cafile=str(cert))
         with pytest.raises(ConnectionError):
-            HTTPGateway("gw", url, gateway.auth, tls_context=context).challenge()
+            HTTPGateway(
+                "gw",
+                url,
+                gateway.auth,
+                tls_context=context,
+                server_sha256=certificate.fingerprint(hashes.SHA256()).hex(),
+            ).challenge()
         context.load_cert_chain(cert, private)
-        client = HTTPGateway("gw", url, gateway.auth, tls_context=context)
+        client = HTTPGateway(
+            "gw",
+            url,
+            gateway.auth,
+            tls_context=context,
+            server_sha256=certificate.fingerprint(hashes.SHA256()).hex(),
+        )
         assert gateway.auth.open(client.challenge())["gateway_id"] == "gw"
 
 
@@ -223,3 +235,27 @@ def test_invalid_requests_cannot_invoke_arbitrary_methods(gateway):
         )
         assert client.post("/rpc", json=envelope).status_code == 400
         assert gateway.auth.open(gateway.challenge())["gateway_id"] == "gw"
+
+
+@pytest.mark.parametrize("pin", [None, "", "abc", "F" * 64, ["a" * 64]])
+def test_https_requires_explicit_valid_gateway_certificate_binding(pin):
+    with pytest.raises(ValueError, match="fingerprint"):
+        HTTPGateway("gw", "https://127.0.0.1", Authenticator(b"x" * 32), server_sha256=pin)
+
+
+def test_http_headers_cannot_impersonate_a_tls_client(gateway):
+    pin = "a" * 64
+    with TestClient(create_gateway_app(gateway, client_sha256=[pin])) as client:
+        response = client.post(
+            "/rpc",
+            json={},
+            headers={"x-client-cert-sha256": pin, "x-forwarded-client-cert": pin},
+        )
+        assert response.status_code == 403
+        assert response.json()["error"] == "GATEWAY_CLIENT_IDENTITY"
+
+
+@pytest.mark.parametrize("pins", [[], "a" * 64, [None]])
+def test_gateway_rejects_invalid_client_identity_configuration(gateway, pins):
+    with pytest.raises(ValueError):
+        create_gateway_app(gateway, client_sha256=pins)

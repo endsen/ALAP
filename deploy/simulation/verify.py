@@ -89,6 +89,7 @@ auth, ports=build_gateway_ports(settings['gateway_transport'])
 assert auth.open(ports['gw'].challenge())['gateway_id']=='gw'
 try:
     HTTPGateway('gw','https://gateway:8091',auth,
+        server_sha256=settings['gateway_transport']['endpoints']['gw']['server_sha256'],
         tls_context=ssl.create_default_context(cafile='/config/ca.crt')).challenge()
 except ConnectionError:
     pass

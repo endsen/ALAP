@@ -85,6 +85,7 @@ def remote(execution, tmp_path):  # noqa: F811
                                 f"log={(tmp_path / 'gateway.log').read_text()}"
                             )
                         time.sleep(0.05)
+                running.process = process
                 yield client
             finally:
                 process.terminate()

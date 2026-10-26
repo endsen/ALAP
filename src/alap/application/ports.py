@@ -64,3 +64,7 @@ class ArtifactStore(Protocol):
 
 class EventPublisher(Protocol):
     async def publish(self, event: dict): ...
+
+
+class MaintenanceGatewayPort(Protocol):
+    def maintenance(self, operation: str, body: dict | None) -> dict: ...

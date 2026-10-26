@@ -217,3 +217,25 @@ Accepted for development。单机 rootless Compose 将 API、Engine、Agent、ou
 ## ADR-053 · D12c.3 一致性冷快照与隔离恢复闸门
 
 Accepted for local simulation。先停止接入和执行，再停止 Gateway/JetStream/PostgreSQL；只从确认停稳且无外部卷使用者的状态导出四个持久卷与私有配置。分卷 AES-256-GCM 加密，HMAC 认证清单作为最后完成标记，独立保存密钥。还原须先认证全部载荷，再导入全新项目/卷并固定原镜像；不覆盖源部署。只启动数据库并强制新 epoch、冻结旧 Run、撤销复制 token；校验 HDF5 校验和/来源和 Gateway SQLite 后才能执行恢复对账。对账不启动调度循环，不自动恢复任务或重发未知命令。隔离副本没有发布端口、外部网络或常驻 Agent/Engine；真实接管不在本期授权范围。提供按需真实 JSON 指标，未知状态不当作健康。生产 WAL/PITR、异地托管、自动告警和现场恢复仍须单独设计/验收。
+
+## ADR-054 · D12d.3 模拟网关静态证书身份绑定
+
+Accepted for development。在现有 mTLS 链/主机名验证之外，HTTPS endpoint 的 Gateway ID 绑定服务端叶证书 SHA-256；每个 Gateway 单独登记允许的 API/Engine 客户端叶证书指纹。服务端身份验证发生在发送 RPC 前，调用方身份直接由 TLS socket 获取，按连接隔离，拒绝转发头充当凭据。资源归属继续由 PostgreSQL Instrument→Gateway 与本地策略/能力表共同约束，证书不授予审批或新资源。采用静态指纹避免同 CA/同主机名证书被互换；代价是证书续期必须同步维护登记，已有私有部署不得静默降级。PeerIdentityProtocol 依赖锁定 Uvicorn H11 实现，升级依赖时复验真实 mTLS 错误身份与连接隔离。当前为模拟开发边界，动态证书注册/吊销、生产轮换、现场仪器身份证明及 EVAL-09 独立失联监护仍另行验收。
+
+## ADR-055 · D12d.3 近端监护先建立隔离模拟基础
+
+Accepted for development foundation。使用版本化分类策略与独立进程建立 WAITING/ARMED/TRIPPED、单调期限、持久锁存/审计和显式确认语义。源表归零不泛化到磁体/温控。当前专用 SQLite 输出模型不与业务 journal 混用，不接入默认部署；本地 operator 字段不构成认证。后续必须统一实际模拟器输出、认证心跳所有权及中断命令对账，才能声称 EVAL-09 执行链保护完成。软件进程死亡/存储故障的边界不能代替硬件独立保护，详见 D12D_EDGE_SUPERVISION.md。
+
+## ADR-056 · D12d.3 命令绑定模拟监护与中断对账
+
+Accepted for opt-in local simulation。Gateway 显式选用 SupervisedSimulator 时，edge SQLite 是三设备输出读回依据；持续 IV 逐点执行，监护扫描不持有 Gateway 操作锁。Engine 使用单独的心跳密钥，经独立 `/supervision` 通道发送 command_id/epoch/generation/sequence 及短时有效期；每次发送前复查数据库会话所有权、审批、当前租约/fencing 和运行门禁。通道继承 mTLS 客户端身份检查，命令签名密钥不能充当心跳密钥。命令 deadline 不随心跳延长。
+
+失联后源表归零，磁体/温控保持；部分采集持久为 edge_interrupted，无 Dataset artifact。Gateway 发出 FAILED_CONFIRMED 证据，中央经已有 UNKNOWN/对账转换将任务置 FAILED、运行置 PAUSED 并冻结后继。未知命令不重发，锁存阻止 Gateway 新 epoch 绑定；旧 Gateway 进程未完成的源表动作必须显式 recover_command，不能推断未执行。此配置不加入默认 Compose；受控维护确认 API、真正网络分区/存储异常组合、C 级部署和现场保护仍待后续门禁。
+
+## ADR-057 · D12d.3 人类管理员维护确认与恢复隔离
+
+Accepted for opt-in local simulation。平台维护 GET/POST 使用现有 Bearer 身份、启用主体和 admin 角色，进一步限制 principal.kind=user，服务主体/Agent 不得执行或重放维护确认。API 通过独立 maintenance_key_file 向 Gateway 的 `/maintenance` 签发最多 10 秒授权，维护密钥不得复用命令或 Engine 心跳密钥；远程链路继承已有 mTLS/静态证书绑定。此授权是短时委托，不宣称在网络请求发出后即时撤销已签发授权。
+
+确认绑定具体 incident/generation、Gateway epoch、策略版本、三个设备读回和人类审查原因。中央必须处于显式 RECOVERING 且命令/停止请求全部收敛，Gateway 再以操作互斥检查本地 journal 均为终态。监护 SQLite 同事务复查活动命令、扫描鲜度、源表零输出、精确读回、策略和授权期限，再持久化确认审计并转 WAITING；任何失败保持锁存。确认不写设备、不恢复 Run、不清中央隔离，后续由原 Engine 恢复握手/对账门禁处理，旧失败任务不可重试。
+
+中央先持久审计意图再发 RPC；公共 API 的持久幂等记录处理重复与冲突。结果丢失保留 INFLIGHT/EXECUTION_UNKNOWN，通过维护 GET 的最近确认审计匹配 review_id，不自动补发。完成的幂等响应是历史结果，当前监护状态必须重新 GET。默认 Compose/Web 未接入；字段/流程仍仅模拟开发，真正网络分区、C 级部署与现场规程另行验收。

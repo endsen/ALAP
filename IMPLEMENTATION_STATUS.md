@@ -5,10 +5,37 @@
 ## 分期交接入口
 
 - 分期计划：`docs/20_DELIVERY_PLAN.md` 的 D01–D13；P0–P7 为技术层次，D 编号为分批交付单位。
-- 当前：**D12 · 集成、部署与验收，进行中**。D01–D11 基础交付完成；已推送实现基线为 GitHub `6702ce9`，本轮 D12d.2/3 尚未推送。D12a Gateway 进程边界已完成本地验收；D12b.1 单实例所有权/启动恢复已完成本地验收；D12b.2 独立常驻执行进程已完成本地验收；D12b.3 Agent/outbox worker 与 D12c.1 数据库初始化/权限分离已完成本地验收。D12 整期未完成。
+- 当前：**D12 · 集成、部署与验收，进行中**。D01–D11 基础交付完成；已同步 GitHub `1a3d456`（第 29 批），当前追加批次尚未推送。D12a Gateway 进程边界已完成本地验收；D12b.1 单实例所有权/启动恢复已完成本地验收；D12b.2 独立常驻执行进程已完成本地验收；D12b.3 Agent/outbox worker 与 D12c.1 数据库初始化/权限分离已完成本地验收。D12 整期未完成。
 - 当前交接：**D12d.3 故障矩阵进行中**；D12d.2 已完成本地验收。已完成 TCP/NATS、模型 HTTPS 故障、批准后计划变更、独立进程数据故障、部署数据 API/浏览器及独立进程异常读回、写入中断恢复及知识检索/撤权验证；知识撤权终态收尾、受限 API/页面及预置上下文的部署路径已通过；常驻 Agent 实际检索与本地 HTTPS 响应期间的部署知识撤权也已取得证据，完整门禁见下文。D12d.4 实际 24 小时以上模拟未开始。D13 尚未开始，不自动跨期。
-- 当前环境：Linux `/home/endsen/ALAP`，Python 3.14.7；工作目录 Git 元数据不可用，最新实现基线为 6702ce92073b20a2382435a7d5fd228469eff110，上传检出为 `/tmp/alap-upload-20261020`，提交前须重新核对远程。依赖按锁文件同步，无新增依赖。D11 下方 macOS 验收为历史记录；本轮 Linux 同步检查见 `reports/local-sync-20261019.md`。
+- 当前环境：macOS `/Users/endsen/codex/ALAP`、Python 3.14.8，有效 Git main，基线 `1a3d456`。专用 PostgreSQL 18.6/55433、JetStream 2.15.1/54223 用于验收。旧工作留存 stash，未整体恢复；下方 Linux 路径、八服务与镜像为异地历史记录，不能作为本机当前部署证明。无新增依赖。
 - D05–D10 实现提交 0015fa6 与交接提交 93ab50f 的远程 CI 均已通过，已于 2026-10-19 核对：https://github.com/endsen/ALAP/actions/runs/39201132173 。此结果不替代 D11 的远程验收。
+
+## 第三十二批 · 维护身份授权与恢复门禁（2026-10-26）
+
+- 关联 FR-009/FR-011、EVAL-09、ADR-057。在第 30/31 批本地工作上继续开发，旧 stash 保留；未提交/推送，无新增依赖或数据库迁移。
+- 增加可选维护 GET/确认 POST API：Bearer 身份、启用人类主体、admin 角色与独立 API→Gateway 维护密钥；Engine/Agent 及普通用户不能确认。请求绑定事故/世代/Gateway epoch/策略/精确读回和原因，共享契约 `edge_ack.schema.json`，OpenAPI 已生成。
+- 中央要求 RECOVERING、命令与停止请求收敛并先保存审计意图；Gateway 再检查本地 journal 终态、执行互斥、短期授权。monitor 同事务检查鲜度、源表为零、读回/策略及活动命令，再记录人类确认并转 WAITING。确认不写输出、不重放未知命令、不恢复旧 Run；Engine 后续正常握手仍保留 PAUSED/FAILED。
+- 监护/执行/维护专项 **53 项通过（51.69 秒）**，本批新增 17 项：人类身份/角色与密钥隔离、旧审查/授权过期/鲜度/源表非零、审计失败回滚、确认回复丢失与禁止自动重发、中央恢复门禁、Gateway 崩溃后显式对账及握手。见 `reports/d12d3-edge-maintenance-focused.txt`。
+- 完整后端门禁 **708 项通过（259.13 秒）**，真实 PostgreSQL/NATS 集成未跳过；Ruff/格式、14 份 Schema/实例及 OpenAPI、生成一致性和依赖检查全部通过，见 `reports/d12d3-batch32-backend.txt`。完整验收说明见 `reports/d12d3-batch32-acceptance.md`；专用 PostgreSQL/JetStream 已停止，测试进程由 fixture 清理。
+- 下一动作：真正网络分区、执行链 monitor/存储故障组合及 C 级 Compose/mTLS 部署。维护授权为最多 10 秒短期委托，不宣称已签发授权即时撤销。默认 Compose/Web 未接入，EVAL-09/D12 未整项完成；不进入 D12d.4/D13。
+
+## 第三十一批 · 认证心跳与模拟执行中断对账（2026-10-26）
+
+- 关联 FR-009（执行与隔离）、FR-011（完整数据发布）、EVAL-09、既有命令/任务/运行状态机；设计决策见 ADR-056。本批在第 30 批本地工作之上继续开发，未恢复旧 stash，未提交/推送。
+- 可选 SupervisedSimulator 将输出读回统一到独立监护状态库，持续 IV 逐点执行；Engine 使用独立密钥、命令/epoch/世代/递增序号与短时有效期心跳。心跳通道不占阻塞执行 RPC 锁；每次发送前复查数据库会话所有权、审批、当前租约/fencing 和运行门禁；命令 deadline 不因续心跳延长。
+- 采集中断持久为 edge_interrupted，无部分 artifact；Gateway 返回 FAILED_CONFIRMED，中央通过现有 UNKNOWN/对账转换将任务置 FAILED、Run 置 PAUSED/冻结。锁存阻止新 epoch 绑定，重启保持 RECOVERING；Gateway 未完成动作只接受显式恢复，不重发。
+- 专项 **36 项通过（21.33 秒）**，见 `reports/d12d3-edge-execution-focused.txt`。含正常完整采集、错误密钥、Engine SIGKILL、数据库所有权丢失、Engine/Gateway 同时中断及显式恢复，以及心跳身份/重放/期限/完成后拒绝续命；失败路径无 Dataset 发布、无重复动作。
+- 完整后端门禁 **691 项通过（228.19 秒）**，真实 PostgreSQL/NATS 集成未跳过；Ruff/格式、13 份 Schema/实例和 OpenAPI、生成一致性、依赖检查全部通过，见 `reports/d12d3-batch31-backend.txt`。验收说明见 `reports/d12d3-batch31-acceptance.md`；本次专用 PostgreSQL/JetStream 已停止，测试子进程已由 fixture 清理。
+- 边界与下一动作：默认 Compose 未启用监护、无新增依赖/业务迁移/Web 改动；受控维护确认 API、真正网络分区、执行链监护/存储故障组合和 C 级部署仍待后续。EVAL-09/D12 未整体完成，不进入 D12d.4 长测或 D13 现场；详见 `docs/D12D_EDGE_SUPERVISION.md`。
+
+## 第三十批 · 身份绑定与独立监护基础（2026-10-26）
+
+- 以 1a3d456 为基线，从旧 stash 按文件迁入已验证证书绑定、测试和上传中断 fixture 的 macOS 可移植修正；没有恢复旧 HDF5/Agent/Web 业务代码，stash 保留。HTTPS endpoint 与服务端指纹绑定，Gateway 登记客户端指纹；同 CA 错误身份/未登记资源拒写，保留原有执行授权，详见 ADR-054。
+- 完成上次中断的独立监护基础：固定分类策略（模拟源表归零、磁体/温控保持）、持久 WAITING/ARMED/TRIPPED、世代/递增心跳、单调超时与 UTC 审计；明确确认后不自动恢复输出。追加 owner 互斥、关闭后禁止恢复扫描、旧库拒绝、序号边界与时钟回退保护。见 ADR-055、docs/D12D_EDGE_SUPERVISION.md。
+- 最终监护专项 **25 项通过（3.49 秒）**，覆盖实际独立进程心跳静默、SIGSTOP、SIGKILL/重启与显式重新启用，以及事务/限值/策略等边界，见 `reports/d12d3-edge-foundation-focused.txt`。
+- 最新基线完整后端门禁 **680 项通过（210.43 秒）**，真实 PostgreSQL/NATS 集成未跳过，Ruff/格式、契约、生成一致性、依赖检查通过；见 `reports/d12d3-batch30-backend.txt`。专用 PostgreSQL/JetStream 已停止，测试子进程已清理。相对远程 642 项新增身份 13 项和监护 25 项；不复用旧基线报告冒充本次验收。
+- **EVAL-09 未完成**：本批监护为独立 SQLite 输出模型，尚未接入 Gateway/Engine 执行链，无持续扫描/部分数据和中央对账；operator 仅审计字段、没有网络授权能力。进程死亡/存储失败不构成硬件安全保证。下一批先打通认证心跳所有权、实际模拟器输出与中断结果对账，再做端到端断网验收。
+- 未改私有 Compose、Web、依赖或数据库迁移；已有部署升级证书绑定需显式登记指纹，见 deploy/simulation/README.md。不进入 D12d.4/D13，本批未提交/推送。
 
 ## GitHub 上传交接（2026-10-21，D12c.3 / D12d.1）
 

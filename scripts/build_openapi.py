@@ -9,6 +9,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPONENTS = {
+    "edge_ack": "EdgeAcknowledgement",
     "stable_condition": "StableCondition",
     "plan_task": "PlanTask",
     "plan_proposal": "PlanProposalRecord",

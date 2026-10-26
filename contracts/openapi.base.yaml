@@ -2754,6 +2754,79 @@ paths:
           maxLength: 200
       - $ref: '#/components/parameters/IdempotencyKey'
       responses: *console_id001
+  /maintenance/gateways/{gateway_id}/edge:
+    get:
+      operationId: getEdgeMaintenance
+      summary: Human administrator review of optional simulation monitor
+      tags:
+      - Instruments
+      parameters:
+      - name: gateway_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+      responses:
+        '200':
+          description: Simulation monitor review; does not resume execution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdgeMaintenanceState'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /maintenance/gateways/{gateway_id}/edge/acknowledgements:
+    post:
+      operationId: acknowledgeEdge
+      summary: Acknowledge a reconciled simulation incident without resuming a Run
+      tags:
+      - Instruments
+      parameters:
+      - name: gateway_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EdgeAcknowledgement'
+      responses:
+        '200':
+          description: Simulation monitor review; does not resume execution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdgeAcknowledgementResult'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
 components:
   securitySchemes:
     bearerAuth:
@@ -2794,6 +2867,86 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
   schemas:
+    EdgeMaintenanceState:
+      type: object
+      additionalProperties: false
+      required:
+      - gateway_id
+      - gateway_epoch
+      - mode
+      - generation
+      - incident
+      - policy_version
+      - outputs
+      - monitor_fresh
+      - observed_at
+      - last_acknowledgement
+      - central_mode
+      - central_epoch
+      properties:
+        gateway_id:
+          type: string
+        gateway_epoch:
+          type:
+          - string
+          - 'null'
+        mode:
+          type: string
+          enum:
+          - WAITING
+          - ARMED
+          - TRIPPED
+        generation:
+          type: string
+          format: uuid
+        incident:
+          type:
+          - string
+          - 'null'
+        policy_version:
+          type: string
+        outputs:
+          $ref: '#/components/schemas/EdgeAcknowledgement/properties/expected_outputs'
+        monitor_fresh:
+          type: boolean
+        observed_at:
+          type: string
+          format: date-time
+        last_acknowledgement:
+          type:
+          - object
+          - 'null'
+        central_mode:
+          type: string
+        central_epoch:
+          type: string
+          format: uuid
+    EdgeAcknowledgementResult:
+      type: object
+      additionalProperties: false
+      required:
+      - gateway_id
+      - review_id
+      - incident
+      - generation
+      - mode
+      - execution_resumed
+      properties:
+        gateway_id:
+          type: string
+        review_id:
+          type: string
+          format: uuid
+        incident:
+          type: string
+          format: uuid
+        generation:
+          type: string
+          format: uuid
+        mode:
+          const: WAITING
+        execution_resumed:
+          const: false
     ErrorResponse:
       type: object
       additionalProperties: false

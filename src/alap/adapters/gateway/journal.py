@@ -109,6 +109,9 @@ class Gateway:
 
     @serialized
     def bind_epoch(self, signed):
+        edge = getattr(self.simulator, "edge", None)
+        if edge is not None and edge.snapshot()["mode"] == "TRIPPED":
+            raise DomainError("EDGE_LATCHED", "Local review and acknowledgement required")
         value = self.auth.open(signed)
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
@@ -183,7 +186,9 @@ class Gateway:
                     "basis": "exclusive restarted simulator action log",
                 }
             else:
-                state = "VERIFYING"
+                state = (
+                    "FAILED_CONFIRMED" if result.get("kind") == "edge_interrupted" else "VERIFYING"
+                )
                 if task["success_condition"]["kind"] == "stable_window":
                     result["samples"] = self.simulator.window(task["success_condition"])
                     check_stable(
@@ -284,7 +289,11 @@ class Gateway:
                     result = {"safe_stop_confirmed": True, "never_executed": True}
                 else:
                     # This adapter owns an exclusive finite simulator; no real-instrument inference.
-                    state = "VERIFYING"
+                    state = (
+                        "FAILED_CONFIRMED"
+                        if result.get("kind") == "edge_interrupted"
+                        else "VERIFYING"
+                    )
                     if task["success_condition"]["kind"] == "stable_window":
                         result["samples"] = self.simulator.window(task["success_condition"])
                         check_stable(
@@ -467,7 +476,7 @@ class Gateway:
         if crash_at == "after_execute":
             raise ConnectionError("injected gateway crash after physical simulation")
         result["completed_at"] = self.simulator.clock.now().isoformat()
-        state = "VERIFYING"
+        state = "FAILED_CONFIRMED" if result.get("kind") == "edge_interrupted" else "VERIFYING"
         if task["success_condition"]["kind"] == "stable_window":
             check_stable(task["success_condition"], result["samples"], self.simulator.clock.now())
             state = "SUCCEEDED"

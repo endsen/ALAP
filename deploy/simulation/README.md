@@ -339,3 +339,17 @@ PLAYWRIGHT_BROWSERS_PATH="$PWD/.local-deploy/browsers" .venv/bin/python deploy/s
 运行 `.venv/bin/python deploy/simulation/check_mcp_cache.py`，两供应商分别保留授权/恢复前撤权，共四项。真实 MCP tools/call 收到请求后先阻塞响应；独立维护事务对本项 AgentRun 执行 SELECT FOR UPDATE（不修改数据），然后释放 MCP 响应，等待 mcp_calls=SUCCEEDED、Agent checkpoint 仍 tools、pg_blocking_pids 确认 worker 提交受阻，再 SIGKILL 专用 worker。检查退出码 137/非 OOM，释放锁后再次比较 checkpoint/版本/缓存/ledger。
 
 专用启动屏障仅等待标记后 exec 原 Agent server；恢复时先重建回环 MCP 服务再放行 worker。保留授权时同一 call_id/tool_id/input_hash/result 缓存被复用、远端 tools/call 不重复；恢复前管理 API 撤权时历史/ledger 不接收缓存且 FAILED/MCP_REVOKED。MCP 服务调用日志、真实 HTTPS 次数、预算和最终再次重启的不变性均核对。行锁与启动屏障有时间上限/finally 释放，未手工 advance、改 checkpoint 或伪造缓存。报告 `d12d3-mcp-cache-*`；不代表断电或远端物理写的恢复保证。
+
+## D12d.3：证书身份绑定升级
+
+新生成的 API/Engine 配置为每个 Gateway endpoint 登记 `server_sha256`，Gateway 配置登记 `client_sha256`（允许的 API/Engine 客户端证书列表）。值是证书 DER 字节的 SHA-256、小写 64 位十六进制。校验链、用途、主机名仍启用，指纹不替代它们；签名、审批、资源/策略、epoch 和 fencing 检查也保留。TLS 服务端证书通过绑定前，客户端不发送 RPC；未登记客户端返回 403，不能通过 HTTP 头伪造身份。Uvicorn 使用项目的 PeerIdentityProtocol，从 TLS socket 提取身份，禁止换成不提供该状态的协议实现。
+
+已有私有目录不会被自动重写。升级前按既有维护流程停止业务、保存一致性备份；从**已确认归属的本地证书文件**计算指纹（不得从待连接的远程端点自动学习身份）：
+
+```bash
+# 对 gateway.crt、api-client.crt、engine-client.crt 分别执行；
+# 替换为本次部署的已核对路径。这只读取公开证书。
+openssl x509 -in /absolute/private/gateway.crt -outform DER | openssl dgst -sha256
+```
+
+将 gateway.crt 的指纹写入 api.json 和 engine.json 的 `gateway_transport.endpoints.gw.server_sha256`；将 api-client.crt、engine-client.crt 的两个指纹写入 gateway.json 的 `client_sha256` 列表。保留所有其他配置、文件权限、证书和密钥；本次无数据库迁移。然后重新构建/启动并执行正常握手和模拟验收。缺少或格式错误的绑定会拒绝启动/构造，不能删掉绑定来绕过失败。证书续期或轮换必须同步更新登记（包括所有调用方），不自动扩大信任范围。此配置是当前单机模拟信任域的静态身份登记，不是现场仪器证书注册系统；部署升级实际验证尚待完成。

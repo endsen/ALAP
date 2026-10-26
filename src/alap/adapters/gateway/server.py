@@ -12,6 +12,8 @@ import uvicorn
 from alap.adapters.gateway.auth import Authenticator
 from alap.adapters.gateway.journal import Gateway
 from alap.adapters.gateway.simulator import Simulator, WallClock
+from alap.adapters.gateway.supervised import SupervisedSimulator
+from alap.adapters.gateway.tls import PeerIdentityProtocol
 from alap.adapters.gateway.transport import create_gateway_app
 from alap.contracts import ContractCatalog
 
@@ -32,18 +34,43 @@ def main():
     settings = json.loads(args.config.read_text())
     if settings["mode"] != "simulation":
         parser.error("Only explicit simulation mode is implemented")
+    clients = settings.get("client_sha256")
+    if all(tls) and not clients:
+        parser.error("mTLS requires registered client_sha256 identities")
+    if clients is not None and not all(tls):
+        parser.error("Client certificate identities require mTLS")
     journal = Path(settings["journal_path"]).resolve()
     physical = Path(settings["physical_path"]).resolve()
     if journal == physical:
         parser.error("Journal and simulated physical state require separate files")
     # Raw random bytes: stripping whitespace would corrupt some valid random keys.
     auth = Authenticator(Path(settings["signing_key_file"]).read_bytes())
+    simulator = Simulator(physical, WallClock())
+    supervision_auth = None
+    maintenance_auth = None
+    if config := settings.get("supervision"):
+        edge_path = Path(config["state_path"]).resolve()
+        if edge_path in {journal, physical}:
+            parser.error("Monitor state requires a separate file")
+        key = Path(config["heartbeat_key_file"]).read_bytes()
+        if key == Path(settings["signing_key_file"]).read_bytes():
+            parser.error("Engine heartbeat requires a separate key")
+        supervision_auth = Authenticator(key)
+        simulator = SupervisedSimulator(
+            physical, WallClock(), edge_path, config["sample_interval_s"]
+        )
+        simulator.edge.snapshot()
+        if maintenance_file := config.get("maintenance_key_file"):
+            maintenance_key = Path(maintenance_file).read_bytes()
+            if maintenance_key in {key, Path(settings["signing_key_file"]).read_bytes()}:
+                parser.error("Maintenance requires an independent API-only key")
+            maintenance_auth = Authenticator(maintenance_key)
     gateway = Gateway(
         settings["gateway_id"],
         journal,
         authenticator=auth,
         catalog=ContractCatalog(Path(__file__).resolve().parents[4] / "contracts"),
-        simulator=Simulator(physical, WallClock()),
+        simulator=simulator,
         skills=settings["execution_skills"],
         policy_versions=settings["policy_versions"],
         capability_versions=settings["capability_versions"],
@@ -57,7 +84,13 @@ def main():
     previous = signal.signal(signal.SIGTERM, terminated)
     try:
         uvicorn.run(
-            create_gateway_app(gateway),
+            create_gateway_app(
+                gateway,
+                client_sha256=clients,
+                supervision_auth=supervision_auth,
+                maintenance_auth=maintenance_auth,
+            ),
+            http=PeerIdentityProtocol,
             host=args.host,
             port=args.port,
             access_log=False,
